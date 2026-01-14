@@ -1,0 +1,13 @@
+.git
+.github
+.next
+.turbo
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+Dockerfile
+README.md
+.cursor
+.env
