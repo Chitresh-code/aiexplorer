@@ -17,7 +17,8 @@ const PopoverContent = React.forwardRef<
       className,
       align = "start",
       side = "bottom",
-      sideOffset = 0,
+      sideOffset = 15,
+      alignOffset = -10,
       container,
       ...props
     },
@@ -29,12 +30,13 @@ const PopoverContent = React.forwardRef<
         side={side}
         align={align}
         sideOffset={sideOffset}
+        alignOffset={alignOffset}
         avoidCollisions={true}
         collisionPadding={8}
         // @ts-ignore
         container={container}
         className={cn(
-          "z-50 w-72 rounded-md border bg-popover p-2 text-popover-foreground shadow-md outline-none",
+          "z-55 w-72 rounded-md border bg-popover p-2 text-popover-foreground shadow-md outline-none",
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[side=bottom]:slide-in-from-top-2",
           className

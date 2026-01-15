@@ -6,6 +6,9 @@ import { Bot, ChevronDown, Loader2, Search, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Combobox } from "@/components/ui/combobox";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { SectionCards } from "@/features/dashboard/components/SectionCards";
@@ -40,6 +43,7 @@ interface GalleryUseCase {
 
 const AIGallery = () => {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState("search");
   const [filters, setFilters] = useState<GalleryFilters>({
     useCase: '',
     department: '',
@@ -154,14 +158,46 @@ const AIGallery = () => {
 
       <Card className="shadow-sm">
         <CardContent className="py-4">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search use cases..."
-              value={filters.useCase}
-              onChange={(e) => setFilters({ ...filters, useCase: e.target.value })}
-              className="h-10 w-full pl-10 bg-white text-base border-gray-200"
-            />
+          <div className="flex justify-center">
+            <div className="w-full max-w-3xl">
+              {/* Search Bar Container */}
+              <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
+                {/* Search Input */}
+                <div className="relative">
+                  <Input
+                    placeholder={
+                      activeTab === "similar"
+                        ? "Describe your use case to find similar ones..."
+                        : "Search use cases..."
+                    }
+                    value={filters.useCase}
+                    onChange={(e) => setFilters({ ...filters, useCase: e.target.value })}
+                    className="h-16 text-sm border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                </div>
+
+                {/* Tab Buttons Inside at Bottom */}
+                <div className="flex items-center gap-2 px-3 pb-2 pt-1 bg-white">
+                  <Button
+                    size="sm"
+                    variant={activeTab === "similar" ? "secondary" : "ghost"}
+                    onClick={() => setActiveTab("similar")}
+                    className="h-8 text-xs px-3"
+                  >
+                    <PlusCircle className="h-3 w-3 mr-1" />
+                    Find Similar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={activeTab === "search" ? "secondary" : "ghost"}
+                    onClick={() => setActiveTab("search")}
+                    className="h-7 text-xs px-3"
+                  >
+                    Search
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -233,9 +269,19 @@ const AIGallery = () => {
       <Card className="shadow-sm">
         <CardContent className="pt-6">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-muted-foreground animate-pulse">Loading AI Gallery...</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, index) => (
+                <Card key={index} className="border-0 shadow-none h-full" style={{ backgroundColor: '#f5f5f5' }}>
+                  <CardContent className="p-8 flex flex-col h-full gap-6 items-start">
+                    <Skeleton className="h-10 w-10 rounded-md" />
+                    <div className="space-y-3 flex-grow w-full">
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-5 w-1/2" />
+                    </div>
+                    <Skeleton className="h-10 w-28 rounded-md" />
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : filteredUseCases.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -244,7 +290,15 @@ const AIGallery = () => {
               </div>
               <h3 className="text-lg font-medium">No use cases found</h3>
               <p className="text-muted-foreground">Try adjusting your filters to find what you're looking for.</p>
-              <Button variant="link" onClick={handleReset} className="mt-2">Reset all filters</Button>
+              <div className="flex items-center gap-3 mt-4">
+                <Button variant="link" onClick={handleReset}>Reset filters</Button>
+                <Button
+                  onClick={() => navigate('/submit-use-case')}
+                  className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-6"
+                >
+                  Submit a new Use Case
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

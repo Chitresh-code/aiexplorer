@@ -75,8 +75,8 @@ export function Combobox({
                 <PopoverContent
                     side="bottom"
                     align="start"
-                    alignOffset={50}
-                    sideOffset={29}
+                    alignOffset={70}
+                    sideOffset={106}
                     className="p-0 border shadow-lg w-[280px]"
                 >
                     <Command>

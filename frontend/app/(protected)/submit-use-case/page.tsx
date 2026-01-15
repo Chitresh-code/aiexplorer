@@ -619,10 +619,6 @@ const SubmitUseCase = () => {
 
     return (
         <div ref={formContainerRef} className="flex flex-1 flex-col gap-6 p-6 w-full">
-            {/* KPI Dashboard Section */}
-            <div className="w-full">
-                <SectionCards />
-            </div>
 
             <div className="flex justify-center w-full">
                 <div className="flex flex-1 flex-col mx-auto max-w-7xl w-full px-4">
