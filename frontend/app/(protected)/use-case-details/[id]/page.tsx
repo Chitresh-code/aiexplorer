@@ -1177,127 +1177,91 @@ const UseCaseDetails = () => {
                                             Timeline
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="px-4 py-0">
-                                        <div className="metrics-table-container" style={{ marginTop: '0', marginBottom: '1rem' }}>
-                                            <table className="reporting-table" style={{ fontSize: '5px', tableLayout: 'fixed', width: '100%' }}>
-                                                <thead>
-                                                    <tr>
-                                                        <th style={{ width: '25%', padding: '2px 3px' }}>Phase</th>
-                                                        <th style={{ width: '28%', padding: '2px 3px' }}>Start Date</th>
-                                                        <th style={{ width: '28%', padding: '2px 3px' }}>End Date</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td style={{ padding: '2px 1px', fontWeight: '500', textAlign: 'left', fontSize: '12px' }}>
-                                                            Idea
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('idea')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.idea.start ? format(phaseDates.idea.start, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('idea')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.idea.end ? format(phaseDates.idea.end, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style={{ padding: '2px 1px', fontWeight: '500', textAlign: 'left', fontSize: '12px' }}>
-                                                            Diagnose
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('diagnose')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.diagnose.start ? format(phaseDates.diagnose.start, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('diagnose')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.diagnose.end ? format(phaseDates.diagnose.end, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style={{ padding: '2px 1px', fontWeight: '500', textAlign: 'left', fontSize: '12px' }}>
-                                                            Design
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('design')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.design.start ? format(phaseDates.design.start, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('design')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.design.end ? format(phaseDates.design.end, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td style={{ padding: '2px 1px', fontWeight: '500', textAlign: 'left', fontSize: '12px' }}>
-                                                            Implemented
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('implemented')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.implemented.start ? format(phaseDates.implemented.start, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                        <td style={{ padding: '2px 1px' }}>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="h-6 w-full justify-start text-left font-normal text-[10px] px-1"
-                                                                onClick={() => handleOpenDateDialog('implemented')}
-                                                            >
-                                                                <CalendarIcon className="mr-1 h-2 w-2" />
-                                                                {phaseDates.implemented.end ? format(phaseDates.implemented.end, "dd-MM-yyyy") : "Pick date"}
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
+                                    <CardContent className="px-6 py-4">
+                                        <div className="space-y-4">
+                                            {/* Idea Phase */}
+                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                                <div className="font-medium text-gray-900 text-sm">Idea</div>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('idea')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.idea.start ? format(phaseDates.idea.start, "dd-MM-yyyy") : "Pick start date"}
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('idea')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.idea.end ? format(phaseDates.idea.end, "dd-MM-yyyy") : "Pick end date"}
+                                                </Button>
+                                            </div>
+
+                                            {/* Diagnose Phase */}
+                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                                <div className="font-medium text-gray-900 text-sm">Diagnose</div>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('diagnose')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.diagnose.start ? format(phaseDates.diagnose.start, "dd-MM-yyyy") : "Pick start date"}
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('diagnose')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.diagnose.end ? format(phaseDates.diagnose.end, "dd-MM-yyyy") : "Pick end date"}
+                                                </Button>
+                                            </div>
+
+                                            {/* Design Phase */}
+                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                                <div className="font-medium text-gray-900 text-sm">Design</div>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('design')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.design.start ? format(phaseDates.design.start, "dd-MM-yyyy") : "Pick start date"}
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('design')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.design.end ? format(phaseDates.design.end, "dd-MM-yyyy") : "Pick end date"}
+                                                </Button>
+                                            </div>
+
+                                            {/* Implemented Phase */}
+                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
+                                                <div className="font-medium text-gray-900 text-sm">Implemented</div>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('implemented')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.implemented.start ? format(phaseDates.implemented.start, "dd-MM-yyyy") : "Pick start date"}
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 justify-start text-left font-normal text-sm"
+                                                    onClick={() => handleOpenDateDialog('implemented')}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {phaseDates.implemented.end ? format(phaseDates.implemented.end, "dd-MM-yyyy") : "Pick end date"}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>
@@ -1319,7 +1283,7 @@ const UseCaseDetails = () => {
                                         </Button>
                                     </CardHeader>
                                     <CardContent className="pt-2">
-                                        <ScrollArea className="h-40">
+                                        <ScrollArea className="h-48">
                                             <div className="space-y-3 pr-3">
                                                 {stakeholders.map((person, index) => {
                                                     return (
@@ -1397,7 +1361,7 @@ const UseCaseDetails = () => {
                                         </Badge>
                                     </CardHeader>
                                     <CardContent className="p-0 flex-1 overflow-hidden">
-                                        <ScrollArea className="h-[27.5rem]">
+                                        <ScrollArea className="h-[41.5rem]">
                                             <div className="divide-y divide-gray-100">
                                                 {updates.map((update) => (
                                                     <div key={update.id} className="p-4 hover:bg-gray-50/50 transition-colors">
@@ -1670,7 +1634,7 @@ const UseCaseDetails = () => {
                 </TabsContent>
 
                 <TabsContent value="agent-library" className="space-y-3">
-                    <div className="w-[95%] mx-auto space-y-6">
+                    <div className="max-w-6xl mx-auto space-y-6">
                         {/* Knowledge Source Selection */}
                         <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
                             <CardHeader className="pb-3 border-b border-gray-100">

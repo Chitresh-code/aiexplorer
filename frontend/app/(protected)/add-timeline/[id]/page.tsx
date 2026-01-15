@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from '@/lib/router';
 import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { CalendarIcon } from "lucide-react";
 
 type PhaseField = "startDate" | "endDate";
 
@@ -51,60 +55,56 @@ const AddTimeline = () => {
     };
 
     return (
-        <div className="main-content">
-            <div className="metrics-table-container" style={{ marginTop: '2rem' }}>
-                <table className="reporting-table">
-                    <thead>
-                        <tr>
-                            <th style={{ width: '30%' }}>Phase</th>
-                            <th style={{ width: '35%' }}>Start Date</th>
-                            <th style={{ width: '35%' }}>End Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {phases.map((phase, index) => (
-                            <tr key={index}>
-                                <td>
-                                    <input
-                                        type="text"
-                                        className="readonly-input"
-                                        value={phase.name}
-                                        readOnly
-                                        style={{ fontWeight: '500', textAlign: 'left', paddingLeft: '1rem' }}
-                                    />
-                                </td>
-                                <td>
-                                    <input
-                                        type="date"
-                                        className="metric-input"
-                                        value={phase.startDate}
-                                        onChange={(e) => handleDateChange(index, 'startDate', e.target.value)}
-                                        placeholder="Select a date..."
-                                    />
-                                </td>
-                                <td>
-                                    <input
-                                        type="date"
-                                        className="metric-input"
-                                        value={phase.endDate}
-                                        onChange={(e) => handleDateChange(index, 'endDate', e.target.value)}
-                                        placeholder="Select a date..."
-                                    />
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+        <div className="flex flex-1 flex-col gap-6 p-6 w-full">
+            <div className="w-[95%] mx-auto">
+                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                            <CalendarIcon className="w-4 h-4 text-teal-600" />
+                            Timeline
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="space-y-4">
+                            {phases.map((phase, index) => (
+                                <div key={phase.name} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center p-4 rounded-lg border border-gray-200 bg-gray-50/50 hover:bg-gray-100/50 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-teal-500"></div>
+                                        <span className="font-medium text-gray-900 text-sm">{phase.name}</span>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500 font-medium">Start Date</Label>
+                                        <input
+                                            type="date"
+                                            className="w-full h-8 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                            value={phase.startDate}
+                                            onChange={(e) => handleDateChange(index, 'startDate', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-gray-500 font-medium">End Date</Label>
+                                        <input
+                                            type="date"
+                                            className="w-full h-8 px-3 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                                            value={phase.endDate}
+                                            onChange={(e) => handleDateChange(index, 'endDate', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
 
-            <div className="flex justify-end mt-4">
-                <button
-                    className={`submit-metric-btn ${!isFormValid ? 'disabled' : ''}`}
-                    onClick={handleSubmit}
-                    disabled={!isFormValid}
-                >
-                    Submit
-                </button>
+                <div className="flex justify-end mt-6">
+                    <Button
+                        onClick={handleSubmit}
+                        disabled={!isFormValid}
+                        className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                        Submit Timeline
+                    </Button>
+                </div>
             </div>
         </div>
     );
