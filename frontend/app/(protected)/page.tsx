@@ -113,13 +113,13 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-      {/* Section Cards - KPI Metrics */}
-      <SectionCards />
+      {/* Section Cards - KPI Metrics - Temporarily removed */}
+      {/* <SectionCards /> */}
 
-      {/* Chart Section */}
-      <div className="w-full">
+      {/* Chart Section - Temporarily removed */}
+      {/* <div className="w-full">
         <ChartAreaInteractive />
-      </div>
+      </div> */}
 
       {/* Action Cards */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">

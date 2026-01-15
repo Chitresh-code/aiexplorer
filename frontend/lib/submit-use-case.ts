@@ -227,6 +227,20 @@ export const getAllChampionNames = async (): Promise<any> => {
 };
 
 /**
+ * Get all data needed for submit use case screen in one API call
+ * @returns {Promise<Object>} Object containing all submit use case data
+ */
+export const getSubmitUseCaseData = async (): Promise<any> => {
+    try {
+        const response = await apiClient.get('/api/submit-usecase-data');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching submit use case data:', error);
+        throw error;
+    }
+};
+
+/**
  * Create a new use case
  * @param {Object} useCaseData - The use case data
  * @returns {Promise<Object>} The created use case

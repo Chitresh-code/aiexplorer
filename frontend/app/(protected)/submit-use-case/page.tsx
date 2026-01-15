@@ -5,14 +5,10 @@ import * as PopoverPrimitive from "@radix-ui/react-popover"
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
-import { X, Loader2, CheckSquare } from 'lucide-react';
+import { X, Loader2, CheckSquare, Users, Plus, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-    getAIModels,
-    getBusinessStructure,
-    getRoles,
-    getDropdownData,
-    getAllVendors,
+    getSubmitUseCaseData,
     getVendorsFromData,
     getAllVendorsFromAllVendorsData,
     getModelsForVendor,
@@ -21,7 +17,6 @@ import {
     getSubTeamsForTeam,
     getRolesFromData,
     getChampionsForBusinessUnit,
-    getAllChampionNames,
     createUseCase,
     createStakeholder,
     createPlan
@@ -55,7 +50,13 @@ import {
     PopoverAnchor,
 } from "@/components/ui/popover"
 import { Combobox } from "@/components/ui/combobox"
-import { MultiCombobox } from "@/components/ui/multi-combobox"
+import { VendorCombobox } from "./vendor-combobox"
+import { ModelCombobox } from "./model-combobox"
+import { BusinessUnitCombobox } from "./business-unit-combobox"
+import { TeamCombobox } from "./team-combobox"
+import { SubTeamCombobox } from "./sub-team-combobox"
+import { SubmitUseCaseAIThemeMultiCombobox as AIThemeMultiCombobox } from "./ai-theme-multi-combobox"
+import { SubmitUseCasePersonaMultiCombobox as PersonaMultiCombobox } from "./persona-multi-combobox"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -97,6 +98,9 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { SectionCards } from "@/features/dashboard/components/SectionCards"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const FormSkeleton = () => (
     <div className="space-y-6">
@@ -289,6 +293,12 @@ const SubmitUseCase = () => {
     const [selectedStakeholder, setSelectedStakeholder] = useState('');
     const [addedStakeholders, setAddedStakeholders] = useState([]);
 
+    // Stakeholder dialog states
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [stakeholderName, setStakeholderName] = useState('');
+    const [stakeholderRole, setStakeholderRole] = useState('');
+    const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
     // Step 3 form values - Launch Plan dates
     const [startDate, setStartDate] = useState<Date | undefined>(undefined);
     const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -355,21 +365,14 @@ const SubmitUseCase = () => {
                 setIsLoading(true);
                 setLoadingError(null);
 
-                const [aiModels, allVendors, businessStructure, roles, dropdowns, championNames] = await Promise.all([
-                    getAIModels(),
-                    getAllVendors(),
-                    getBusinessStructure(),
-                    getRoles(),
-                    getDropdownData(),
-                    getAllChampionNames()
-                ]);
+                const consolidatedData = await getSubmitUseCaseData();
 
-                setAiModelsData(aiModels);
-                setAllVendorsData(allVendors);
-                setBusinessStructureData(businessStructure);
-                setRolesData(roles);
-                setDropdownData(dropdowns);
-                setChampionNames(championNames);
+                setAiModelsData(consolidatedData.ai_models);
+                setAllVendorsData(consolidatedData.vendors);
+                setBusinessStructureData(consolidatedData.business_structure);
+                setRolesData(consolidatedData.roles);
+                setDropdownData(consolidatedData.dropdown_data);
+                setChampionNames(consolidatedData.champion_names.champions);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setLoadingError('Failed to load form data. Please refresh the page.');
@@ -617,6 +620,50 @@ const SubmitUseCase = () => {
         }
     }, [selectedRole, selectedStakeholder, addedStakeholders]);
 
+    const handleUpdateStakeholder = useCallback(() => {
+        if (stakeholderName && stakeholderRole) {
+            // Generate initials from the name
+            const initial = stakeholderName.split(' ').map(n => n[0]).join('').toUpperCase();
+
+            if (editingIndex !== null) {
+                // Update existing stakeholder
+                setAddedStakeholders(prev => prev.map((stakeholder, idx) =>
+                    idx === editingIndex
+                        ? { ...stakeholder, name: stakeholderName, role: stakeholderRole }
+                        : stakeholder
+                ));
+                toast.success('Stakeholder updated successfully');
+            } else {
+                // Add new stakeholder to the list
+                setAddedStakeholders(prev => [...prev, {
+                    name: stakeholderName,
+                    role: stakeholderRole
+                }]);
+                toast.success('Stakeholder added successfully');
+            }
+
+            setIsDialogOpen(false);
+            setStakeholderName('');
+            setStakeholderRole('');
+            setEditingIndex(null);
+        }
+    }, [stakeholderName, stakeholderRole, editingIndex]);
+
+    const handleEditStakeholder = useCallback((index: number) => {
+        const stakeholder = addedStakeholders[index];
+        setStakeholderName(stakeholder.name);
+        setStakeholderRole(stakeholder.role);
+        setEditingIndex(index);
+        setIsDialogOpen(true);
+    }, [addedStakeholders]);
+
+    const handleDialogClose = useCallback(() => {
+        setIsDialogOpen(false);
+        setStakeholderName('');
+        setStakeholderRole('');
+        setEditingIndex(null);
+    }, []);
+
     return (
         <div ref={formContainerRef} className="flex flex-1 flex-col gap-6 p-6 w-full">
 
@@ -759,7 +806,7 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>AI Theme</FieldLabel>
                                                             <FieldContent>
-                                                                <MultiCombobox
+                                                                <AIThemeMultiCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={aiThemes}
@@ -780,7 +827,7 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Target Personas</FieldLabel>
                                                             <FieldContent>
-                                                                <MultiCombobox
+                                                                <PersonaMultiCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={personas}
@@ -802,7 +849,7 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Vendor Name</FieldLabel>
                                                             <FieldContent>
-                                                                <Combobox
+                                                                <VendorCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={vendors}
@@ -822,7 +869,7 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Model Name</FieldLabel>
                                                             <FieldContent>
-                                                                <Combobox
+                                                                <ModelCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={models}
@@ -854,7 +901,7 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Business Unit</FieldLabel>
                                                             <FieldContent>
-                                                                <Combobox
+                                                                <BusinessUnitCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={businessUnits}
@@ -874,15 +921,13 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Team Name</FieldLabel>
                                                             <FieldContent>
-                                                                <Combobox
+                                                                <TeamCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={teams}
                                                                     disabled={!selectedBusinessUnit}
                                                                     placeholder="Select Team Name"
                                                                     searchPlaceholder="Search teams..."
-                                                                    align="start"
-                                                                    containerRef={formContainerRef}
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
                                                             </FieldContent>
@@ -899,14 +944,12 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Sub Team Name</FieldLabel>
                                                             <FieldContent>
-                                                                <Combobox
+                                                                <SubTeamCombobox
                                                                     value={field.value}
                                                                     onChange={field.onChange}
                                                                     options={subTeams}
                                                                     disabled={!selectedTeam}
                                                                     placeholder="Select Sub Team Name"
-                                                                    align="start"
-                                                                    containerRef={formContainerRef}
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
                                                             </FieldContent>
@@ -1195,220 +1238,196 @@ const SubmitUseCase = () => {
                             )}
 
                             {currentStep === 3 && (
-                                <div className="space-y-10">
-                                    <div className="stakeholders-container">
-                                        <div className="stakeholder-form">
-                                            <div className="form-group">
-                                                <FieldLabel className="mb-2">Role</FieldLabel>
-                                                <Combobox
-                                                    value={selectedRole}
-                                                    onChange={setSelectedRole}
-                                                    options={roles}
-                                                    placeholder="Select a Role"
-                                                    searchPlaceholder="Search roles..."
-                                                    align="end"
-                                                    containerRef={formContainerRef}
-                                                />
-                                            </div>
-                                            <div className="form-group">
-                                                <FieldLabel className="mb-2">Stakeholder</FieldLabel>
-                                                <button
-                                                    className="add-stakeholder-btn"
-                                                    onClick={handleAddStakeholder}
-                                                    disabled={!selectedRole || !selectedStakeholder}
-                                                >
-                                                    + Add Stakeholder
-                                                </button>
-                                                <Combobox
-                                                    value={selectedStakeholder}
-                                                    onChange={setSelectedStakeholder}
-                                                    options={championNames.map(name => ({ value: name, label: name }))}
-                                                    placeholder="Search for people's email or name"
-                                                    searchPlaceholder="Search people..."
-                                                    align="end"
-                                                    containerRef={formContainerRef}
-                                                />
-                                                <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.5rem' }}>
-                                                    Please add at least one stakeholder.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="stakeholder-list">
-                                            {championsData.length > 0 && (
-                                                <div style={{ marginBottom: '1rem' }}>
+                                <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                                    {/* Left column: Stakeholders Card - 40% width */}
+                                    <div className="lg:col-span-4">
+                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[500px]">
+                                        <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+                                            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                                                <Users className="w-4 h-4 text-teal-600" />
+                                                Stakeholders
+                                            </CardTitle>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-teal-600 hover:bg-teal-50"
+                                                onClick={() => setIsDialogOpen(true)}
+                                            >
+                                                <Plus className="w-4 h-4" />
+                                            </Button>
+                                        </CardHeader>
+                                        <CardContent className="pt-2 flex-1">
+                                            <ScrollArea className="h-80">
+                                                <div className="space-y-3 pr-3">
                                                     {championsData.map((champion, idx) => (
-                                                        <div key={idx} style={{
-                                                            padding: '0.5rem',
-                                                            marginBottom: '0.25rem',
-                                                            backgroundColor: '#f8f9fa',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid #e9ecef'
-                                                        }}>
-                                                            <div>{champion.UKrewer}</div>
-                                                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>Champion</div>
+                                                        <div key={`champion-${idx}`} className="flex items-center justify-between gap-3 group">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
+                                                                    <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
+                                                                        {champion.UKrewer.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-gray-900 leading-none">{champion.UKrewer}</p>
+                                                                    <p className="text-xs text-gray-500 mt-1">Champion</p>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     ))}
-                                                </div>
-                                            )}
-                                            {addedStakeholders.length > 0 && (
-                                                <div style={{ marginTop: '1rem' }}>
                                                     {addedStakeholders.map((stakeholder, idx) => (
-                                                        <div key={idx} style={{
-                                                            padding: '0.5rem',
-                                                            marginBottom: '0.25rem',
-                                                            backgroundColor: '#e8f5e8',
-                                                            borderRadius: '4px',
-                                                            border: '1px solid #c3e6c3'
-                                                        }}>
-                                                            <div>{stakeholder.name}</div>
-                                                            <div style={{ fontSize: '0.8rem', color: '#666', marginTop: '0.25rem' }}>{stakeholder.role}</div>
+                                                        <div key={`added-${idx}`} className="flex items-center justify-between gap-3 group">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
+                                                                    <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
+                                                                        {stakeholder.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-gray-900 leading-none">{stakeholder.name}</p>
+                                                                    <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 mr-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
+                                                                onClick={() => handleEditStakeholder(idx)}
+                                                            >
+                                                                <Edit className="w-3 h-3" />
+                                                            </Button>
                                                         </div>
                                                     ))}
                                                 </div>
-                                            )}
-                                        </div>
+                                            </ScrollArea>
+                                        </CardContent>
+                                    </Card>
                                     </div>
 
-                                    <div className="launch-plan-container pt-6 border-t">
-                                        <FieldLabel className="mb-4">Use Case Launch Plan</FieldLabel>
-                                        <p className="text-sm text-muted-foreground mb-4">Please add both start and end date to submit.</p>
-                                        <div className="rounded-md border">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead className="w-[200px]">Phase</TableHead>
-                                                        <TableHead>Start Date</TableHead>
-                                                        <TableHead>End Date</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    <TableRow>
-                                                        <TableCell className="font-medium">
-                                                            <Input type="text" value="Idea" readOnly className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none" />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !startDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Idea')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {startDate ? format(startDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !endDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Idea')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {endDate ? format(endDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    <TableRow>
-                                                        <TableCell className="font-medium">
-                                                            <Input type="text" value="Diagnose" readOnly className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none" />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !diagnoseStartDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Diagnose')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {diagnoseStartDate ? format(diagnoseStartDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !diagnoseEndDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Diagnose')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {diagnoseEndDate ? format(diagnoseEndDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    <TableRow>
-                                                        <TableCell className="font-medium">
-                                                            <Input type="text" value="Design" readOnly className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none" />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !designStartDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Design')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {designStartDate ? format(designStartDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !designEndDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Design')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {designEndDate ? format(designEndDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    <TableRow>
-                                                        <TableCell className="font-medium">
-                                                            <Input type="text" value="Implemented" readOnly className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none" />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !implementedStartDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Implemented')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {implementedStartDate ? format(implementedStartDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button
-                                                                variant={"outline"}
-                                                                className={cn(
-                                                                    "w-full justify-start text-left font-normal",
-                                                                    !implementedEndDate && "text-muted-foreground"
-                                                                )}
-                                                                onClick={() => handleOpenDateDialog('Implemented')}
-                                                            >
-                                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                {implementedEndDate ? format(implementedEndDate, "dd-MM-yyyy") : <span>Pick a date</span>}
-                                                            </Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                </TableBody>
-                                            </Table>
-                                        </div>
+                                    {/* Second column: Timeline Card - 60% width */}
+                                    <div className="lg:col-span-6">
+                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[500px]">
+                                            <CardHeader className="pb-3">
+                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                                                    <CalendarIcon className="w-4 h-4 text-teal-600" />
+                                                    Timeline
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="px-6 py-4">
+                                                <div className="metrics-table-container">
+                                                    <table className="reporting-table" style={{ fontSize: '14px', tableLayout: 'fixed', width: '100%' }}>
+                                                        <thead>
+                                                            <tr>
+                                                                <th style={{ width: '25%', padding: '12px 8px', fontWeight: '600', color: '#374151', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Phase</th>
+                                                                <th style={{ width: '37.5%', padding: '12px 8px', fontWeight: '600', color: '#374151', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Start Date</th>
+                                                                <th style={{ width: '37.5%', padding: '12px 8px', fontWeight: '600', color: '#374151', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>End Date</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
+                                                                    Idea
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Idea')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {startDate ? format(startDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Idea')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {endDate ? format(endDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
+                                                                    Diagnose
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Diagnose')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {diagnoseStartDate ? format(diagnoseStartDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Diagnose')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {diagnoseEndDate ? format(diagnoseEndDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
+                                                                    Design
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Design')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {designStartDate ? format(designStartDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Design')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-2" />
+                                                                        {designEndDate ? format(designEndDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
+                                                                    Implemented
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Implemented')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {implementedStartDate ? format(implementedStartDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                                <td style={{ padding: '16px 8px' }}>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                                        onClick={() => handleOpenDateDialog('Implemented')}
+                                                                    >
+                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                        {implementedEndDate ? format(implementedEndDate, "dd-MM-yyyy") : "Pick date"}
+                                                                    </Button>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
                                     </div>
                                 </div>
                             )}
@@ -1417,7 +1436,8 @@ const SubmitUseCase = () => {
                 </Form>
             )}
 
-            <div className="form-actions">
+            <div className="w-full max-w-7xl mx-auto px-4">
+                <div className="flex justify-end gap-2">
                 <Button variant="ghost" onClick={handleBack}>Back</Button>
                 <Button variant="outline" onClick={() => navigate('/')}>Cancel</Button>
                 <Button
@@ -1437,6 +1457,7 @@ const SubmitUseCase = () => {
                         currentStep === 3 ? 'Submit' : 'Next'
                     )}
                 </Button>
+            </div>
             </div>
 
             {/* Date Selection Dialog */}
@@ -1479,6 +1500,61 @@ const SubmitUseCase = () => {
                             disabled={!tempStartDate || !tempEndDate}
                         >
                             Submit Dates
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Stakeholders Dialog */}
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>{editingIndex !== null ? 'Edit Stakeholder' : 'Add Stakeholder'}</DialogTitle>
+                        <DialogDescription>
+                            {editingIndex !== null ? 'Update the stakeholder information.' : 'Add a new stakeholder to this use case.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <label htmlFor="name" className="text-right text-sm font-medium">
+                                Name
+                            </label>
+                            <Input
+                                id="name"
+                                value={stakeholderName}
+                                onChange={(e) => setStakeholderName(e.target.value)}
+                                className="col-span-3"
+                                placeholder="Enter stakeholder name"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <label htmlFor="role" className="text-right text-sm font-medium">
+                                Role
+                            </label>
+                            <Select value={stakeholderRole} onValueChange={setStakeholderRole}>
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Select a role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Product Manager">Product Manager</SelectItem>
+                                    <SelectItem value="Program Manager">Program Manager</SelectItem>
+                                    <SelectItem value="Team Member">Team Member</SelectItem>
+                                    <SelectItem value="Champion">Champion</SelectItem>
+                                    <SelectItem value="Executive Sponsor">Executive Sponsor</SelectItem>
+                                    <SelectItem value="Process Owner">Process Owner</SelectItem>
+                                    <SelectItem value="Other">Other</SelectItem>
+                                    <SelectItem value="Engineering Lead">Engineering Lead</SelectItem>
+                                    <SelectItem value="Security Lead">Security Lead</SelectItem>
+                                    <SelectItem value="Procurement Lead">Procurement Lead</SelectItem>
+                                    <SelectItem value="Legal lead">Legal lead</SelectItem>
+                                    <SelectItem value="Arch Review">Arch Review</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={handleUpdateStakeholder} disabled={!stakeholderName || !stakeholderRole}>
+                            {editingIndex !== null ? 'Update' : 'Add Stakeholder'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

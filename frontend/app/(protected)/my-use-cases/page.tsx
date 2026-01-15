@@ -136,11 +136,6 @@ const MyUseCases = () => {
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-            {/* KPI Dashboard Section */}
-            <div className="w-full">
-                <SectionCards />
-            </div>
-
             {/* Filters Card */}
             <Card className="shadow-sm">
                 <CardContent className="pt-6">

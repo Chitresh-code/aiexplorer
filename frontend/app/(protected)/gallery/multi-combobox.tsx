@@ -20,7 +20,7 @@ import {
     PopoverAnchor,
 } from "@/components/ui/popover"
 
-interface MultiComboboxProps {
+interface GalleryMultiComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
@@ -34,7 +34,7 @@ interface MultiComboboxProps {
     hideBadges?: boolean
 }
 
-export function MultiCombobox({
+export function GalleryMultiCombobox({
     value = [],
     onChange,
     options,
@@ -46,7 +46,7 @@ export function MultiCombobox({
     align = "start",
     icon,
     hideBadges = false,
-}: MultiComboboxProps) {
+}: GalleryMultiComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {
@@ -77,7 +77,7 @@ export function MultiCombobox({
                     <Button
                         variant="outline"
                         className={cn(
-                            "w-full justify-between h-10 px-3",
+                            "w-full justify-between h-8 px-3",
                             !value.length && "text-muted-foreground",
                             className
                         )}
@@ -95,9 +95,9 @@ export function MultiCombobox({
 
                 <PopoverContent
                     side="bottom"
-                    align="center"
+                    align="start"
                     alignOffset={80}
-                    sideOffset={60}
+                    sideOffset={106}
                     className="p-0 border shadow-lg w-[280px]"
                 >
                     <Command>

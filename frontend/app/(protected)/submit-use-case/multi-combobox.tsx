@@ -20,7 +20,7 @@ import {
     PopoverAnchor,
 } from "@/components/ui/popover"
 
-interface MultiComboboxProps {
+interface SubmitUseCaseMultiComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
@@ -32,9 +32,10 @@ interface MultiComboboxProps {
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
     hideBadges?: boolean
+    container?: Element | null
 }
 
-export function MultiCombobox({
+export function SubmitUseCaseMultiCombobox({
     value = [],
     onChange,
     options,
@@ -46,7 +47,8 @@ export function MultiCombobox({
     align = "start",
     icon,
     hideBadges = false,
-}: MultiComboboxProps) {
+    container,
+}: SubmitUseCaseMultiComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {
@@ -97,8 +99,9 @@ export function MultiCombobox({
                     side="bottom"
                     align="center"
                     alignOffset={80}
-                    sideOffset={60}
+                    sideOffset={85}
                     className="p-0 border shadow-lg w-[280px]"
+                    container={container}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />

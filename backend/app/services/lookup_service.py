@@ -77,3 +77,33 @@ class LookupService:
         champions = self.repository.get_unique_champions()
         champion_names = [champion[0] for champion in champions if champion[0]]
         return {"champions": champion_names}
+
+    def get_submit_usecase_data(self):
+        """Get all data needed for submit use case screen in one call"""
+        # Get AI models hierarchy
+        ai_models = self.get_ai_models_hierarchy()
+
+        # Get all vendors
+        vendors_data = self.repository.get_vendors()
+        vendors = [{"VendorName": vm.VendorName, "ProductName": vm.ProductName} for vm in vendors_data]
+
+        # Get business structure hierarchy
+        business_structure = self.get_business_structure_hierarchy()
+
+        # Get roles hierarchy
+        roles = self.get_roles_hierarchy()
+
+        # Get dropdown data
+        dropdown_data = self.get_dropdown_data()
+
+        # Get champion names
+        champion_names = self.get_all_champion_names()
+
+        return {
+            "ai_models": ai_models,
+            "vendors": vendors,
+            "business_structure": business_structure,
+            "roles": roles,
+            "dropdown_data": dropdown_data,
+            "champion_names": champion_names
+        }

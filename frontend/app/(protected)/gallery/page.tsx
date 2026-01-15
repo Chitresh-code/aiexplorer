@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
 import { Combobox } from "@/components/ui/combobox";
-import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { GalleryMultiCombobox as MultiCombobox } from "./multi-combobox";
 import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import {
   getDropdownData,

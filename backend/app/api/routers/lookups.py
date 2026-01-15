@@ -80,3 +80,10 @@ async def get_all_champion_names(db: Session = Depends(get_db)):
     """Get all unique AI Champion names for stakeholder dropdown"""
     service = LookupService(db)
     return service.get_all_champion_names()
+
+
+@router.get("/submit-usecase-data")
+async def get_submit_usecase_data(db: Session = Depends(get_db)):
+    """Get all data needed for submit use case screen in one call"""
+    service = LookupService(db)
+    return service.get_submit_usecase_data()

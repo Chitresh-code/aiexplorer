@@ -64,7 +64,7 @@ export function RecentSubmissionsCarousel({ useCases, loading }: RecentSubmissio
           {useCases.length} total
         </span>
       </CardHeader>
-      <CardContent className="px-6 py-6 sm:px-10">
+      <CardContent className="px-6 py-6 sm:px-10 h-[400px]">
         <div className="relative">
           <Carousel
             className="w-full"
@@ -106,7 +106,7 @@ export function RecentSubmissionsCarousel({ useCases, loading }: RecentSubmissio
                     key={useCase.ID}
                     className="pl-4 basis-full sm:basis-1/2 lg:basis-1/3 xl:basis-1/4"
                   >
-                    <Card className="group h-full border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer">
+                    <Card className="group h-full border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer min-h-[350px]">
                       <CardContent className="p-5 space-y-4">
                         <div className="flex items-start justify-between gap-3">
                           <h4 className="line-clamp-2 text-base font-bold text-gray-900 leading-tight flex-1">

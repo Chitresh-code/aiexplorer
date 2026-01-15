@@ -1,6 +1,6 @@
 'use client';
 
-import { MultiCombobox } from "@/components/ui/multi-combobox"
+import { UseCaseDetailsMultiCombobox as MultiCombobox } from "../multi-combobox"
 
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -928,7 +928,7 @@ const UseCaseDetails = () => {
                                 value="status"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
                             >
-                                Approvals
+                                Actions
                             </TabsTrigger>
                         </TabsList>
 
