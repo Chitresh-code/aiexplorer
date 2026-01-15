@@ -1,5 +1,7 @@
 'use client';
 
+import { MultiCombobox } from "@/components/ui/multi-combobox"
+
 import { useParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -129,119 +131,6 @@ const UseCaseDetailsSkeleton = () => (
     </div>
 );
 
-// MultiCombobox component definition
-interface Option {
-    value: string;
-    label: string;
-}
-
-const MultiCombobox = ({
-    value,
-    onChange,
-    options,
-    placeholder = "Select options",
-    searchPlaceholder = "Search...",
-    emptyText = "No option found.",
-    disabled = false,
-    className,
-}: {
-    value: string[];
-    onChange: (value: string[]) => void;
-    options: Option[];
-    placeholder?: string;
-    searchPlaceholder?: string;
-    emptyText?: string;
-    disabled?: boolean;
-    className?: string;
-}) => {
-    const [open, setOpen] = useState(false)
-
-    // Ensure value is always an array
-    const safeValue = Array.isArray(value) ? value : []
-
-    const handleSelect = (optionValue: string) => {
-        const newValue = safeValue.includes(optionValue)
-            ? safeValue.filter(v => v !== optionValue)
-            : [...safeValue, optionValue]
-        onChange(newValue)
-    }
-
-    const handleRemove = (optionValue: string) => {
-        onChange(safeValue.filter(v => v !== optionValue))
-    }
-
-    const Trigger = (
-        <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn("w-full justify-between form-select min-w-0 h-auto py-1.5", className, !safeValue.length && "text-muted-foreground")}
-            disabled={disabled}
-        >
-            <span className="truncate mr-2">
-                {safeValue.length > 0 ? `${safeValue.length} selected` : placeholder}
-            </span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-        </Button>
-    );
-
-    return (
-        <div className="space-y-2">
-            {safeValue.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                    {safeValue.map((val) => {
-                        const option = options.find(opt => opt.value === val);
-                        return (
-                            <Badge key={val} variant="secondary" className="text-xs">
-                                {option?.label || val}
-                                <button
-                                    type="button"
-                                    className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemove(val);
-                                    }}
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </Badge>
-                        );
-                    })}
-                </div>
-            )}
-            <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    {Trigger}
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                    <Command>
-                        <CommandInput placeholder={searchPlaceholder} />
-                        <CommandList>
-                            <CommandEmpty>{emptyText}</CommandEmpty>
-                            <CommandGroup>
-                                {options.map((option) => (
-                                    <CommandItem
-                                        key={option.value}
-                                        value={option.label}
-                                        onSelect={() => handleSelect(option.value)}
-                                    >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                safeValue.includes(option.value) ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                        {option.label}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
-        </div>
-    )
-}
 
 interface Metric {
     id: number;

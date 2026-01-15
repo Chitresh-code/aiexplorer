@@ -2,7 +2,7 @@
 // @ts-nocheck
 'use client';
 import * as PopoverPrimitive from "@radix-ui/react-popover"
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import { X, Loader2, CheckSquare } from 'lucide-react';
@@ -52,7 +52,10 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
+    PopoverAnchor,
 } from "@/components/ui/popover"
+import { Combobox } from "@/components/ui/combobox"
+import { MultiCombobox } from "@/components/ui/multi-combobox"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -130,186 +133,6 @@ const FormSkeleton = () => (
     </div>
 );
 
-// Combobox component definition
-const Combobox = ({
-    value,
-    onChange,
-    options,
-    placeholder = "Select option",
-    searchPlaceholder = "Search...",
-    emptyText = "No option found.",
-    disabled = false,
-    className,
-    align = "center",
-}) => {
-    const [open, setOpen] = useState(false)
-
-    const Trigger = (
-        <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn("w-full justify-between form-select min-w-0 h-auto py-1.5", className, !value && "text-muted-foreground")}
-            disabled={disabled}
-        >
-            <span className="truncate mr-2">
-                {value
-                    ? options.find((option) => option.value === value)?.label || value
-                    : placeholder}
-            </span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-        </Button>
-    );
-
-    return (
-        <div className="relative w-full">
-            <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger asChild>
-                    {Trigger}
-                </PopoverTrigger>
-                <PopoverContent
-                    className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)]"
-                    align={align}
-                    sideOffset={4}
-                >
-                    <Command className="w-full">
-                        <CommandInput placeholder={searchPlaceholder} className="h-9" />
-                        <CommandList>
-                            <CommandEmpty>{emptyText}</CommandEmpty>
-                            <CommandGroup>
-                                {options.map((option) => (
-                                    <CommandItem
-                                        key={option.value}
-                                        value={option.label}
-                                        onSelect={() => {
-                                            onChange(option.value)
-                                            setOpen(false)
-                                        }}
-                                    >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                value === option.value ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                        {option.label}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
-                </PopoverContent>
-            </Popover>
-        </div>
-    )
-}
-
-// MultiCombobox component definition
-const MultiCombobox = ({
-    value,
-    onChange,
-    options,
-    placeholder = "Select options",
-    searchPlaceholder = "Search...",
-    emptyText = "No option found.",
-    disabled = false,
-    className,
-    align = "center",
-}) => {
-    const [open, setOpen] = useState(false)
-
-    // Ensure value is always an array
-    const safeValue = Array.isArray(value) ? value : []
-
-    const handleSelect = (optionValue) => {
-        const newValue = safeValue.includes(optionValue)
-            ? safeValue.filter(v => v !== optionValue)
-            : [...safeValue, optionValue]
-        onChange(newValue)
-    }
-
-    const handleRemove = (optionValue) => {
-        onChange(safeValue.filter(v => v !== optionValue))
-    }
-
-    const Trigger = (
-        <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className={cn("w-full justify-between form-select min-w-0 h-auto py-1.5", className, !safeValue.length && "text-muted-foreground")}
-            disabled={disabled}
-        >
-            <span className="truncate mr-2">
-                {safeValue.length > 0 ? `${safeValue.length} selected` : placeholder}
-            </span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-        </Button>
-    );
-
-    return (
-        <div className="space-y-2">
-            {safeValue.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                    {safeValue.map((val) => {
-                        const option = options.find(opt => opt.value === val);
-                        return (
-                            <Badge key={val} variant="secondary" className="text-xs">
-                                {option?.label || val}
-                                <button
-                                    type="button"
-                                    className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemove(val);
-                                    }}
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </Badge>
-                        );
-                    })}
-                </div>
-            )}
-            <div className="relative w-full">
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        {Trigger}
-                    </PopoverTrigger>
-                    <PopoverContent
-                        className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[var(--radix-popover-trigger-width)]"
-                        align={align}
-                        sideOffset={4}
-                    >
-                        <Command className="w-full">
-                            <CommandInput placeholder={searchPlaceholder} className="h-9" />
-                            <CommandList>
-                                <CommandEmpty>{emptyText}</CommandEmpty>
-                                <CommandGroup>
-                                    {options.map((option) => (
-                                        <CommandItem
-                                            key={option.value}
-                                            value={option.label}
-                                            onSelect={() => handleSelect(option.value)}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    safeValue.includes(option.value) ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {option.label}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-            </div>
-        </div>
-    )
-}
 
 const formSchema = z.object({
     useCaseTitle: z.string().min(1, "Use Case Title is required"),
@@ -356,6 +179,8 @@ const SubmitUseCase = () => {
     const location = useLocation();
     const { accounts } = useMsal();
     const [currentStep, setCurrentStep] = useState(location.state?.initialStep || 1);
+    const formContainerRef = useRef(null);
+    const aiCardRef = useRef(null);
     // Removed manual eseResourceValue state, using form watch instead
 
     // Loading states
@@ -793,7 +618,7 @@ const SubmitUseCase = () => {
     }, [selectedRole, selectedStakeholder, addedStakeholders]);
 
     return (
-        <div className="flex flex-1 flex-col gap-6 p-6 w-full">
+        <div ref={formContainerRef} className="flex flex-1 flex-col gap-6 p-6 w-full">
             {/* KPI Dashboard Section */}
             <div className="w-full">
                 <SectionCards />
@@ -924,7 +749,7 @@ const SubmitUseCase = () => {
                                     </Card>
 
                                     {/* AI Configuration Card */}
-                                    <Card className="shadow-sm">
+                                    <Card ref={aiCardRef} className="shadow-sm">
                                         <CardHeader className="border-b">
                                             <CardTitle>AI Configuration</CardTitle>
                                             <CardDescription>Select AI themes, personas, vendor and model</CardDescription>
@@ -944,7 +769,7 @@ const SubmitUseCase = () => {
                                                                     options={aiThemes}
                                                                     placeholder="Select AI Themes"
                                                                     searchPlaceholder="Search themes..."
-                                                                    align="start"
+                                                                    container={aiCardRef.current}
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
                                                             </FieldContent>
@@ -965,7 +790,6 @@ const SubmitUseCase = () => {
                                                                     options={personas}
                                                                     placeholder="Select Target Personas"
                                                                     searchPlaceholder="Search personas..."
-                                                                    align="end"
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
                                                             </FieldContent>
@@ -1061,6 +885,8 @@ const SubmitUseCase = () => {
                                                                     disabled={!selectedBusinessUnit}
                                                                     placeholder="Select Team Name"
                                                                     searchPlaceholder="Search teams..."
+                                                                    align="start"
+                                                                    containerRef={formContainerRef}
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
                                                             </FieldContent>
@@ -1083,6 +909,8 @@ const SubmitUseCase = () => {
                                                                     options={subTeams}
                                                                     disabled={!selectedTeam}
                                                                     placeholder="Select Sub Team Name"
+                                                                    align="start"
+                                                                    containerRef={formContainerRef}
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
                                                             </FieldContent>
@@ -1203,6 +1031,8 @@ const SubmitUseCase = () => {
                                                                         { value: "UKG Products Data", label: "UKG Products Data" },
                                                                     ]}
                                                                     placeholder="Select data sources"
+                                                                    align="end"
+                                                                    containerRef={formContainerRef}
                                                                 />
                                                             </div>
                                                         )}
@@ -1267,6 +1097,8 @@ const SubmitUseCase = () => {
                                                                         { value: "All Regions", label: "All Regions" },
                                                                     ]}
                                                                     placeholder="Select location"
+                                                                    align="end"
+                                                                    containerRef={formContainerRef}
                                                                 />
                                                             </div>
                                                         )}
@@ -1323,6 +1155,8 @@ const SubmitUseCase = () => {
                                                                         { value: "Restricted", label: "Restricted" },
                                                                     ]}
                                                                     placeholder="Select classification level"
+                                                                    align="end"
+                                                                    containerRef={formContainerRef}
                                                                 />
                                                             </div>
                                                         )}
@@ -1376,6 +1210,8 @@ const SubmitUseCase = () => {
                                                     options={roles}
                                                     placeholder="Select a Role"
                                                     searchPlaceholder="Search roles..."
+                                                    align="end"
+                                                    containerRef={formContainerRef}
                                                 />
                                             </div>
                                             <div className="form-group">
@@ -1393,6 +1229,8 @@ const SubmitUseCase = () => {
                                                     options={championNames.map(name => ({ value: name, label: name }))}
                                                     placeholder="Search for people's email or name"
                                                     searchPlaceholder="Search people..."
+                                                    align="end"
+                                                    containerRef={formContainerRef}
                                                 />
                                                 <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.5rem' }}>
                                                     Please add at least one stakeholder.
