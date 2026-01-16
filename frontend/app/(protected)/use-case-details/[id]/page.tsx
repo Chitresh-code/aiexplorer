@@ -1284,25 +1284,25 @@ const UseCaseDetails = () => {
                                     </CardHeader>
                                     <CardContent className="pt-2">
                                         <ScrollArea className="h-48">
-                                            <div className="space-y-3 pr-3">
+                                            <div className="space-y-2 pr-3">
                                                 {stakeholders.map((person, index) => {
                                                     return (
-                                                        <div key={index} className="flex items-center justify-between gap-3 group">
-                                                            <div className="flex items-center gap-3">
-                                                                <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
+                                                        <div key={index} className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 hover:bg-gray-50/70 transition-colors group">
+                                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                                <Avatar className="h-7 w-7 border-none ring-1 ring-gray-100 shadow-sm">
                                                                     <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
                                                                         {person.initial}
                                                                     </AvatarFallback>
                                                                 </Avatar>
-                                                                <div>
-                                                                    <p className="text-sm font-semibold text-gray-900 leading-none">{person.name}</p>
-                                                                    <p className="text-xs text-gray-500 mt-1">{person.role}</p>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-sm font-semibold text-gray-900 leading-none truncate">{person.name}</p>
+                                                                    <p className="text-[11px] text-gray-500 mt-0.5 truncate">{person.role}</p>
                                                                 </div>
                                                             </div>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-6 w-6 mr-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
+                                                                className="h-6 w-6 mr-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                 onClick={() => handleEditStakeholder(index)}
                                                             >
                                                                 <Edit className="w-3 h-3" />

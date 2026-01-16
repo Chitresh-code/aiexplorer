@@ -358,30 +358,75 @@ const SubmitUseCase = () => {
         handleDateDialogClose();
     };
 
-    // Fetch all data on mount
+    // Fetch all data on mount with stale-while-revalidate cache
     useEffect(() => {
-        const fetchAllData = async () => {
+        let isMounted = true;
+        const cacheKey = "submit-use-case-data-v1";
+        const cacheTtlMs = 10 * 60 * 1000;
+
+        const applySubmitUseCaseData = (consolidatedData) => {
+            setAiModelsData(consolidatedData.ai_models);
+            setAllVendorsData(consolidatedData.vendors);
+            setBusinessStructureData(consolidatedData.business_structure);
+            setRolesData(consolidatedData.roles);
+            setDropdownData(consolidatedData.dropdown_data);
+            setChampionNames(consolidatedData.champion_names.champions);
+        };
+
+        const loadFromCache = () => {
+            if (typeof window === "undefined") return false;
             try {
-                setIsLoading(true);
-                setLoadingError(null);
-
-                const consolidatedData = await getSubmitUseCaseData();
-
-                setAiModelsData(consolidatedData.ai_models);
-                setAllVendorsData(consolidatedData.vendors);
-                setBusinessStructureData(consolidatedData.business_structure);
-                setRolesData(consolidatedData.roles);
-                setDropdownData(consolidatedData.dropdown_data);
-                setChampionNames(consolidatedData.champion_names.champions);
+                const raw = window.localStorage.getItem(cacheKey);
+                if (!raw) return false;
+                const cached = JSON.parse(raw);
+                if (!cached?.data || !cached?.ts) return false;
+                if (Date.now() - cached.ts > cacheTtlMs) return false;
+                applySubmitUseCaseData(cached.data);
+                return true;
             } catch (error) {
-                console.error('Error fetching data:', error);
-                setLoadingError('Failed to load form data. Please refresh the page.');
-            } finally {
-                setIsLoading(false);
+                console.warn("Failed to read submit use case cache:", error);
+                return false;
             }
         };
 
-        fetchAllData();
+        const fetchAllData = async (hasCache: boolean) => {
+            try {
+                if (!hasCache) {
+                    setIsLoading(true);
+                }
+                setLoadingError(null);
+
+                const consolidatedData = await getSubmitUseCaseData();
+                if (!isMounted) return;
+
+                applySubmitUseCaseData(consolidatedData);
+                if (typeof window !== "undefined") {
+                    window.localStorage.setItem(
+                        cacheKey,
+                        JSON.stringify({ ts: Date.now(), data: consolidatedData })
+                    );
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                if (!hasCache) {
+                    setLoadingError("Failed to load form data. Please refresh the page.");
+                }
+            } finally {
+                if (!hasCache && isMounted) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        const hasCache = loadFromCache();
+        if (hasCache) {
+            setIsLoading(false);
+        }
+        fetchAllData(hasCache);
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     // Fetch champions when business unit changes
