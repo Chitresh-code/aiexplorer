@@ -1,6 +1,9 @@
 # AI Hub - Screen-Based API Architecture
 
-This document defines the "One Screen → One API" architecture for the AI Hub. Following the **Backend Aggregation Pattern**, each frontend screen makes a single primary request to fetch all required data, minimizing network overhead and simplifying frontend logic. The backend aggregates all data from various sources (KPIs, use cases, updates, etc.) and sends it in one JSON response that matches the mock data structures.
+This document defines the "One Screen → One API" architecture for the AI Hub. Following the **Backend Aggregation Pattern**, each frontend screen makes a single primary request to fetch all required data, minimizing network overhead and simplifying frontend logic.
+
+**Data Source Strategy:**
+Currently, the backend architecture is designed to support **hybrid data sources**. While the ultimate goal is a fully relational database (PostgreSQL/SQL Server), the system currently supports (or mimics) data ingestion from CSV files for rapid prototyping and legacy data integration. The API layer abstracts this implementation detail, ensuring the frontend remains agnostic to the underlying data source.
 
 ---
 
@@ -48,8 +51,6 @@ This document defines the "One Screen → One API" architecture for the AI Hub. 
 }
 ```
 
----
-
 ### 2.2 Use Case Details Screen
 **Endpoint:** `GET /api/screens/use-case-details/{id}`  
 **Purpose:** Loads all tab data for a specific use case (Stakeholders, Updates, Checklist, Dates, and Metadata).
@@ -91,8 +92,6 @@ This document defines the "One Screen → One API" architecture for the AI Hub. 
 }
 ```
 
----
-
 ### 2.3 AI Gallery Screen
 **Endpoint:** `GET /api/screens/gallery`  
 **Purpose:** Fetches all use cases configured for display in the public gallery.
@@ -114,8 +113,6 @@ This document defines the "One Screen → One API" architecture for the AI Hub. 
   ]
 }
 ```
-
----
 
 ### 2.4 Champion Dashboard Screen
 **Endpoint:** `GET /api/screens/champion-dashboard`  
@@ -141,9 +138,103 @@ This document defines the "One Screen → One API" architecture for the AI Hub. 
 }
 ```
 
----
+### 2.5 My Use Cases Screen
+**Endpoint:** `GET /api/screens/my-use-cases`  
+**Purpose:** Fetches use cases submitted by or relevant to the current user, along with filter options.
 
-### 2.5 Metadata Reporting Screen
+**Sample Response:**
+```json
+{
+  "use_cases": [
+    { "id": 1, "title": "My Automation Project", "phase": "Idea", "status": "Draft", "updatedAt": "2025-01-10" }
+  ],
+  "filters": {
+    "phases": ["Idea", "Diagnose", "Design", "Implemented"],
+    "business_units": ["IT", "HR"]
+  }
+}
+```
+
+### 2.6 Meaningful Update Screen
+**Endpoint:** `GET /api/screens/meaningful-update/{id}`  
+**Purpose:** Fetches the history of meaningful updates for a specific use case to display in the list/table.
+
+**Sample Response:**
+```json
+{
+  "use_case_title": "Project Alpha",
+  "updates": [
+    { "id": 1, "text": "Completed initial POC.", "submittedBy": "Chitresh Gyanani", "role": "Champion", "submittedOn": "2025-01-15" }
+  ]
+}
+```
+
+### 2.7 Approval Screen
+**Endpoint:** `GET /api/screens/approval/{id}`  
+**Purpose:** Fetches data required for the approval interface, including use case details summary, approval history, and relevant updates.
+
+**Sample Response:**
+```json
+{
+  "details": {
+    "title": "Project Alpha",
+    "submittedBy": "John Doe",
+    "status": "In Review",
+    "businessUnit": "Engineering"
+  },
+  "approval_history": [
+    { "phase": "Idea", "approver": "Jane Smith", "status": "Approved", "date": "2025-01-10" }
+  ],
+  "recent_updates": [
+    { "phase": "Diagnose", "champion": "John Doe", "description": "POC success", "date": "2025-01-14" }
+  ]
+}
+```
+
+### 2.8 Metrics Definition Screen
+**Endpoint:** `GET /api/screens/metrics/{id}`  
+**Purpose:** Fetches the list of defined metrics for a use case (e.g., for the 'Metrics' configuration page).
+
+**Sample Response:**
+```json
+{
+  "metrics": [
+    {
+      "id": 101,
+      "primarySuccessValue": "Reduce manual effort",
+      "parcsCategory": "Productivity",
+      "unitOfMeasurement": "HoursPerWeek",
+      "baselineValue": 40,
+      "baselineDate": "2025-01-01",
+      "targetValue": 10,
+      "targetDate": "2025-06-01"
+    }
+  ]
+}
+```
+
+### 2.9 Metric Reporting Screen
+**Endpoint:** `GET /api/screens/metric-reporting/{id}`  
+**Purpose:** Fetches metrics that require reporting (actuals vs targets) for the reporting interface.
+
+**Sample Response:**
+```json
+{
+  "metrics_to_report": [
+    {
+      "id": 101,
+      "primarySuccessValue": "Reduce manual effort",
+      "baselineValue": 40,
+      "targetValue": 10,
+      "reportedValue": null,
+      "reportedDate": null
+    }
+  ],
+  "history": []
+}
+```
+
+### 2.10 Metadata Reporting Screen
 **Endpoint:** `GET /api/screens/metadata-reporting/{id}`  
 **Purpose:** Loads all internal scoring and prioritization state for a specific use case.
 
@@ -178,8 +269,9 @@ These APIs are used for specific actions and shared data lookups.
 | `/api/usecases` | `POST` | Create a new use case. |
 | `/api/usecases/{id}` | `PUT` | Update general use case fields. |
 | `/api/usecases/{id}` | `DELETE` | Remove a use case. |
-| `/api/metrics` | `POST` | Submit or update reported metrics. |
-| `/api/updates` | `POST` | Post a status update or comment. |
+| `/api/metrics` | `POST` | Save/Update defined metrics for a use case. |
+| `/api/metrics/report` | `POST` | Submit actual reported values for metrics. |
+| `/api/updates` | `POST` | Post a meaningful update. |
 | `/api/decisions` | `POST` | Submit an approval/rejection decision. |
 
 ### 3.2 Global Utilities
@@ -187,7 +279,7 @@ These APIs are used for specific actions and shared data lookups.
 | :--- | :--- | :--- |
 | `/api/dropdown-data` | `GET` | Fetches shared personas, themes, and business units. |
 | `/api/auth/me` | `GET` | Get current user profile and role. |
-| `/health` | `GET` | System health check. |
+| `/health` | `GET` | System health check (Database/Service status). |
 
 ---
 
@@ -197,3 +289,4 @@ These APIs are used for specific actions and shared data lookups.
 2.  **Aggregation:** Backend should use efficient joins or parallel queries to gather screen data into a single response.
 3.  **CamelCase:** Use camelCase for keys in JSON responses to match frontend TypeScript interfaces.
 4.  **Error Handling:** Use standard HTTP status codes (404 for not found, 403 for unauthorized).
+5.  **Data Source Abstraction:** Ensure ease of switching between CSV Repositories and SQL Repositories via Dependency Injection or configuration.

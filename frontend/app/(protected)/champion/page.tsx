@@ -7,13 +7,7 @@ import { LayoutGrid, List, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { PlusCircle } from "lucide-react";
 import { DataTable } from "@/features/champion/components/data-table";
@@ -101,6 +95,35 @@ const ChampionUseCaseScreen = () => {
         { id: 10, title: 'test', idea: '10/22/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'At Risk' },
     ];
 
+    const phaseOptions = [
+        { label: "All Phases", value: "all" },
+        { label: "Idea", value: "Idea" },
+        { label: "Diagnose", value: "Diagnose" },
+        { label: "Design", value: "Design" },
+        { label: "Implemented", value: "Implemented" },
+    ];
+
+    const businessUnitOptions = [
+        { label: "All Units", value: "all" },
+        { label: "Communications", value: "Communications" },
+        { label: "Customer Experience", value: "Customer Experience" },
+        { label: "Engineering Product Innovation Cloud", value: "Engineering Product Innovation Cloud" },
+        { label: "Global Business Operations", value: "Global Business Operations" },
+        { label: "Go-to-Market", value: "Go-to-Market" },
+        { label: "Legal", value: "Legal" },
+        { label: "People", value: "People" },
+    ];
+
+    const finalPersonas = useMemo(() => [
+        { label: "All Personas", value: "all" },
+        ...personas
+    ], [personas]);
+
+    const finalAiThemes = useMemo(() => [
+        { label: "All Themes", value: "all" },
+        ...aiThemes
+    ], [aiThemes]);
+
     // Basic filtering logic (Client-side for this demo)
     const filteredData = useCases.filter(uc => {
         if (searchUseCase && !uc.title.toLowerCase().includes(searchUseCase.toLowerCase())) return false;
@@ -159,66 +182,49 @@ const ChampionUseCaseScreen = () => {
                             />
                         </div>
 
-                        <Select value={searchPhase} onValueChange={setSearchPhase}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Phase</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Phases</SelectItem>
-                                <SelectItem value="Idea">Idea</SelectItem>
-                                <SelectItem value="Diagnose">Diagnose</SelectItem>
-                                <SelectItem value="Design">Design</SelectItem>
-                                <SelectItem value="Implemented">Implemented</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={phaseOptions}
+                            value={searchPhase}
+                            onChange={setSearchPhase}
+                            placeholder="Phase"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={70}
+                            alignOffset={120}
+                        />
 
-                        <Select value={sortOption} onValueChange={setSortOption}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Business Unit</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Units</SelectItem>
-                                <SelectItem value="Communications">Communications</SelectItem>
-                                <SelectItem value="Customer Experience">Customer Experience</SelectItem>
-                                <SelectItem value="Engineering Product Innovation Cloud">Engineering Product Innovation Cloud</SelectItem>
-                                <SelectItem value="Global Business Operations">Global Business Operations</SelectItem>
-                                <SelectItem value="Go-to-Market">Go-to-Market</SelectItem>
-                                <SelectItem value="Legal">Legal</SelectItem>
-                                <SelectItem value="People">People</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={businessUnitOptions}
+                            value={sortOption}
+                            onChange={setSortOption}
+                            placeholder="Business Unit"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={70}
+                            alignOffset={150}
+                        />
 
-                        <Select value={searchTargetPersonas} onValueChange={setSearchTargetPersonas}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Target Personas</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Personas</SelectItem>
-                                {personas.map((persona: any) => (
-                                    <SelectItem key={persona.value} value={persona.value}>
-                                        {persona.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={finalPersonas}
+                            value={searchTargetPersonas}
+                            onChange={setSearchTargetPersonas}
+                            placeholder="Target Personas"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={70}
+                            alignOffset={190}
+                        />
 
-                        <Select value={searchAiThemes} onValueChange={setSearchAiThemes}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">AI Themes</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Themes</SelectItem>
-                                {aiThemes.map((theme: any) => (
-                                    <SelectItem key={theme.value} value={theme.value}>
-                                        {theme.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={finalAiThemes}
+                            value={searchAiThemes}
+                            onChange={setSearchAiThemes}
+                            placeholder="AI Themes"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={70}
+                            alignOffset={580}
+                        />
 
                         {(searchUseCase || searchPhase || (sortOption && sortOption !== 'all') || searchTargetPersonas || searchAiThemes) && (
                             <Button

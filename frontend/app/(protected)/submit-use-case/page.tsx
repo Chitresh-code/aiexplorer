@@ -1242,65 +1242,65 @@ const SubmitUseCase = () => {
                                     {/* Left column: Stakeholders Card - 40% width */}
                                     <div className="lg:col-span-4">
                                         <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[500px]">
-                                        <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                                            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                                <Users className="w-4 h-4 text-teal-600" />
-                                                Stakeholders
-                                            </CardTitle>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 text-teal-600 hover:bg-teal-50"
-                                                onClick={() => setIsDialogOpen(true)}
-                                            >
-                                                <Plus className="w-4 h-4" />
-                                            </Button>
-                                        </CardHeader>
-                                        <CardContent className="pt-2 flex-1">
-                                            <ScrollArea className="h-80">
-                                                <div className="space-y-3 pr-3">
-                                                    {championsData.map((champion, idx) => (
-                                                        <div key={`champion-${idx}`} className="flex items-center justify-between gap-3 group">
-                                                            <div className="flex items-center gap-3">
-                                                                <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
-                                                                    <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
-                                                                        {champion.UKrewer.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                                                    </AvatarFallback>
-                                                                </Avatar>
-                                                                <div>
-                                                                    <p className="text-sm font-semibold text-gray-900 leading-none">{champion.UKrewer}</p>
-                                                                    <p className="text-xs text-gray-500 mt-1">Champion</p>
+                                            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                                                    <Users className="w-4 h-4 text-teal-600" />
+                                                    Stakeholders
+                                                </CardTitle>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-teal-600 hover:bg-teal-50"
+                                                    onClick={() => setIsDialogOpen(true)}
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                </Button>
+                                            </CardHeader>
+                                            <CardContent className="pt-2 flex-1">
+                                                <ScrollArea className="h-[470px]">
+                                                    <div className="space-y-3 pr-3">
+                                                        {championsData.map((champion, idx) => (
+                                                            <div key={`champion-${idx}`} className="flex items-center justify-between gap-3 group">
+                                                                <div className="flex items-center gap-3">
+                                                                    <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
+                                                                        <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
+                                                                            {champion.UKrewer.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div>
+                                                                        <p className="text-sm font-semibold text-gray-900 leading-none">{champion.UKrewer}</p>
+                                                                        <p className="text-xs text-gray-500 mt-1">Champion</p>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
-                                                    {addedStakeholders.map((stakeholder, idx) => (
-                                                        <div key={`added-${idx}`} className="flex items-center justify-between gap-3 group">
-                                                            <div className="flex items-center gap-3">
-                                                                <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
-                                                                    <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
-                                                                        {stakeholder.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                                                    </AvatarFallback>
-                                                                </Avatar>
-                                                                <div>
-                                                                    <p className="text-sm font-semibold text-gray-900 leading-none">{stakeholder.name}</p>
-                                                                    <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
+                                                        ))}
+                                                        {addedStakeholders.map((stakeholder, idx) => (
+                                                            <div key={`added-${idx}`} className="flex items-center justify-between gap-3 group">
+                                                                <div className="flex items-center gap-3">
+                                                                    <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
+                                                                        <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
+                                                                            {stakeholder.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    <div>
+                                                                        <p className="text-sm font-semibold text-gray-900 leading-none">{stakeholder.name}</p>
+                                                                        <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
+                                                                    </div>
                                                                 </div>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-6 w-6 mr-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
+                                                                    onClick={() => handleEditStakeholder(idx)}
+                                                                >
+                                                                    <Edit className="w-3 h-3" />
+                                                                </Button>
                                                             </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6 mr-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
-                                                                onClick={() => handleEditStakeholder(idx)}
-                                                            >
-                                                                <Edit className="w-3 h-3" />
-                                                            </Button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </ScrollArea>
-                                        </CardContent>
-                                    </Card>
+                                                        ))}
+                                                    </div>
+                                                </ScrollArea>
+                                            </CardContent>
+                                        </Card>
                                     </div>
 
                                     {/* Second column: Timeline Card - 60% width */}
@@ -1438,26 +1438,26 @@ const SubmitUseCase = () => {
 
             <div className="w-full max-w-7xl mx-auto px-4">
                 <div className="flex justify-end gap-2">
-                <Button variant="ghost" onClick={handleBack}>Back</Button>
-                <Button variant="outline" onClick={() => navigate('/')}>Cancel</Button>
-                <Button
-                    onClick={handleNext}
-                    disabled={
-                        (currentStep === 1 && !isStep1Valid) ||
-                        (currentStep === 3 && !isStep2Valid) ||
-                        isSubmitting
-                    }
-                >
-                    {isSubmitting ? (
-                        <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Submitting...
-                        </>
-                    ) : (
-                        currentStep === 3 ? 'Submit' : 'Next'
-                    )}
-                </Button>
-            </div>
+                    <Button variant="ghost" onClick={handleBack}>Back</Button>
+                    <Button variant="outline" onClick={() => navigate('/')}>Cancel</Button>
+                    <Button
+                        onClick={handleNext}
+                        disabled={
+                            (currentStep === 1 && !isStep1Valid) ||
+                            (currentStep === 3 && !isStep2Valid) ||
+                            isSubmitting
+                        }
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Submitting...
+                            </>
+                        ) : (
+                            currentStep === 3 ? 'Submit' : 'Next'
+                        )}
+                    </Button>
+                </div>
             </div>
 
             {/* Date Selection Dialog */}

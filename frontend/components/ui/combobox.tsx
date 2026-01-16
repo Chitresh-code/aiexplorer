@@ -30,6 +30,8 @@ interface ComboboxProps {
     className?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
+    sideOffset?: number
+    alignOffset?: number
 }
 
 export function Combobox({
@@ -43,6 +45,8 @@ export function Combobox({
     className,
     align = "start",
     icon,
+    sideOffset = 106,
+    alignOffset = 70,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -74,9 +78,9 @@ export function Combobox({
 
                 <PopoverContent
                     side="bottom"
-                    align="start"
-                    alignOffset={70}
-                    sideOffset={106}
+                    align={align}
+                    alignOffset={alignOffset}
+                    sideOffset={sideOffset}
                     className="p-0 border shadow-lg w-[280px]"
                 >
                     <Command>

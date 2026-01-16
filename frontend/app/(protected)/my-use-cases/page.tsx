@@ -6,13 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from '@/lib/router';
 import { Plus, ChevronDown, LayoutGrid, List, Search, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +89,35 @@ const MyUseCases = () => {
         });
     }, [dropdownData]);
 
+    const phaseOptions = [
+        { label: "All Phases", value: "all" },
+        { label: "Idea", value: "Idea" },
+        { label: "Diagnose", value: "Diagnose" },
+        { label: "Design", value: "Design" },
+        { label: "Implemented", value: "Implemented" },
+    ];
+
+    const businessUnitOptions = [
+        { label: "All Units", value: "all" },
+        { label: "Communications", value: "Communications" },
+        { label: "Customer Experience", value: "Customer Experience" },
+        { label: "Engineering Product Innovation Cloud", value: "Engineering Product Innovation Cloud" },
+        { label: "Global Business Operations", value: "Global Business Operations" },
+        { label: "Go-to-Market", value: "Go-to-Market" },
+        { label: "Legal", value: "Legal" },
+        { label: "People", value: "People" },
+    ];
+
+    const finalPersonas = useMemo(() => [
+        { label: "All Personas", value: "all" },
+        ...personas.map((p: any) => ({ label: p.label, value: p.value }))
+    ], [personas]);
+
+    const finalAiThemes = useMemo(() => [
+        { label: "All Themes", value: "all" },
+        ...aiThemes.map((t: any) => ({ label: t.label, value: t.value }))
+    ], [aiThemes]);
+
     const displayUseCases = useMemo(() => {
         if (!backendUseCases) return [];
         if (backendUseCases.length === 0) return [];
@@ -169,66 +192,49 @@ const MyUseCases = () => {
                             />
                         </div>
 
-                        <Select value={searchPhase} onValueChange={setSearchPhase}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Phase</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Phases</SelectItem>
-                                <SelectItem value="Idea">Idea</SelectItem>
-                                <SelectItem value="Diagnose">Diagnose</SelectItem>
-                                <SelectItem value="Design">Design</SelectItem>
-                                <SelectItem value="Implemented">Implemented</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={phaseOptions}
+                            value={searchPhase}
+                            onChange={setSearchPhase}
+                            placeholder="Phase"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={30}
+                            alignOffset={120}
+                        />
 
-                        <Select value={searchBusinessUnit} onValueChange={setSearchBusinessUnit}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Business Unit</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Units</SelectItem>
-                                <SelectItem value="Communications">Communications</SelectItem>
-                                <SelectItem value="Customer Experience">Customer Experience</SelectItem>
-                                <SelectItem value="Engineering Product Innovation Cloud">Engineering Product Innovation Cloud</SelectItem>
-                                <SelectItem value="Global Business Operations">Global Business Operations</SelectItem>
-                                <SelectItem value="Go-to-Market">Go-to-Market</SelectItem>
-                                <SelectItem value="Legal">Legal</SelectItem>
-                                <SelectItem value="People">People</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={businessUnitOptions}
+                            value={searchBusinessUnit}
+                            onChange={setSearchBusinessUnit}
+                            placeholder="Business Unit"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={30}
+                            alignOffset={150}
+                        />
 
-                        <Select value={searchTargetPersonas} onValueChange={setSearchTargetPersonas}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">Target Personas</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Personas</SelectItem>
-                                {personas.map((persona: any) => (
-                                    <SelectItem key={persona.value} value={persona.value}>
-                                        {persona.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={finalPersonas}
+                            value={searchTargetPersonas}
+                            onChange={setSearchTargetPersonas}
+                            placeholder="Target Personas"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={30}
+                            alignOffset={190}
+                        />
 
-                        <Select value={searchAiThemes} onValueChange={setSearchAiThemes}>
-                            <SelectTrigger className="h-8 w-fit gap-2 border-dashed bg-white px-3">
-                                <PlusCircle className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">AI Themes</span>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Themes</SelectItem>
-                                {aiThemes.map((theme: any) => (
-                                    <SelectItem key={theme.value} value={theme.value}>
-                                        {theme.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                        <Combobox
+                            options={finalAiThemes}
+                            value={searchAiThemes}
+                            onChange={setSearchAiThemes}
+                            placeholder="AI Themes"
+                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                            sideOffset={30}
+                            alignOffset={580}
+                        />
 
                         {(searchUseCase || searchPhase || searchBusinessUnit || searchTargetPersonas || searchAiThemes) && (
                             <Button
