@@ -156,51 +156,47 @@ const AIGallery = () => {
         <SectionCards />
       </div>
 
-      <Card className="shadow-sm">
-        <CardContent className="py-4">
-          <div className="flex justify-center">
-            <div className="w-full max-w-3xl">
-              {/* Search Bar Container */}
-              <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
-                {/* Search Input */}
-                <div className="relative">
-                  <Input
-                    placeholder={
-                      activeTab === "similar"
-                        ? "Describe your use case to find similar ones..."
-                        : "Search use cases..."
-                    }
-                    value={filters.useCase}
-                    onChange={(e) => setFilters({ ...filters, useCase: e.target.value })}
-                    className="h-16 text-sm border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </div>
+      <div className="flex justify-center py-4">
+        <div className="w-full max-w-3xl">
+          {/* Search Bar Container */}
+          <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
+            {/* Search Input */}
+            <div className="relative">
+              <Input
+                placeholder={
+                  activeTab === "similar"
+                    ? "Describe your use case to find similar ones..."
+                    : "Search use cases..."
+                }
+                value={filters.useCase}
+                onChange={(e) => setFilters({ ...filters, useCase: e.target.value })}
+                className="h-16 text-sm border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+            </div>
 
-                {/* Tab Buttons Inside at Bottom */}
-                <div className="flex items-center gap-2 px-3 pb-2 pt-1 bg-white">
-                  <Button
-                    size="sm"
-                    variant={activeTab === "similar" ? "secondary" : "ghost"}
-                    onClick={() => setActiveTab("similar")}
-                    className="h-8 text-xs px-3"
-                  >
-                    <PlusCircle className="h-3 w-3 mr-1" />
-                    Find Similar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={activeTab === "search" ? "secondary" : "ghost"}
-                    onClick={() => setActiveTab("search")}
-                    className="h-7 text-xs px-3"
-                  >
-                    Search
-                  </Button>
-                </div>
-              </div>
+            {/* Tab Buttons Inside at Bottom */}
+            <div className="flex items-center gap-2 px-3 pb-2 pt-1 bg-white">
+              <Button
+                size="sm"
+                variant={activeTab === "similar" ? "secondary" : "ghost"}
+                onClick={() => setActiveTab("similar")}
+                className="h-8 text-xs px-3"
+              >
+                <PlusCircle className="h-3 w-3 mr-1" />
+                Find Similar
+              </Button>
+              <Button
+                size="sm"
+                variant={activeTab === "search" ? "secondary" : "ghost"}
+                onClick={() => setActiveTab("search")}
+                className="h-7 text-xs px-3"
+              >
+                Search
+              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Card className="shadow-sm">
         <CardContent className="py-4">
