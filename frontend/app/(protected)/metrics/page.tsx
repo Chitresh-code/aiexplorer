@@ -40,7 +40,6 @@ import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { SectionCards } from "@/features/dashboard/components/SectionCards";
 
 // MetricDatePicker component for calendar date selection with dialog
 const MetricDatePicker = ({
@@ -460,11 +459,6 @@ const Metrics = () => {
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-            {/* KPI Dashboard Section */}
-            <div className="w-full">
-                <SectionCards />
-            </div>
-
             {/* Use Case Selector and Actions Card */}
             <Card className="shadow-sm">
                 <CardContent className="pt-6">

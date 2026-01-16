@@ -63,7 +63,7 @@ export function SubTeamCombobox({
                 side="bottom"
                 align="center"
                 alignOffset={70}
-                sideOffset={135}
+                sideOffset={145}
                 avoidCollisions={false}
                 className="p-0 border shadow-lg w-[280px]"
                 container={container}

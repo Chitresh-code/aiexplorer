@@ -57,6 +57,7 @@ import { TeamCombobox } from "./team-combobox"
 import { SubTeamCombobox } from "./sub-team-combobox"
 import { SubmitUseCaseAIThemeMultiCombobox as AIThemeMultiCombobox } from "./ai-theme-multi-combobox"
 import { SubmitUseCasePersonaMultiCombobox as PersonaMultiCombobox } from "./persona-multi-combobox"
+import { SubmitUseCaseMultiCombobox as MultiCombobox } from "./multi-combobox"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -147,7 +148,7 @@ const formSchema = z.object({
     selectedAITheme: z.array(z.string()).min(1, "AI Theme is required"),
     selectedPersona: z.array(z.string()).min(1, "Target Persona is required"),
     selectedVendor: z.string().min(1, "Vendor Name is required"),
-    selectedModel: z.string().min(1, "Model Name is required"),
+    selectedModel: z.string().optional(),
     selectedBusinessUnit: z.string().min(1, "Business Unit is required"),
     selectedTeam: z.string().min(1, "Team Name is required"),
     primaryContact: z.string().optional(),
@@ -274,18 +275,7 @@ const SubmitUseCase = () => {
     const selectedModel = form.watch("selectedModel");
 
     const showChecklistTab = useMemo(() => {
-        if (!selectedVendor || !selectedModel) return false;
-
-        const isGoogle = selectedVendor.toLowerCase() === 'google';
-        const isOpenAI = selectedVendor === 'Open AI' || selectedVendor === 'OpenAI';
-
-        if (isGoogle && (selectedModel === 'Agent Space' || selectedModel === 'Custom Vertex AI Agent')) {
-            return true;
-        }
-        if (isOpenAI && selectedModel === 'Custom ChatGPT Agent') {
-            return true;
-        }
-        return false;
+        return Boolean(selectedVendor && selectedModel);
     }, [selectedVendor, selectedModel]);
 
     // Stakeholder form values
@@ -499,6 +489,17 @@ const SubmitUseCase = () => {
         const buNames = getBusinessUnitsFromData(businessStructureData);
         return buNames.map(name => ({ value: name, label: name }));
     }, [businessStructureData]);
+
+    useEffect(() => {
+        if (!selectedVendor) {
+            form.setValue("selectedModel", "", { shouldDirty: true, shouldValidate: true });
+            return;
+        }
+        const hasSelected = models.some(model => model.value === selectedModel);
+        if (!hasSelected) {
+            form.setValue("selectedModel", "", { shouldDirty: true, shouldValidate: true });
+        }
+    }, [form, models, selectedModel, selectedVendor]);
 
     const teams = useMemo(() => {
         if (!selectedBusinessUnit || !businessStructureData) return [];
@@ -914,12 +915,12 @@ const SubmitUseCase = () => {
                                                         <Field>
                                                             <FieldLabel>Model Name</FieldLabel>
                                                             <FieldContent>
-                                                                <ModelCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={models}
-                                                                    disabled={!selectedVendor}
-                                                                    placeholder="No Product Identified"
+                                                                    <ModelCombobox
+                                                                        value={field.value}
+                                                                        onChange={field.onChange}
+                                                                        options={models}
+                                                                    disabled={!selectedVendor || models.length === 0}
+                                                                    placeholder="No Model Identified"
                                                                     searchPlaceholder="Search models..."
                                                                 />
                                                                 <FieldError errors={[fieldState.error]} />
@@ -1022,7 +1023,7 @@ const SubmitUseCase = () => {
                                                                             <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
                                                                         </Button>
                                                                     </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent className="w-full p-0">
+                                                                    <DropdownMenuContent className="w-full p-0" sideOffset={144}>
                                                                         <DropdownMenuItem onSelect={() => field.onChange("No")}>No</DropdownMenuItem>
                                                                         <DropdownMenuItem onSelect={() => field.onChange("Yes")}>Yes</DropdownMenuItem>
                                                                     </DropdownMenuContent>
@@ -1286,7 +1287,7 @@ const SubmitUseCase = () => {
                                 <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
                                     {/* Left column: Stakeholders Card - 40% width */}
                                     <div className="lg:col-span-4">
-                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[500px]">
+                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[560px]">
                                             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
                                                 <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
                                                     <Users className="w-4 h-4 text-teal-600" />
@@ -1350,7 +1351,7 @@ const SubmitUseCase = () => {
 
                                     {/* Second column: Timeline Card - 60% width */}
                                     <div className="lg:col-span-6">
-                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[500px]">
+                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[560px]">
                                             <CardHeader className="pb-3">
                                                 <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
                                                     <CalendarIcon className="w-4 h-4 text-teal-600" />

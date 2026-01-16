@@ -63,7 +63,7 @@ export function BusinessUnitCombobox({
                 side="bottom"
                 align="center"
                 alignOffset={70}
-                sideOffset={115}
+                sideOffset={125}
                 avoidCollisions={false}
                 className="p-0 border shadow-lg w-[280px]"
                 container={container}

@@ -233,7 +233,7 @@ const MyUseCases = () => {
                             className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
                             icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
                             sideOffset={30}
-                            alignOffset={580}
+                            alignOffset={250}
                         />
 
                         {(searchUseCase || searchPhase || searchBusinessUnit || searchTargetPersonas || searchAiThemes) && (

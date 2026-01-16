@@ -935,7 +935,7 @@ const UseCaseDetails = () => {
                                 value="status"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
                             >
-                                Actions
+                                {state?.sourceScreen === 'champion' ? 'Approvals' : 'Actions'}
                             </TabsTrigger>
                         </TabsList>
 
@@ -944,14 +944,14 @@ const UseCaseDetails = () => {
                                 <Button
                                     variant="outline"
                                     onClick={() => setIsEditing(!isEditing)}
-                                    className="border-teal-600 text-teal-600 hover:bg-teal-50 rounded-full px-4 py-1.5 h-auto text-sm font-medium"
+                                    className="border-teal-600 text-teal-600 hover:bg-teal-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
                                 >
                                     {isEditing ? 'Save' : 'Edit'}
                                 </Button>
                             )}
                             {activeTab !== 'metrics' && (
                                 <Button
-                                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-full px-4 py-1.5 h-auto text-sm font-medium"
+                                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
                                     onClick={handleApplyChanges}
                                 >
                                     Apply Changes

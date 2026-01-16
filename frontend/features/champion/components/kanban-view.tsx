@@ -90,8 +90,8 @@ const KanbanView = ({ data: initialData, navigate, sourceScreen = 'champion' }: 
                                                         phase === 'Design' ? "bg-amber-400" :
                                                             "bg-emerald-400"
                                             )} />
-                                            <h2 className="font-semibold text-xs text-gray-500 tracking-wider uppercase truncate">{phase}</h2>
-                                            <span className="text-[10px] font-bold text-gray-400 bg-white border border-gray-100 w-4 h-4 flex items-center justify-center rounded-full flex-shrink-0">
+                                            <h2 className="font-semibold text-sm text-gray-500 tracking-wider uppercase truncate">{phase}</h2>
+                                            <span className="text-[12px] font-bold text-gray-400 bg-white border border-gray-100 w-4 h-4 flex items-center justify-center rounded-full flex-shrink-0">
                                                 {groupedData[phase]?.length || 0}
                                             </span>
                                         </div>
@@ -109,7 +109,7 @@ const KanbanView = ({ data: initialData, navigate, sourceScreen = 'champion' }: 
                                 <div
                                     key={uc.id}
                                     className={cn(
-                                        "bg-white border border-gray-200/60 rounded-lg py-4 px-2 shadow-none transition-all duration-150 cursor-pointer group border-l-2 min-h-[80px] flex flex-col justify-between",
+                                        "bg-white border border-gray-200/60 rounded-lg py-5 px-3 shadow-none transition-all duration-150 cursor-pointer group border-l-2 min-h-[96px] flex flex-col justify-between",
                                         phase === 'Idea' ? "hover:border-blue-300" :
                                             phase === 'Diagnose' ? "hover:border-purple-300" :
                                                 phase === 'Design' ? "hover:border-amber-300" :

@@ -98,7 +98,7 @@ export function SubmitUseCaseAIThemeMultiCombobox({
                 <PopoverContent
                     side="bottom"
                     align="center"
-                    alignOffset={70}
+                    alignOffset={20}
                     sideOffset={55}
                     className="p-0 border shadow-lg w-[280px]"
                     container={container}

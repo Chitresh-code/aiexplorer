@@ -63,7 +63,7 @@ export function VendorCombobox({
                 side="bottom"
                 align="center"
                 alignOffset={70}
-                sideOffset={65}
+                sideOffset={75}
                 avoidCollisions={false}
                 className="p-0 border shadow-lg w-[280px]"
                 container={container}
