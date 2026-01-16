@@ -3,7 +3,7 @@
 import { UseCaseDetailsMultiCombobox as MultiCombobox } from "../multi-combobox"
 
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,13 @@ import {
 } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ConfidenceCombobox } from "./components/reprioritize/ConfidenceCombobox";
+import { DeliveryCombobox } from "./components/reprioritize/DeliveryCombobox";
+import { EffortCombobox } from "./components/reprioritize/EffortCombobox";
+import { ImpactCombobox } from "./components/reprioritize/ImpactCombobox";
+import { PriorityCombobox } from "./components/reprioritize/PriorityCombobox";
+import { ReportingFrequencyCombobox } from "./components/reprioritize/ReportingFrequencyCombobox";
+import { UserBaseCombobox } from "./components/reprioritize/UserBaseCombobox";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -1405,230 +1412,147 @@ const UseCaseDetails = () => {
                     </div>
                 </TabsContent>
                 <TabsContent value="reprioritize" className="space-y-3">
-                    <div className="w-[95%] mx-auto space-y-6">
-                        {/* Impact Metrics Section */}
-                        <div className="space-y-4">
-                            <div className="space-y-1">
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                    Impact Metrics
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Measure the potential reach and impact of this use case
-                                </p>
-                            </div>
-                            <Separator />
+                    <div className="flex justify-center w-full">
+                        <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
+                            <Card className="shadow-sm">
+                                <CardHeader className="border-b">
+                                    <CardTitle>Impact Metrics</CardTitle>
+                                    <CardDescription>Measure the potential reach and impact of this use case</CardDescription>
+                                </CardHeader>
+                                <CardContent className="pt-6 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label>Reach</Label>
+                                            <Input
+                                                type="text"
+                                                value={formData.reach}
+                                                onChange={(e) => handleFormDataChange('reach', e.target.value)}
+                                            />
+                                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Reach */}
-                                <div className="space-y-2">
-                                    <Label>Reach</Label>
-                                    <Input
-                                        type="text"
-                                        value={formData.reach}
-                                        onChange={(e) => handleFormDataChange('reach', e.target.value)}
-                                    />
-                                </div>
+                                        <div className="space-y-2">
+                                            <Label>Impact</Label>
+                                            <ImpactCombobox
+                                                value={formData.impact}
+                                                onChange={(value) => handleFormDataChange('impact', value)}
+                                            />
+                                        </div>
 
-                                {/* Impact */}
-                                <div className="space-y-2">
-                                    <Label>Impact</Label>
-                                    <Select value={formData.impact} onValueChange={(value) => handleFormDataChange('impact', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select impact level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                            <SelectItem value="Very High">Very High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                        <div className="space-y-2">
+                                            <Label>Confidence</Label>
+                                            <ConfidenceCombobox
+                                                value={formData.confidence}
+                                                onChange={(value) => handleFormDataChange('confidence', value)}
+                                            />
+                                        </div>
 
-                                {/* Confidence */}
-                                <div className="space-y-2">
-                                    <Label>Confidence</Label>
-                                    <Select value={formData.confidence} onValueChange={(value) => handleFormDataChange('confidence', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select confidence level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Effort */}
-                                <div className="space-y-2">
-                                    <Label>Effort</Label>
-                                    <Select value={formData.effort} onValueChange={(value) => handleFormDataChange('effort', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select effort level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Low">Low</SelectItem>
-                                            <SelectItem value="Medium">Medium</SelectItem>
-                                            <SelectItem value="High">High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Priority & Scoring Section */}
-                        <div className="space-y-4 pt-6">
-                            <div className="space-y-1">
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                    Priority & Scoring
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Define prioritization and scoring metrics
-                                </p>
-                            </div>
-                            <Separator />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* RICE Score */}
-                                <div className="space-y-2">
-                                    <Label>RICE Score</Label>
-                                    <Input
-                                        type="text"
-                                        value={formData.riceScore}
-                                        onChange={(e) => handleFormDataChange('riceScore', e.target.value)}
-                                    />
-                                </div>
-
-                                {/* Priority */}
-                                <div className="space-y-2">
-                                    <Label>Priority</Label>
-                                    <Select value={formData.priority} onValueChange={(value) => handleFormDataChange('priority', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select priority level" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="1">1</SelectItem>
-                                            <SelectItem value="2">2</SelectItem>
-                                            <SelectItem value="3">3</SelectItem>
-                                            <SelectItem value="4">4</SelectItem>
-                                            <SelectItem value="5">5</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Delivery */}
-                                <div className="space-y-2">
-                                    <Label>Delivery</Label>
-                                    <Select value={formData.delivery} onValueChange={(value) => handleFormDataChange('delivery', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select delivery quarter" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="FY25Q01">FY25Q01</SelectItem>
-                                            <SelectItem value="FY25Q02">FY25Q02</SelectItem>
-                                            <SelectItem value="FY25Q03">FY25Q03</SelectItem>
-                                            <SelectItem value="FY25Q04">FY25Q04</SelectItem>
-                                            <SelectItem value="FY26Q01">FY26Q01</SelectItem>
-                                            <SelectItem value="FY26Q02">FY26Q02</SelectItem>
-                                            <SelectItem value="FY26Q03">FY26Q03</SelectItem>
-                                            <SelectItem value="FY26Q04">FY26Q04</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Total User Base */}
-                                <div className="space-y-2">
-                                    <Label>Total User Base</Label>
-                                    <Select value={formData.totalUserBase} onValueChange={(value) => handleFormDataChange('totalUserBase', value)}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select user base range" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="0-100">0-100</SelectItem>
-                                            <SelectItem value="100-500">100-500</SelectItem>
-                                            <SelectItem value="500-1000">500-1000</SelectItem>
-                                            <SelectItem value="1000-5000">1000-5000</SelectItem>
-                                            <SelectItem value="5000+">5000+</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Reporting Configuration Section */}
-                        <div className="space-y-4 pt-6">
-                            <div className="space-y-1">
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                    Reporting Configuration
-                                </h3>
-                                <p className="text-sm text-gray-500">
-                                    Configure how this use case is reported
-                                </p>
-                            </div>
-                            <Separator />
-
-                            {/* Display in AI Gallery */}
-                            <div className="flex items-center justify-between py-4">
-                                <div className="space-y-0.5">
-                                    <div className="text-sm font-medium text-gray-900">
-                                        Display in AI Gallery
+                                        <div className="space-y-2">
+                                            <Label>Effort</Label>
+                                            <EffortCombobox
+                                                value={formData.effort}
+                                                onChange={(value) => handleFormDataChange('effort', value)}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-gray-500">
-                                        Show this use case publicly in the gallery
-                                    </div>
-                                </div>
-                                <Switch
-                                    checked={formData.displayInGallery}
-                                    onCheckedChange={() => handleToggle('displayInGallery')}
-                                />
-                            </div>
-                            <Separator />
+                                </CardContent>
+                            </Card>
 
-                            {/* SLT Reporting */}
-                            <div className="flex items-center justify-between py-4">
-                                <div className="space-y-0.5">
-                                    <div className="text-sm font-medium text-gray-900">
-                                        SLT Reporting
-                                    </div>
-                                    <div className="text-sm text-gray-500">
-                                        Include in senior leadership reports
-                                    </div>
-                                </div>
-                                <Switch
-                                    checked={formData.sltReporting}
-                                    onCheckedChange={() => handleToggle('sltReporting')}
-                                />
-                            </div>
-                            <Separator />
+                            <Card className="shadow-sm">
+                                <CardHeader className="border-b">
+                                    <CardTitle>Priority & Scoring</CardTitle>
+                                    <CardDescription>Define prioritization and scoring metrics</CardDescription>
+                                </CardHeader>
+                                <CardContent className="pt-6 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <Label>RICE Score</Label>
+                                            <Input
+                                                type="text"
+                                                value={formData.riceScore}
+                                                onChange={(e) => handleFormDataChange('riceScore', e.target.value)}
+                                            />
+                                        </div>
 
-                            {/* Reporting Frequency */}
-                            <div className={cn("flex items-center justify-between py-4 flex-wrap gap-4", !formData.sltReporting && "opacity-50")}>
-                                <div className="space-y-0.5 flex-1 min-w-[200px]">
-                                    <div className={cn("text-sm font-medium", formData.sltReporting ? "text-gray-900" : "text-gray-400")}>
-                                        Reporting Frequency
+                                        <div className="space-y-2">
+                                            <Label>Priority</Label>
+                                            <PriorityCombobox
+                                                value={formData.priority}
+                                                onChange={(value) => handleFormDataChange('priority', value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Delivery</Label>
+                                            <DeliveryCombobox
+                                                value={formData.delivery}
+                                                onChange={(value) => handleFormDataChange('delivery', value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label>Total User Base</Label>
+                                            <UserBaseCombobox
+                                                value={formData.totalUserBase}
+                                                onChange={(value) => handleFormDataChange('totalUserBase', value)}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className={cn("text-sm", formData.sltReporting ? "text-gray-500" : "text-gray-400")}>
-                                        How often this use case is reported
+                                </CardContent>
+                            </Card>
+
+                            <Card className="shadow-sm">
+                                <CardHeader className="border-b">
+                                    <CardTitle>Reporting Configuration</CardTitle>
+                                    <CardDescription>Configure how this use case is reported</CardDescription>
+                                </CardHeader>
+                                <CardContent className="pt-6 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium text-gray-900">
+                                                Display in AI Gallery
+                                            </div>
+                                            <div className="text-sm text-gray-500">
+                                                Show this use case publicly in the gallery
+                                            </div>
+                                        </div>
+                                        <Switch
+                                            checked={formData.displayInGallery}
+                                            onCheckedChange={() => handleToggle('displayInGallery')}
+                                        />
                                     </div>
-                                </div>
-                                <Select
-                                    value={formData.reportingFrequency}
-                                    onValueChange={(value) => handleFormDataChange('reportingFrequency', value)}
-                                    disabled={!formData.sltReporting}
-                                >
-                                    <SelectTrigger className="w-[250px]">
-                                        <SelectValue placeholder="Select frequency" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Once in two week">Once in two week</SelectItem>
-                                        <SelectItem value="Weekly">Weekly</SelectItem>
-                                        <SelectItem value="Bi-weekly">Bi-weekly</SelectItem>
-                                        <SelectItem value="Monthly">Monthly</SelectItem>
-                                        <SelectItem value="Quarterly">Quarterly</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
+
+                                    <div className="flex items-center justify-between border-t pt-6">
+                                        <div className="space-y-0.5">
+                                            <div className="text-sm font-medium text-gray-900">
+                                                SLT Reporting
+                                            </div>
+                                            <div className="text-sm text-gray-500">
+                                                Include in senior leadership reports
+                                            </div>
+                                        </div>
+                                        <Switch
+                                            checked={formData.sltReporting}
+                                            onCheckedChange={() => handleToggle('sltReporting')}
+                                        />
+                                    </div>
+
+                                    <div className={cn("flex items-center justify-between border-t pt-6 flex-wrap gap-4", !formData.sltReporting && "opacity-50")}>
+                                        <div className="space-y-0.5 flex-1 min-w-[200px]">
+                                            <div className={cn("text-sm font-medium", formData.sltReporting ? "text-gray-900" : "text-gray-400")}>
+                                                Reporting Frequency
+                                            </div>
+                                            <div className={cn("text-sm", formData.sltReporting ? "text-gray-500" : "text-gray-400")}>
+                                                How often this use case is reported
+                                            </div>
+                                        </div>
+                                        <ReportingFrequencyCombobox
+                                            value={formData.reportingFrequency}
+                                            onChange={(value) => handleFormDataChange('reportingFrequency', value)}
+                                            disabled={!formData.sltReporting}
+                                        />
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
                 </TabsContent>

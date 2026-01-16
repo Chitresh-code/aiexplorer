@@ -28,6 +28,7 @@ interface ComboboxProps {
     emptyText?: string
     disabled?: boolean
     className?: string
+    contentClassName?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
     sideOffset?: number
@@ -43,15 +44,16 @@ export function Combobox({
     emptyText = "No option found.",
     disabled = false,
     className,
+    contentClassName,
     align = "start",
     icon,
-    sideOffset = 106,
-    alignOffset = 70,
+    sideOffset = 6,
+    alignOffset = 8,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     return (
-        <div className={cn(className?.includes("w-") ? "w-fit" : "w-full")}>
+        <div className={cn("w-full", className)}>
             <Popover open={open} onOpenChange={setOpen} modal={false}>
                 <PopoverTrigger asChild>
                     <Button
@@ -81,7 +83,12 @@ export function Combobox({
                     align={align}
                     alignOffset={alignOffset}
                     sideOffset={sideOffset}
-                    className="p-0 border shadow-lg w-[280px]"
+                    avoidCollisions={false}
+                    collisionPadding={0}
+                    className={cn(
+                        "p-0 border shadow-lg w-[calc(var(--radix-popper-anchor-width)-16px)] min-w-[200px] max-w-[240px]",
+                        contentClassName
+                    )}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />
