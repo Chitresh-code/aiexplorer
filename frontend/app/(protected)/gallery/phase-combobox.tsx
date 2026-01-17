@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, X } from "lucide-react"
+import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import {
     Command,
     CommandEmpty,
@@ -17,79 +16,52 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    PopoverAnchor,
 } from "@/components/ui/popover"
 
-interface SubmitUseCasePersonaMultiComboboxProps {
-    value?: string[]
-    onChange: (value: string[]) => void
+interface GalleryPhaseComboboxProps {
+    value?: string
+    onChange: (value: string) => void
     options: { label: string; value: string }[]
     placeholder?: string
     searchPlaceholder?: string
     emptyText?: string
     disabled?: boolean
     className?: string
+    contentClassName?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
-    hideBadges?: boolean
+    sideOffset?: number
+    alignOffset?: number
 }
 
-export function SubmitUseCasePersonaMultiCombobox({
-    value = [],
+export function GalleryPhaseCombobox({
+    value,
     onChange,
     options,
-    placeholder = "Select options",
+    placeholder = "Select option",
     searchPlaceholder = "Search...",
     emptyText = "No option found.",
     disabled = false,
     className,
+    contentClassName,
     align = "start",
     icon,
-    hideBadges = false,
-}: SubmitUseCasePersonaMultiComboboxProps) {
+    sideOffset = 100,
+    alignOffset = 65,
+}: GalleryPhaseComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
-    const toggle = (val: string) => {
-        onChange(
-            value.includes(val)
-                ? value.filter((v) => v !== val)
-                : [...value, val]
-        )
-    }
-
     return (
-        <div className={cn("flex flex-col gap-2", className?.includes("w-") ? "w-fit" : "w-full")}>
-            {!hideBadges && value.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                    {value.map((val) => {
-                        const opt = options.find((o) => o.value === val)
-                        return (
-                            <Badge key={val} variant="secondary" className="flex items-center gap-1 pr-1">
-                                {opt?.label}
-                                <button
-                                    type="button"
-                                    className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
-                                    onClick={(event) => {
-                                        event.stopPropagation()
-                                        onChange(value.filter((v) => v !== val))
-                                    }}
-                                    aria-label={`Remove ${opt?.label ?? "selection"}`}
-                                >
-                                    <X className="h-3 w-3" />
-                                </button>
-                            </Badge>
-                        )
-                    })}
-                </div>
-            )}
-
+        <div className={cn("w-full", className)}>
             <Popover open={open} onOpenChange={setOpen} modal={false}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
                         className={cn(
                             "w-full justify-between h-10 px-3",
-                            !value.length && "text-muted-foreground",
+                            !value && "text-muted-foreground",
                             className
                         )}
                         disabled={disabled}
@@ -97,7 +69,9 @@ export function SubmitUseCasePersonaMultiCombobox({
                         <div className="flex items-center gap-2 truncate">
                             {icon}
                             <span className="truncate">
-                                {value.length ? `${value.length} selected` : placeholder}
+                                {value
+                                    ? options.find((option) => option.value === value)?.label
+                                    : placeholder}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -106,10 +80,15 @@ export function SubmitUseCasePersonaMultiCombobox({
 
                 <PopoverContent
                     side="bottom"
-                    align="end"
-                    alignOffset={90}
-                    sideOffset={55}
-                    className="p-0 border shadow-lg w-[280px]"
+                    align={align}
+                    alignOffset={alignOffset}
+                    sideOffset={sideOffset}
+                    avoidCollisions={false}
+                    collisionPadding={0}
+                    className={cn(
+                        "p-0 border shadow-lg w-[calc(var(--radix-popper-anchor-width)-16px)] min-w-[325px] max-w-[240px]",
+                        contentClassName
+                    )}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />
@@ -120,14 +99,15 @@ export function SubmitUseCasePersonaMultiCombobox({
                                     <CommandItem
                                         key={option.value}
                                         value={option.label}
-                                        onSelect={() => toggle(option.value)}
+                                        onSelect={() => {
+                                            onChange(option.value)
+                                            setOpen(false)
+                                        }}
                                     >
                                         <Check
                                             className={cn(
                                                 "mr-2 h-4 w-4",
-                                                value.includes(option.value)
-                                                    ? "opacity-100"
-                                                    : "opacity-0"
+                                                value === option.value ? "opacity-100" : "opacity-0"
                                             )}
                                         />
                                         {option.label}

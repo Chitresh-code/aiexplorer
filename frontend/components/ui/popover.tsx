@@ -19,6 +19,8 @@ const PopoverContent = React.forwardRef<
       side = "bottom",
       sideOffset = 15,
       alignOffset = 20,
+      avoidCollisions = true,
+      collisionPadding = 8,
       container,
       ...props
     },
@@ -31,8 +33,8 @@ const PopoverContent = React.forwardRef<
         align={align}
         sideOffset={sideOffset}
         alignOffset={alignOffset}
-        avoidCollisions={true}
-        collisionPadding={8}
+        avoidCollisions={avoidCollisions}
+        collisionPadding={collisionPadding}
         // @ts-ignore
         container={container}
         className={cn(

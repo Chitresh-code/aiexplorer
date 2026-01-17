@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -66,8 +66,19 @@ export function SubmitUseCaseAIThemeMultiCombobox({
                     {value.map((val) => {
                         const opt = options.find((o) => o.value === val)
                         return (
-                            <Badge key={val} variant="secondary">
+                            <Badge key={val} variant="secondary" className="flex items-center gap-1 pr-1">
                                 {opt?.label}
+                                <button
+                                    type="button"
+                                    className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        onChange(value.filter((v) => v !== val))
+                                    }}
+                                    aria-label={`Remove ${opt?.label ?? "selection"}`}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
                             </Badge>
                         )
                     })}

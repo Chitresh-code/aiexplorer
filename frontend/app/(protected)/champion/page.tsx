@@ -189,8 +189,6 @@ const ChampionUseCaseScreen = () => {
                             placeholder="Phase"
                             className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
                             icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                            sideOffset={70}
-                            alignOffset={120}
                         />
 
                         <Combobox
@@ -200,8 +198,6 @@ const ChampionUseCaseScreen = () => {
                             placeholder="Business Unit"
                             className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
                             icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                            sideOffset={70}
-                            alignOffset={150}
                         />
 
                         <Combobox
@@ -211,8 +207,6 @@ const ChampionUseCaseScreen = () => {
                             placeholder="Target Personas"
                             className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
                             icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                            sideOffset={70}
-                            alignOffset={190}
                         />
 
                         <Combobox
@@ -222,8 +216,6 @@ const ChampionUseCaseScreen = () => {
                             placeholder="AI Themes"
                             className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
                             icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                            sideOffset={70}
-                            alignOffset={580}
                         />
 
                         {(searchUseCase || searchPhase || (sortOption && sortOption !== 'all') || searchTargetPersonas || searchAiThemes) && (

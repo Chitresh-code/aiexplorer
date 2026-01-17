@@ -17,10 +17,9 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    PopoverAnchor,
 } from "@/components/ui/popover"
 
-interface SubmitUseCasePersonaMultiComboboxProps {
+interface GalleryDepartmentComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
@@ -29,12 +28,15 @@ interface SubmitUseCasePersonaMultiComboboxProps {
     emptyText?: string
     disabled?: boolean
     className?: string
+    contentClassName?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
     hideBadges?: boolean
+    sideOffset?: number
+    alignOffset?: number
 }
 
-export function SubmitUseCasePersonaMultiCombobox({
+export function GalleryDepartmentCombobox({
     value = [],
     onChange,
     options,
@@ -43,10 +45,13 @@ export function SubmitUseCasePersonaMultiCombobox({
     emptyText = "No option found.",
     disabled = false,
     className,
+    contentClassName,
     align = "start",
     icon,
     hideBadges = false,
-}: SubmitUseCasePersonaMultiComboboxProps) {
+    sideOffset = 100,
+    alignOffset = 310,
+}: GalleryDepartmentComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {
@@ -87,6 +92,8 @@ export function SubmitUseCasePersonaMultiCombobox({
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
                         className={cn(
                             "w-full justify-between h-10 px-3",
                             !value.length && "text-muted-foreground",
@@ -106,10 +113,15 @@ export function SubmitUseCasePersonaMultiCombobox({
 
                 <PopoverContent
                     side="bottom"
-                    align="end"
-                    alignOffset={90}
-                    sideOffset={55}
-                    className="p-0 border shadow-lg w-[280px]"
+                    align={align}
+                    alignOffset={alignOffset}
+                    sideOffset={sideOffset}
+                    avoidCollisions={false}
+                    collisionPadding={0}
+                    className={cn(
+                        "p-0 border shadow-lg w-[360]",
+                        contentClassName
+                    )}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />
@@ -125,9 +137,7 @@ export function SubmitUseCasePersonaMultiCombobox({
                                         <Check
                                             className={cn(
                                                 "mr-2 h-4 w-4",
-                                                value.includes(option.value)
-                                                    ? "opacity-100"
-                                                    : "opacity-0"
+                                                value.includes(option.value) ? "opacity-100" : "opacity-0"
                                             )}
                                         />
                                         {option.label}

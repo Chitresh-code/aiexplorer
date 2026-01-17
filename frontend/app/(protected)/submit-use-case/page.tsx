@@ -274,9 +274,7 @@ const SubmitUseCase = () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const selectedModel = form.watch("selectedModel");
 
-    const showChecklistTab = useMemo(() => {
-        return Boolean(selectedVendor && selectedModel);
-    }, [selectedVendor, selectedModel]);
+    const showChecklistTab = true;
 
     // Stakeholder form values
     const [selectedRole, setSelectedRole] = useState('');
@@ -1063,7 +1061,7 @@ const SubmitUseCase = () => {
                                             <div>
                                                 <h3 className="text-lg font-semibold">AI Product Checklist</h3>
                                                 <p className="text-sm text-muted-foreground">
-                                                    Please provide accurate responses for your {selectedModel} implementation.
+                                                    Please provide accurate responses for your {selectedModel || "AI product"} implementation.
                                                 </p>
                                             </div>
                                         </div>

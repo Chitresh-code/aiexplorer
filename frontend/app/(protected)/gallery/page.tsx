@@ -9,8 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
-import { Combobox } from "@/components/ui/combobox";
-import { GalleryMultiCombobox as MultiCombobox } from "./multi-combobox";
+import { GalleryPhaseCombobox as PhaseCombobox } from "./phase-combobox";
+import { GalleryVendorCombobox as VendorCombobox } from "./vendor-combobox";
+import { GalleryPersonaMultiCombobox as PersonaMultiCombobox } from "./persona-multi-combobox";
+import { GalleryAIThemeMultiCombobox as AIThemeMultiCombobox } from "./ai-theme-multi-combobox";
+import { GalleryDepartmentCombobox as DepartmentCombobox } from "./department-combobox";
 import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import {
   getDropdownData,
@@ -20,15 +23,6 @@ import {
   getBusinessUnitsFromData
 } from '@/lib/submit-use-case';
 import { fetchUseCases } from '@/lib/api';
-
-interface GalleryFilters {
-  useCase: string;
-  department: string;
-  persona: string[];
-  aiTheme: string[];
-  vendor: string;
-  phase: string;
-}
 
 interface GalleryUseCase {
   id: number;
@@ -44,14 +38,12 @@ interface GalleryUseCase {
 const AIGallery = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("search");
-  const [filters, setFilters] = useState<GalleryFilters>({
-    useCase: '',
-    department: '',
-    persona: [],
-    aiTheme: [],
-    vendor: '',
-    phase: ''
-  });
+  const [searchUseCase, setSearchUseCase] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
+  const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
+  const [selectedAiThemes, setSelectedAiThemes] = useState<string[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<string[]>([]);
+  const [selectedPhase, setSelectedPhase] = useState('');
 
   const [useCases, setUseCases] = useState<GalleryUseCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,7 +105,12 @@ const AIGallery = () => {
 
   const vendorOptions = useMemo(() => {
     const vendors = getAllVendorsFromAllVendorsData(vendorsData);
-    return vendors.map(v => ({ label: v, value: v }));
+    return vendors
+      .filter((vendor) => {
+        const normalized = String(vendor ?? "").trim().toLowerCase();
+        return normalized && normalized !== "no vendor identified";
+      })
+      .map(vendor => ({ label: vendor, value: vendor }));
   }, [vendorsData]);
 
   const phaseOptions = [
@@ -124,27 +121,33 @@ const AIGallery = () => {
   ];
 
   const handleReset = () => {
-    setFilters({
-      useCase: '',
-      department: '',
-      persona: [],
-      aiTheme: [],
-      vendor: '',
-      phase: ''
-    });
+    setSearchUseCase('');
+    setSelectedDepartment([]);
+    setSelectedPersonas([]);
+    setSelectedAiThemes([]);
+    setSelectedVendor([]);
+    setSelectedPhase('');
   };
 
   const handleExplore = (useCase: GalleryUseCase) => {
     navigate(`/gallery/${useCase.id}`, { state: { useCase } });
   };
 
+  const normalizedDepartments = Array.isArray(selectedDepartment)
+    ? selectedDepartment
+    : selectedDepartment
+      ? [selectedDepartment]
+      : [];
+
   const filteredUseCases = useCases.filter(uc => {
-    const matchesUseCase = !filters.useCase || uc.title.toLowerCase().includes(filters.useCase.toLowerCase());
-    const matchesDepartment = !filters.department || uc.department === filters.department;
-    const matchesPersona = filters.persona.length === 0 || filters.persona.some(p => uc.persona.includes(p));
-    const matchesAITheme = filters.aiTheme.length === 0 || filters.aiTheme.some(t => uc.aiTheme.includes(t));
-    const matchesVendor = !filters.vendor || uc.modelName === filters.vendor;
-    const matchesPhase = !filters.phase || uc.phase === filters.phase;
+    const matchesUseCase = !searchUseCase || uc.title.toLowerCase().includes(searchUseCase.toLowerCase());
+    const matchesDepartment = normalizedDepartments.length === 0
+      || normalizedDepartments.some((department) => uc.department?.includes(department));
+    const matchesPersona = selectedPersonas.length === 0 || selectedPersonas.some(p => uc.persona.includes(p));
+    const matchesAITheme = selectedAiThemes.length === 0 || selectedAiThemes.some(t => uc.aiTheme.includes(t));
+    const matchesVendor = selectedVendor.length === 0
+      || selectedVendor.some((vendor) => uc.modelName?.includes(vendor));
+    const matchesPhase = !selectedPhase || uc.phase === selectedPhase;
 
     return matchesUseCase && matchesDepartment && matchesPersona && matchesAITheme && matchesVendor && matchesPhase;
   });
@@ -157,7 +160,7 @@ const AIGallery = () => {
       </div>
 
       <div className="flex justify-center py-4">
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-5xl">
           {/* Search Bar Container */}
           <div className="border border-gray-300 rounded-lg bg-white overflow-hidden">
             {/* Search Input */}
@@ -168,8 +171,8 @@ const AIGallery = () => {
                     ? "Describe your use case to find similar ones..."
                     : "Search use cases..."
                 }
-                value={filters.useCase}
-                onChange={(e) => setFilters({ ...filters, useCase: e.target.value })}
+                value={searchUseCase}
+                onChange={(e) => setSearchUseCase(e.target.value)}
                 className="h-16 text-sm border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
               />
             </div>
@@ -200,64 +203,64 @@ const AIGallery = () => {
 
       <Card className="shadow-sm">
         <CardContent className="py-4">
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <Combobox
+          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
+            <PhaseCombobox
               options={phaseOptions}
-              value={filters.phase}
-              onChange={(val: string) => setFilters({ ...filters, phase: val })}
+              value={selectedPhase}
+              onChange={setSelectedPhase}
               placeholder="Phase"
-              className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+              className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
             />
 
-            <Combobox
+            <VendorCombobox
               options={vendorOptions}
-              value={filters.vendor}
-              onChange={(val: string) => setFilters({ ...filters, vendor: val })}
+              value={selectedVendor}
+              onChange={setSelectedVendor}
               placeholder="Vendor"
-              className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+              className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
             />
 
-            <MultiCombobox
+            <PersonaMultiCombobox
               options={personaOptions}
-              value={filters.persona}
-              onChange={(val: string[]) => setFilters({ ...filters, persona: val })}
+              value={selectedPersonas}
+              onChange={setSelectedPersonas}
               placeholder="Target Personas"
-              className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+              className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-              hideBadges={true}
             />
 
-            <MultiCombobox
+            <AIThemeMultiCombobox
               options={themeOptions}
-              value={filters.aiTheme}
-              onChange={(val: string[]) => setFilters({ ...filters, aiTheme: val })}
+              value={selectedAiThemes}
+              onChange={setSelectedAiThemes}
               placeholder="AI Themes"
-              className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+              className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-              hideBadges={true}
             />
 
-            <Combobox
+            <DepartmentCombobox
               options={departmentOptions}
-              value={filters.department}
-              onChange={(val: string) => setFilters({ ...filters, department: val })}
+              value={normalizedDepartments}
+              onChange={setSelectedDepartment}
               placeholder="Department"
-              className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
+              className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
             />
+          </div>
 
-            {(filters.useCase || filters.department || filters.phase || filters.persona.length > 0 || filters.aiTheme.length > 0 || filters.vendor) && (
+          {(searchUseCase || normalizedDepartments.length > 0 || selectedPhase || selectedPersonas.length > 0 || selectedAiThemes.length > 0 || selectedVendor.length > 0) && (
+            <div className="mt-3 flex justify-end">
               <Button
                 variant="ghost"
                 onClick={handleReset}
-                className="h-8 px-3 text-sm shrink-0"
+                className="h-8 px-3 text-sm"
               >
                 Reset
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -265,12 +268,12 @@ const AIGallery = () => {
       <Card className="shadow-sm">
         <CardContent className="pt-6">
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-4">
               {[...Array(6)].map((_, index) => (
                 <Card key={index} className="border-0 shadow-none h-full" style={{ backgroundColor: '#f5f5f5' }}>
-                  <CardContent className="p-8 flex flex-col h-full gap-6 items-start">
+                  <CardContent className="p-6 flex flex-col h-full gap-4 items-start">
                     <Skeleton className="h-10 w-10 rounded-md" />
-                    <div className="space-y-3 flex-grow w-full">
+                    <div className="space-y-2 flex-grow w-full">
                       <Skeleton className="h-6 w-3/4" />
                       <Skeleton className="h-5 w-1/2" />
                     </div>
@@ -297,19 +300,19 @@ const AIGallery = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-4">
               {filteredUseCases.map((useCase) => (
                 <Card key={useCase.id} className="border-0 shadow-none h-full transition-all hover:scale-[1.02] hover:shadow-md cursor-pointer" style={{ backgroundColor: useCase.bgColor }} onClick={() => handleExplore(useCase)}>
-                  <CardContent className="p-8 flex flex-col h-full gap-6 items-start">
-                    <div className="mb-2">
+                  <CardContent className="p-6 flex flex-col h-full gap-4 items-start">
+                    <div className="mb-1">
                       <Bot size={40} className="text-[#13352C]" strokeWidth={1.5} />
                     </div>
-                    <div className="space-y-3 flex-grow">
+                    <div className="space-y-2 flex-grow">
                       <h3 className="text-xl font-medium text-[#13352C] leading-snug">{useCase.title}</h3>
                       <p className="text-[#13352C] opacity-80 font-medium text-base">• {useCase.phase}</p>
                     </div>
                     <Button
-                      className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-8 rounded-md mt-4"
+                      className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-8 rounded-md mt-2"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleExplore(useCase);
