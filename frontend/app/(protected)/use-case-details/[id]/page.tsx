@@ -26,6 +26,7 @@ import { ConfidenceCombobox } from "./components/reprioritize/ConfidenceCombobox
 import { DeliveryCombobox } from "./components/reprioritize/DeliveryCombobox";
 import { EffortCombobox } from "./components/reprioritize/EffortCombobox";
 import { ImpactCombobox } from "./components/reprioritize/ImpactCombobox";
+import { MetricsSelect } from "./components/MetricsSelect";
 import { PriorityCombobox } from "./components/reprioritize/PriorityCombobox";
 import { ReportingFrequencyCombobox } from "./components/reprioritize/ReportingFrequencyCombobox";
 import { UserBaseCombobox } from "./components/reprioritize/UserBaseCombobox";
@@ -779,22 +780,13 @@ const UseCaseDetails = () => {
             cell: ({ row }) => row.original.isSubmitted ? (
                 <span className="text-sm px-2">{row.original.parcsCategory}</span>
             ) : (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between metric-select h-9 px-2 text-xs">
-                            <span className="truncate">{row.original.parcsCategory || "Select"}</span>
-                            <ChevronDown className="ml-1 h-3 w-3 opacity-50 flex-shrink-0" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[140px]" align="start">
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', '')}>Select</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Productivity')}>Productivity</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Adoption')}>Adoption</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Risk Mitigation')}>Risk Mitigation</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Cost')}>Cost</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Scale')}>Scale</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <MetricsSelect
+                    value={row.original.parcsCategory}
+                    onSelect={(val) => handleInputChange(row.original.id, 'parcsCategory', val)}
+                    options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
+                    width="w-[140px]"
+                    className="metric-select"
+                />
             ),
             size: 120,
         },
@@ -804,27 +796,24 @@ const UseCaseDetails = () => {
             cell: ({ row }) => row.original.isSubmitted ? (
                 <span className="text-sm px-2">{row.original.unitOfMeasurement}</span>
             ) : (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between metric-select h-9 px-2 text-xs">
-                            <span className="truncate">{row.original.unitOfMeasurement || "Select"}</span>
-                            <ChevronDown className="ml-1 h-3 w-3 opacity-50 flex-shrink-0" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[180px]" align="start">
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', '')}>Select</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerDay')}>HoursPerDay</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerMonth')}>HoursPerMonth</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerYear')}>HoursPerYear</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerCase')}>HoursPerCase</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerTransaction')}>HoursPerTransaction</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'USDPerMonth')}>USDPerMonth</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'USDPerYear')}>USDPerYear</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'USD')}>USD</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'Users')}>Users</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'Audited Risks')}>Audited Risks</DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                <MetricsSelect
+                    value={row.original.unitOfMeasurement}
+                    onSelect={(val) => handleInputChange(row.original.id, 'unitOfMeasurement', val)}
+                    options={[
+                        'HoursPerDay',
+                        'HoursPerMonth',
+                        'HoursPerYear',
+                        'HoursPerCase',
+                        'HoursPerTransaction',
+                        'USDPerMonth',
+                        'USDPerYear',
+                        'USD',
+                        'Users',
+                        'Audited Risks'
+                    ]}
+                    width="w-[180px]"
+                    className="metric-select"
+                />
             ),
             size: 130,
         },
@@ -1599,7 +1588,7 @@ const UseCaseDetails = () => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                                                <div className="space-y-3">
+                                <div className="space-y-3">
                                     <Label className="text-xs font-semibold text-gray-500 uppercase">Knowledge Source</Label>
                                     <Select value={knowledgeForce} onValueChange={setKnowledgeForce}>
                                         <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-teal-500/20 focus:border-teal-500 transition-all">
