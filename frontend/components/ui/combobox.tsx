@@ -29,6 +29,7 @@ interface ComboboxProps {
     disabled?: boolean
     className?: string
     contentClassName?: string
+    listClassName?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
     sideOffset?: number
@@ -45,10 +46,11 @@ export function Combobox({
     disabled = false,
     className,
     contentClassName,
-    align = "start",
+    listClassName,
+    align = "end",
     icon,
-    sideOffset = 6,
-    alignOffset = 8,
+    sideOffset = 90,
+    alignOffset = -140,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -86,13 +88,13 @@ export function Combobox({
                     avoidCollisions={false}
                     collisionPadding={0}
                     className={cn(
-                        "p-0 border shadow-lg w-[calc(var(--radix-popper-anchor-width)-16px)] min-w-[200px] max-w-[240px]",
+                        "p-0 border shadow-lg w-[calc(var(--radix-popper-anchor-width)-16px)] min-w-[350px] max-w-[280px]",
                         contentClassName
                     )}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />
-                        <CommandList className="max-h-40 overflow-y-auto">
+                        <CommandList className={cn("max-h-40 overflow-y-auto", listClassName)}>
                             <CommandEmpty>{emptyText}</CommandEmpty>
                             <CommandGroup>
                                 {options.map((option) => (

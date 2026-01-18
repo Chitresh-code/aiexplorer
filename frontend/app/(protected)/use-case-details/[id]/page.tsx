@@ -235,6 +235,7 @@ const UseCaseDetails = () => {
     }, [useCases, id, state]);
 
     const [selectedStatus, setSelectedStatus] = useState(useCase.Status || 'Active');
+    const showChangeStatusCard = false;
     const [startDate, setStartDate] = useState<Date | undefined>(new Date('2024-01-01'));
     const [endDate, setEndDate] = useState<Date | undefined>(new Date('2024-12-31'));
     const [phaseDates, setPhaseDates] = useState({
@@ -1138,43 +1139,45 @@ const UseCaseDetails = () => {
 
                 <TabsContent value="update" className="space-y-6">
                     <div className="w-[95%] mx-auto">
-                        <div className="grid grid-cols-1 lg:grid-cols-[40%_1fr] gap-6 items-start mx-auto">
+                        <div className="grid grid-cols-1 lg:grid-cols-[40%_1fr] gap-6 items-start lg:items-stretch mx-auto">
                             {/* Left Column: Change Status, Timeline, Stakeholders */}
-                            <div className="space-y-6">
+                            <div className="space-y-6 lg:self-stretch lg:flex lg:flex-col lg:gap-6 lg:space-y-0">
                                 {/* Change Status Card */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 flex flex-col min-h-[176px]">
-                                    <CardHeader className="pb-3">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                                            Change Status
-                                            <Badge variant="secondary" className="bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200">
-                                                {useCase.Phase}
-                                            </Badge>
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="flex-1 flex flex-col justify-center">
-                                        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                            <span className="font-medium text-gray-900">{selectedStatus}</span>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-teal-600 hover:text-teal-700 hover:bg-teal-50">
-                                                        <ChevronDown className="h-3 w-3" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="w-48">
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('On-Track')}>On-Track</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('At Risk')}>At Risk</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('Completed')}>Completed</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('Help Needed')}>Help Needed</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('No Updates')}>No Updates</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('Not Started')}>Not Started</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('Parked')}>Parked</DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setSelectedStatus('Rejected')}>Rejected</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                                {showChangeStatusCard && (
+                                    <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 flex flex-col min-h-[176px]">
+                                        <CardHeader className="pb-3">
+                                            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                                                <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                                                Change Status
+                                                <Badge variant="secondary" className="bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200">
+                                                    {useCase.Phase}
+                                                </Badge>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="flex-1 flex flex-col justify-center">
+                                            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                                <span className="font-medium text-gray-900">{selectedStatus}</span>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-teal-600 hover:text-teal-700 hover:bg-teal-50">
+                                                            <ChevronDown className="h-3 w-3" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end" className="w-48">
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('On-Track')}>On-Track</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('At Risk')}>At Risk</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Completed')}>Completed</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Help Needed')}>Help Needed</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('No Updates')}>No Updates</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Not Started')}>Not Started</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Parked')}>Parked</DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Rejected')}>Rejected</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
 
                                 {/* Timeline Card */}
                                 <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
@@ -1326,7 +1329,7 @@ const UseCaseDetails = () => {
                             </div>
 
                             {/* Right Column: Post Update, Recent Updates */}
-                            <div className="space-y-6">
+                            <div className="space-y-6 lg:self-stretch lg:flex lg:flex-col lg:gap-6 lg:space-y-0">
                                 {/* Post Update Card */}
                                 <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
                                     <CardHeader className="pb-2">
@@ -1357,7 +1360,7 @@ const UseCaseDetails = () => {
                                 </Card>
 
                                 {/* Recent Updates Feed */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 flex flex-col">
+                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 flex flex-col lg:flex-1 lg:min-h-0">
                                     <CardHeader className="pb-3 border-b border-gray-100 flex flex-row items-center justify-between">
                                         <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
                                             <Clock className="w-4 h-4 text-teal-600" />
@@ -1367,8 +1370,8 @@ const UseCaseDetails = () => {
                                             {updates.length} TOTAL
                                         </Badge>
                                     </CardHeader>
-                                    <CardContent className="p-0 flex-1 overflow-hidden">
-                                        <ScrollArea className="h-[41.5rem]">
+                                    <CardContent className="p-0 flex-1 overflow-hidden lg:min-h-0">
+                                        <ScrollArea className="h-48 lg:h-full">
                                             <div className="divide-y divide-gray-100">
                                                 {updates.map((update) => (
                                                     <div key={update.id} className="p-4 hover:bg-gray-50/50 transition-colors">
@@ -1567,13 +1570,13 @@ const UseCaseDetails = () => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="pt-6">
-                                <div className="space-y-3">
+                                                                <div className="space-y-3">
                                     <Label className="text-xs font-semibold text-gray-500 uppercase">Knowledge Source</Label>
                                     <Select value={knowledgeForce} onValueChange={setKnowledgeForce}>
                                         <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-teal-500/20 focus:border-teal-500 transition-all">
                                             <SelectValue placeholder="Select Knowledge Source" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent position="item-aligned" className="w-60 -translate-x-0.5">
                                             <SelectItem value="Sharepoint">Sharepoint</SelectItem>
                                             <SelectItem value="OneDrive">OneDrive</SelectItem>
                                             <SelectItem value="ServiceNow">ServiceNow</SelectItem>

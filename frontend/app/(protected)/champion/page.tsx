@@ -4,18 +4,19 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from '@/lib/router';
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, List, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Combobox } from "@/components/ui/combobox";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle } from "lucide-react";
 import { DataTable } from "@/features/champion/components/data-table";
 import { createColumns, UseCase } from "@/features/champion/components/columns";
 import KanbanView from "@/features/champion/components/kanban-view";
 import { getDropdownData } from '@/lib/submit-use-case';
 import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChampionPhaseCombobox } from "./phase-combobox";
+import { ChampionBusinessUnitCombobox } from "./business-unit-combobox";
+import { ChampionTargetPersonasCombobox } from "./target-personas-combobox";
+import { ChampionAIThemesCombobox } from "./ai-themes-combobox";
 
 const UseCaseSkeleton = () => (
     <div className="space-y-4">
@@ -34,11 +35,11 @@ const UseCaseSkeleton = () => (
 const ChampionUseCaseScreen = () => {
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-    const [sortOption, setSortOption] = useState('');
+    const [sortOption, setSortOption] = useState<string[]>([]);
     const [searchUseCase, setSearchUseCase] = useState('');
     const [searchPhase, setSearchPhase] = useState('');
-    const [searchTargetPersonas, setSearchTargetPersonas] = useState('');
-    const [searchAiThemes, setSearchAiThemes] = useState('');
+    const [searchTargetPersonas, setSearchTargetPersonas] = useState<string[]>([]);
+    const [searchAiThemes, setSearchAiThemes] = useState<string[]>([]);
     const [dropdownData, setDropdownData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -96,7 +97,6 @@ const ChampionUseCaseScreen = () => {
     ];
 
     const phaseOptions = [
-        { label: "All Phases", value: "all" },
         { label: "Idea", value: "Idea" },
         { label: "Diagnose", value: "Diagnose" },
         { label: "Design", value: "Design" },
@@ -152,87 +152,77 @@ const ChampionUseCaseScreen = () => {
             {/* Filters Card */}
             <Card className="shadow-sm">
                 <CardContent className="pt-6">
-                    <div className="flex items-center gap-4 flex-wrap">
-                        <Tabs value={viewMode} onValueChange={(val: any) => setViewMode(val)}>
-                            <TabsList className="bg-gray-100/80 p-1 rounded-lg border border-gray-200 h-10">
-                                <TabsTrigger
-                                    value="table"
-                                    className="h-8 w-8 p-0 rounded-md transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#13352C] text-gray-500"
-                                    title="Table View"
-                                >
-                                    <List className="size-4" />
-                                </TabsTrigger>
-                                <TabsTrigger
-                                    value="kanban"
-                                    className="h-8 w-8 p-0 rounded-md transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#13352C] text-gray-500"
-                                    title="Board View"
-                                >
-                                    <LayoutGrid className="size-4" />
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                    <div className="w-full overflow-x-auto">
+                        <div className="grid min-w-[1120px] grid-cols-[auto_minmax(220px,1fr)_repeat(4,minmax(180px,1fr))_auto] items-center gap-4">
+                            <Tabs value={viewMode} onValueChange={(val: any) => setViewMode(val)}>
+                                <TabsList className="bg-gray-100/80 p-1 rounded-lg border border-gray-200 h-10">
+                                    <TabsTrigger
+                                        value="table"
+                                        className="h-8 w-8 p-0 rounded-md transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#13352C] text-gray-500"
+                                        title="Table View"
+                                    >
+                                        <List className="size-4" />
+                                    </TabsTrigger>
+                                    <TabsTrigger
+                                        value="kanban"
+                                        className="h-8 w-8 p-0 rounded-md transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#13352C] text-gray-500"
+                                        title="Board View"
+                                    >
+                                        <LayoutGrid className="size-4" />
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
 
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Filter use cases..."
-                                value={searchUseCase}
-                                onChange={(e) => setSearchUseCase(e.target.value)}
-                                className="h-8 w-48 pl-9 bg-white text-sm"
+                            <div className="relative min-w-[200px]">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Filter use cases..."
+                                    value={searchUseCase}
+                                    onChange={(e) => setSearchUseCase(e.target.value)}
+                                    className="h-8 w-full pl-9 bg-white text-sm"
+                                />
+                            </div>
+
+                            <ChampionPhaseCombobox
+                                options={phaseOptions}
+                                value={searchPhase}
+                                onChange={setSearchPhase}
                             />
+
+                            <ChampionBusinessUnitCombobox
+                                options={businessUnitOptions}
+                                value={sortOption}
+                                onChange={setSortOption}
+                            />
+
+                            <ChampionTargetPersonasCombobox
+                                options={finalPersonas}
+                                value={searchTargetPersonas}
+                                onChange={setSearchTargetPersonas}
+                            />
+
+                            <ChampionAIThemesCombobox
+                                options={finalAiThemes}
+                                value={searchAiThemes}
+                                onChange={setSearchAiThemes}
+                            />
+
+                            {(searchUseCase || searchPhase || sortOption.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
+                                <Button
+                                    variant="ghost"
+                                    className="h-8 px-3 text-sm justify-self-end"
+                                    onClick={() => {
+                                        setSearchUseCase('');
+                                        setSearchPhase('');
+                                        setSortOption([]);
+                                        setSearchTargetPersonas([]);
+                                        setSearchAiThemes([]);
+                                    }}
+                                >
+                                    Reset
+                                </Button>
+                            )}
                         </div>
-
-                        <Combobox
-                            options={phaseOptions}
-                            value={searchPhase}
-                            onChange={setSearchPhase}
-                            placeholder="Phase"
-                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
-                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                        />
-
-                        <Combobox
-                            options={businessUnitOptions}
-                            value={sortOption}
-                            onChange={setSortOption}
-                            placeholder="Business Unit"
-                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
-                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                        />
-
-                        <Combobox
-                            options={finalPersonas}
-                            value={searchTargetPersonas}
-                            onChange={setSearchTargetPersonas}
-                            placeholder="Target Personas"
-                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
-                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                        />
-
-                        <Combobox
-                            options={finalAiThemes}
-                            value={searchAiThemes}
-                            onChange={setSearchAiThemes}
-                            placeholder="AI Themes"
-                            className="h-8 w-fit gap-2 border-dashed bg-white px-3 shrink-0"
-                            icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
-                        />
-
-                        {(searchUseCase || searchPhase || (sortOption && sortOption !== 'all') || searchTargetPersonas || searchAiThemes) && (
-                            <Button
-                                variant="ghost"
-                                className="h-8 px-3 text-sm"
-                                onClick={() => {
-                                    setSearchUseCase('');
-                                    setSearchPhase('');
-                                    setSortOption('');
-                                    setSearchTargetPersonas('');
-                                    setSearchAiThemes('');
-                                }}
-                            >
-                                Reset
-                            </Button>
-                        )}
                     </div>
                 </CardContent>
             </Card>

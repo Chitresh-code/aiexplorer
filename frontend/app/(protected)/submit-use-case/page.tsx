@@ -169,7 +169,7 @@ const formSchema = z.object({
     hasPII: z.string().optional(),
     informsHighRiskDecisions: z.string().optional(),
     hasHumanInLoop: z.string().optional(),
-    intendedUserLocation: z.string().optional(),
+    intendedUserLocation: z.array(z.string()).optional(),
     hasSupportChannel: z.string().optional(),
     hasDataFlowDiagram: z.string().optional(),
     hasWritePrivileges: z.string().optional(),
@@ -236,7 +236,7 @@ const SubmitUseCase = () => {
             hasPII: "",
             informsHighRiskDecisions: "",
             hasHumanInLoop: "",
-            intendedUserLocation: "",
+            intendedUserLocation: [],
             hasSupportChannel: "",
             hasDataFlowDiagram: "",
             hasWritePrivileges: "",
@@ -1169,8 +1169,8 @@ const SubmitUseCase = () => {
                                                         name="intendedUserLocation"
                                                         render={({ field }) => (
                                                             <div className="max-w-72 ml-4">
-                                                                <Combobox
-                                                                    value={field.value}
+                                                                <MultiCombobox
+                                                                    value={field.value ?? []}
                                                                     onChange={field.onChange}
                                                                     options={[
                                                                         { value: "AMER", label: "AMER" },
@@ -1179,7 +1179,7 @@ const SubmitUseCase = () => {
                                                                         { value: "ANZ", label: "ANZ" },
                                                                         { value: "All Regions", label: "All Regions" },
                                                                     ]}
-                                                                    placeholder="Select location"
+                                                                    placeholder="Select locations"
                                                                     align="end"
                                                                     containerRef={formContainerRef}
                                                                 />
@@ -1239,6 +1239,7 @@ const SubmitUseCase = () => {
                                                                     ]}
                                                                     placeholder="Select classification level"
                                                                     align="end"
+                                                                    contentClassName="translate-x-4"
                                                                     containerRef={formContainerRef}
                                                                 />
                                                             </div>

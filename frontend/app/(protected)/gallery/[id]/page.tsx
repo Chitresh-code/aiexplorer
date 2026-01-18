@@ -91,7 +91,7 @@ const AIGalleryDetail = () => {
     if (!useCase) return null;
 
     return (
-        <div className="main-content h-screen overflow-hidden">
+        <div className="main-content min-h-[calc(100vh-3.5rem)] justify-center overflow-hidden">
             <div className="w-full">
                 <div className="w-[95%] mx-auto">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(80vh-150px)]">

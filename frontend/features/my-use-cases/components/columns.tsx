@@ -97,7 +97,7 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
                     <TooltipTrigger asChild>
                         <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Idea</div>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side="bottom" align="start" sideOffset={-40} alignOffset={160}>
                         <p className="max-w-[200px] text-xs">{phaseTooltips.Idea}</p>
                     </TooltipContent>
                 </Tooltip>
@@ -129,7 +129,7 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
                     <TooltipTrigger asChild>
                         <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Diagnose</div>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side="bottom" align="start" sideOffset={-40} alignOffset={200}>
                         <p className="max-w-[200px] text-xs">{phaseTooltips.Diagnose}</p>
                     </TooltipContent>
                 </Tooltip>
@@ -159,7 +159,7 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
                     <TooltipTrigger asChild>
                         <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Design</div>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side="bottom" align="start" sideOffset={-40} alignOffset={450}>
                         <p className="max-w-[200px] text-xs">{phaseTooltips.Design}</p>
                     </TooltipContent>
                 </Tooltip>
@@ -189,8 +189,8 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
                     <TooltipTrigger asChild>
                         <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Implemented</div>
                     </TooltipTrigger>
-                    <TooltipContent>
-                        <p className="max-w-[200px] text-xs">{phaseTooltips.Implemented}</p>
+                    <TooltipContent side="bottom" align="start" sideOffset={-30} alignOffset={3450}>
+                        <p className="max-w-[210px] text-xs">{phaseTooltips.Implemented}</p>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>

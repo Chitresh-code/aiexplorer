@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown, X } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,42 +17,22 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    PopoverAnchor,
 } from "@/components/ui/popover"
 
-interface SubmitUseCaseMultiComboboxProps {
+interface MyUseCasesBusinessUnitComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
-    placeholder?: string
-    searchPlaceholder?: string
-    emptyText?: string
-    disabled?: boolean
     className?: string
-    align?: "start" | "center" | "end"
-    icon?: React.ReactNode
-    hideBadges?: boolean
-    container?: Element | null
-    containerRef?: React.RefObject<Element | null>
 }
 
-export function SubmitUseCaseMultiCombobox({
+export function MyUseCasesBusinessUnitCombobox({
     value = [],
     onChange,
     options,
-    placeholder = "Select options",
-    searchPlaceholder = "Search...",
-    emptyText = "No option found.",
-    disabled = false,
     className,
-    align = "center",
-    icon,
-    hideBadges = false,
-    container,
-    containerRef,
-}: SubmitUseCaseMultiComboboxProps) {
+}: MyUseCasesBusinessUnitComboboxProps) {
     const [open, setOpen] = React.useState(false)
-    const popoverContainer = container ?? containerRef?.current ?? undefined
 
     const toggle = (val: string) => {
         onChange(
@@ -67,8 +47,8 @@ export function SubmitUseCaseMultiCombobox({
     }
 
     return (
-        <div className={cn("flex flex-col gap-2", className?.includes("w-") ? "w-fit" : "w-full")}>
-            {!hideBadges && value.length > 0 && (
+        <div className={cn("flex flex-col gap-2 w-full", className)}>
+            {value.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                     {value.map((val) => {
                         const opt = options.find((o) => o.value === val)
@@ -98,16 +78,14 @@ export function SubmitUseCaseMultiCombobox({
                     <Button
                         variant="outline"
                         className={cn(
-                            "w-full justify-between h-10 px-3",
-                            !value.length && "text-muted-foreground",
-                            className
+                            "w-full justify-between h-8 px-3 border-dashed bg-white",
+                            !value.length && "text-muted-foreground"
                         )}
-                        disabled={disabled}
                     >
                         <div className="flex items-center gap-2 truncate">
-                            {icon}
+                            <PlusCircle className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">
-                                {value.length ? `${value.length} selected` : placeholder}
+                                {value.length ? `${value.length} selected` : "Business Unit"}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -117,15 +95,16 @@ export function SubmitUseCaseMultiCombobox({
                 <PopoverContent
                     side="bottom"
                     align="start"
-                    alignOffset={100}
-                    sideOffset={90}
-                    className="p-0 border shadow-lg w-[350px]"
-                    container={popoverContainer}
+                    alignOffset={200}
+                    sideOffset={30}
+                    className={cn(
+                        "p-0 border shadow-lg w-[280px] w-[220px] min-w-[330px] max-w-[220px]"
+                    )}
                 >
                     <Command>
-                        <CommandInput placeholder={searchPlaceholder} />
+                        <CommandInput placeholder="Search..." />
                         <CommandList className="max-h-40 overflow-y-auto">
-                            <CommandEmpty>{emptyText}</CommandEmpty>
+                            <CommandEmpty>No option found.</CommandEmpty>
                             <CommandGroup>
                                 {options.map((option) => (
                                     <CommandItem
