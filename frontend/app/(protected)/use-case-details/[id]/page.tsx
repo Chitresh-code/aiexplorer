@@ -246,7 +246,6 @@ const UseCaseDetails = () => {
     });
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('info');
-    const [showReportedMetrics, setShowReportedMetrics] = useState(false);
     const [selectedMetricIdForReporting, setSelectedMetricIdForReporting] = useState<string>("");
     const [stakeholderName, setStakeholderName] = useState('');
     const [stakeholderRole, setStakeholderRole] = useState('');
@@ -622,6 +621,36 @@ const UseCaseDetails = () => {
         }
     }, [id]);
 
+    const reportableMetrics = useMemo(() => {
+        const submitted = reportedMetrics.filter((metric) => metric.isSubmitted);
+        return submitted.length > 0 ? submitted : reportedMetrics;
+    }, [reportedMetrics]);
+
+    const reportedHistoryMetrics = useMemo(
+        () => reportedMetrics.filter((metric) => metric.reportedValue || metric.reportedDate),
+        [reportedMetrics]
+    );
+
+    const selectedMetricForReporting = useMemo(
+        () => reportedMetrics.find((metric) => metric.id.toString() === selectedMetricIdForReporting),
+        [reportedMetrics, selectedMetricIdForReporting]
+    );
+
+    const reportedMetricsForDisplay = useMemo(() => {
+        if (!selectedMetricForReporting) {
+            return reportedHistoryMetrics;
+        }
+        const alreadyListed = reportedHistoryMetrics.some(
+            (metric) => metric.id === selectedMetricForReporting.id
+        );
+        return alreadyListed
+            ? reportedHistoryMetrics
+            : [...reportedHistoryMetrics, selectedMetricForReporting];
+    }, [reportedHistoryMetrics, selectedMetricForReporting]);
+
+    const hasReportedMetrics = reportedHistoryMetrics.length > 0;
+    const shouldShowReportedTable = Boolean(selectedMetricForReporting) || hasReportedMetrics;
+
     const reportedColumns = useMemo<ColumnDef<Metric>[]>(() => [
         {
             accessorKey: 'primarySuccessValue',
@@ -757,7 +786,7 @@ const UseCaseDetails = () => {
                             <ChevronDown className="ml-1 h-3 w-3 opacity-50 flex-shrink-0" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[140px]">
+                    <DropdownMenuContent className="w-[140px]" align="start">
                         <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', '')}>Select</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Productivity')}>Productivity</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'parcsCategory', 'Adoption')}>Adoption</DropdownMenuItem>
@@ -782,7 +811,7 @@ const UseCaseDetails = () => {
                             <ChevronDown className="ml-1 h-3 w-3 opacity-50 flex-shrink-0" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-[140px]">
+                    <DropdownMenuContent className="w-[180px]" align="start">
                         <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', '')}>Select</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerDay')}>HoursPerDay</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleInputChange(row.original.id, 'unitOfMeasurement', 'HoursPerMonth')}>HoursPerMonth</DropdownMenuItem>
@@ -872,7 +901,7 @@ const UseCaseDetails = () => {
     ], [handleRemoveMetric, handleInputChange]);
 
     const reportedTable = useReactTable({
-        data: reportedMetrics,
+        data: reportedMetricsForDisplay,
         columns: reportedColumns,
         getCoreRowModel: getCoreRowModel(),
     });
@@ -1639,44 +1668,42 @@ const UseCaseDetails = () => {
                             </div>
 
                             {metrics.length > 0 ? (
-                                <ScrollArea className="w-full">
-                                    <div className="rounded-md border min-w-[800px]">
-                                        <Table>
-                                            <TableHeader>
-                                                {addMetricsTable.getHeaderGroups().map((headerGroup) => (
-                                                    <TableRow key={headerGroup.id}>
-                                                        {headerGroup.headers.map((header) => (
-                                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                                {header.isPlaceholder
-                                                                    ? null
-                                                                    : flexRender(
-                                                                        header.column.columnDef.header,
-                                                                        header.getContext()
-                                                                    )}
-                                                            </TableHead>
+                                <div className="rounded-md border">
+                                    <Table>
+                                        <TableHeader>
+                                            {addMetricsTable.getHeaderGroups().map((headerGroup) => (
+                                                <TableRow key={headerGroup.id}>
+                                                    {headerGroup.headers.map((header) => (
+                                                        <TableHead key={header.id}>
+                                                            {header.isPlaceholder
+                                                                ? null
+                                                                : flexRender(
+                                                                    header.column.columnDef.header,
+                                                                    header.getContext()
+                                                                )}
+                                                        </TableHead>
+                                                    ))}
+                                                </TableRow>
+                                            ))}
+                                        </TableHeader>
+                                        <TableBody>
+                                            {addMetricsTable.getRowModel().rows?.length ? (
+                                                addMetricsTable.getRowModel().rows.map((row) => (
+                                                    <TableRow
+                                                        key={row.id}
+                                                        data-state={row.getIsSelected() && "selected"}
+                                                    >
+                                                        {row.getVisibleCells().map((cell) => (
+                                                            <TableCell key={cell.id}>
+                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                            </TableCell>
                                                         ))}
                                                     </TableRow>
-                                                ))}
-                                            </TableHeader>
-                                            <TableBody>
-                                                {addMetricsTable.getRowModel().rows?.length ? (
-                                                    addMetricsTable.getRowModel().rows.map((row) => (
-                                                        <TableRow
-                                                            key={row.id}
-                                                            data-state={row.getIsSelected() && "selected"}
-                                                        >
-                                                            {row.getVisibleCells().map((cell) => (
-                                                                <TableCell key={cell.id}>
-                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                </TableCell>
-                                                            ))}
-                                                        </TableRow>
-                                                    ))
-                                                ) : null}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </ScrollArea>
+                                                ))
+                                            ) : null}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             ) : (
                                 <Empty className="border border-dashed border-gray-200 bg-white/70">
                                     <EmptyHeader>
@@ -1721,14 +1748,14 @@ const UseCaseDetails = () => {
                             </div>
 
                             <div className="flex flex-col gap-6">
-                                {showReportedMetrics && selectedMetricIdForReporting ? (
+                                {shouldShowReportedTable ? (
                                     <div className="rounded-md border">
                                         <Table>
                                             <TableHeader>
                                                 {reportedTable.getHeaderGroups().map((headerGroup) => (
                                                     <TableRow key={headerGroup.id}>
                                                         {headerGroup.headers.map((header) => (
-                                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
+                                                            <TableHead key={header.id}>
                                                                 {header.isPlaceholder
                                                                     ? null
                                                                     : flexRender(
@@ -1741,17 +1768,15 @@ const UseCaseDetails = () => {
                                                 ))}
                                             </TableHeader>
                                             <TableBody>
-                                                {reportedTable.getRowModel().rows
-                                                    .filter(row => row.original.id.toString() === selectedMetricIdForReporting)
-                                                    .map((row) => (
-                                                        <TableRow key={row.id}>
-                                                            {row.getVisibleCells().map((cell) => (
-                                                                <TableCell key={cell.id}>
-                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                </TableCell>
-                                                            ))}
-                                                        </TableRow>
-                                                    ))}
+                                                {reportedTable.getRowModel().rows.map((row) => (
+                                                    <TableRow key={row.id}>
+                                                        {row.getVisibleCells().map((cell) => (
+                                                            <TableCell key={cell.id}>
+                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                            </TableCell>
+                                                        ))}
+                                                    </TableRow>
+                                                ))}
                                             </TableBody>
                                         </Table>
                                     </div>
@@ -2188,17 +2213,16 @@ const UseCaseDetails = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
-                        {reportedMetrics.filter(m => m.isSubmitted).length >= 3 ? (
+                        {reportableMetrics.length >= 3 ? (
                             <ScrollArea className="h-64">
                                 <div className="space-y-2 pr-4">
-                                    {reportedMetrics.filter(m => m.isSubmitted).map((metric) => (
+                                    {reportableMetrics.map((metric) => (
                                         <Button
                                             key={metric.id}
-                                            variant={selectedMetricIdForReporting === metric.id.toString() ? "default" : "outline"}
-                                            className="w-full justify-start h-auto p-3 text-left"
+                                            variant="outline"
+                                            className="w-full justify-start h-auto p-3 text-left hover:bg-transparent hover:text-foreground"
                                             onClick={() => {
                                                 setSelectedMetricIdForReporting(metric.id.toString());
-                                                setShowReportedMetrics(true);
                                                 setIsMetricSelectDialogOpen(false);
                                             }}
                                         >
@@ -2214,14 +2238,13 @@ const UseCaseDetails = () => {
                             </ScrollArea>
                         ) : (
                             <div className="space-y-2">
-                                {reportedMetrics.filter(m => m.isSubmitted).map((metric) => (
+                                {reportableMetrics.map((metric) => (
                                     <Button
                                         key={metric.id}
-                                        variant={selectedMetricIdForReporting === metric.id.toString() ? "default" : "outline"}
-                                        className="w-full justify-start h-auto p-3 text-left"
+                                        variant="outline"
+                                        className="w-full justify-start h-auto p-3 text-left hover:bg-transparent hover:text-foreground"
                                         onClick={() => {
                                             setSelectedMetricIdForReporting(metric.id.toString());
-                                            setShowReportedMetrics(true);
                                             setIsMetricSelectDialogOpen(false);
                                         }}
                                     >
