@@ -2,18 +2,20 @@
 // @ts-nocheck
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from '@/lib/router';
-import { Calendar, Check, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from '@/lib/router';
+import { Calendar as CalendarIcon, Check, History, Plus } from 'lucide-react';
 import { useUseCases } from '@/hooks/use-usecases';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Empty,
     EmptyContent,
@@ -23,41 +25,157 @@ import {
     EmptyTitle,
 } from '@/components/ui/empty';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
-const MetricSkeleton = () => (
-    <div className="space-y-6">
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-10 w-64" />
-            </div>
-            <div className="flex items-center gap-2">
-                <Skeleton className="h-10 w-32" />
-                <Skeleton className="h-10 w-32" />
-                <Skeleton className="h-10 w-24" />
-            </div>
-        </div>
-        <div className="rounded-md border p-4 space-y-4">
-            <div className="grid grid-cols-7 gap-4 border-b pb-2">
-                {[...Array(7)].map((_, i) => (
-                    <Skeleton key={i} className="h-4 w-full" />
+const reportMetricColumnSizes = {
+    primarySuccessValue: 160,
+    baselineValue: 160,
+    baselineDate: 160,
+    targetValue: 160,
+    targetDate: 160,
+    reportedValue: 160,
+    reportedDate: 160,
+};
+
+const reportMetricColumns = [
+    { key: 'primarySuccessValue', label: 'Primary Success Value', width: reportMetricColumnSizes.primarySuccessValue },
+    { key: 'baselineValue', label: 'Baseline Value', width: reportMetricColumnSizes.baselineValue },
+    { key: 'baselineDate', label: 'Baseline Date', width: reportMetricColumnSizes.baselineDate },
+    { key: 'targetValue', label: 'Target Value', width: reportMetricColumnSizes.targetValue },
+    { key: 'targetDate', label: 'Target Date', width: reportMetricColumnSizes.targetDate },
+    { key: 'reportedValue', label: 'Reported Value', width: reportMetricColumnSizes.reportedValue },
+    { key: 'reportedDate', label: 'Reported Date', width: reportMetricColumnSizes.reportedDate },
+];
+
+const addMetricColumnSizes = {
+    primarySuccessValue: 160,
+    parcsCategory: 160,
+    unitOfMeasurement: 160,
+    baselineValue: 160,
+    baselineDate: 160,
+    targetValue: 160,
+    targetDate: 160,
+};
+
+const addMetricColumns = [
+    { key: 'primarySuccessValue', label: 'Primary Success Value', width: addMetricColumnSizes.primarySuccessValue },
+    { key: 'parcsCategory', label: 'PARCS Category', width: addMetricColumnSizes.parcsCategory },
+    { key: 'unitOfMeasurement', label: 'Unit of Measurement', width: addMetricColumnSizes.unitOfMeasurement },
+    { key: 'baselineValue', label: 'Baseline Value', width: addMetricColumnSizes.baselineValue },
+    { key: 'baselineDate', label: 'Baseline Date', width: addMetricColumnSizes.baselineDate },
+    { key: 'targetValue', label: 'Target Value', width: addMetricColumnSizes.targetValue },
+    { key: 'targetDate', label: 'Target Date', width: addMetricColumnSizes.targetDate },
+];
+
+const MetricsSelect = ({
+    value,
+    options,
+    onSelect,
+    placeholder = "Select",
+    width = "w-[160px]",
+    className,
+    sideOffset = 50,
+    alignOffset = 200,
+    align = "start",
+}: {
+    value: string;
+    options: string[];
+    onSelect: (value: string) => void;
+    placeholder?: string;
+    width?: string;
+    className?: string;
+    sideOffset?: number;
+    alignOffset?: number;
+    align?: "start" | "center" | "end";
+}) => {
+    const handleValueChange = (newValue: string) => {
+        onSelect(newValue === " " ? "" : newValue);
+    };
+
+    const displayValue = value === "" ? " " : value;
+
+    return (
+        <Select value={displayValue} onValueChange={handleValueChange}>
+            <SelectTrigger className={cn("w-full h-9 px-2 text-xs", className)}>
+                <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset}>
+                <SelectItem value=" " className="text-muted-foreground">
+                    {placeholder}
+                </SelectItem>
+                {options.map((option) => (
+                    <SelectItem key={option} value={option}>
+                        {option}
+                    </SelectItem>
                 ))}
-            </div>
-            {[...Array(3)].map((_, i) => (
-                <div key={i} className="grid grid-cols-7 gap-4">
-                    {[...Array(7)].map((_, j) => (
-                        <Skeleton key={j} className="h-8 w-full" />
-                    ))}
-                </div>
-            ))}
-        </div>
-    </div>
-);
+            </SelectContent>
+        </Select>
+    );
+};
+
+const MetricDatePicker = ({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (date: string) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+
+    const dateValue = useMemo(() => {
+        if (!value) return undefined;
+        const parts = value.split('-');
+        if (parts.length === 3) {
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+        return undefined;
+    }, [value]);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn(
+                        "w-full justify-start text-left font-normal h-9 px-2 text-xs",
+                        !value && "text-muted-foreground"
+                    )}
+                    onClick={() => setOpen(true)}
+                >
+                    <CalendarIcon className="mr-2 h-3 w-3" />
+                    {dateValue ? format(dateValue, "dd-MM-yyyy") : <span>Pick date</span>}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                    mode="single"
+                    selected={dateValue}
+                    onSelect={(date) => {
+                        if (date) {
+                            onChange(format(date, "yyyy-MM-dd"));
+                            setOpen(false);
+                        }
+                    }}
+                    initialFocus
+                />
+            </PopoverContent>
+        </Popover>
+    );
+};
 
 const MetricReporting = () => {
-    const navigate = useNavigate();
     const location = useLocation();
-    const { submittedMetrics, useCaseTitle, useCaseId } = location.state || {};
+    const { submittedMetrics, useCaseTitle } = location.state || {};
     const { useCases: backendUseCases, loading } = useUseCases();
     const useCases = backendUseCases.map(uc => ({
         id: uc.ID,
@@ -68,45 +186,80 @@ const MetricReporting = () => {
     const [isReporting, setIsReporting] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [selectedUseCase, setSelectedUseCase] = useState(useCaseTitle || (useCases.length > 0 ? useCases[0].title : ''));
+    const didInitUseCase = useRef(false);
 
     // Update selectedUseCase if useCaseTitle changes or when useCases load
     useEffect(() => {
         if (useCaseTitle) {
             setSelectedUseCase(useCaseTitle);
-        } else if (!selectedUseCase && useCases.length > 0) {
+            didInitUseCase.current = true;
+        } else if (!didInitUseCase.current && !selectedUseCase && useCases.length > 0) {
             setSelectedUseCase(useCases[0].title);
+            didInitUseCase.current = true;
         }
     }, [useCaseTitle, useCases, selectedUseCase]);
 
     useEffect(() => {
         if (submittedMetrics) {
-            // Initialize metrics with reported fields if not present
             const initializedMetrics = submittedMetrics.map(m => ({
                 ...m,
                 reportedValue: m.reportedValue || '',
-                reportedDate: m.reportedDate || ''
+                reportedDate: m.reportedDate || '',
+                isSubmitted: m.isSubmitted ?? true,
             }));
             setMetrics(initializedMetrics);
         }
     }, [submittedMetrics]);
 
-    const handleCreateMetric = () => {
-        navigate(`/metrics/${useCaseId || ''}`, { state: { useCaseTitle, useCaseId } });
+    const reportableMetrics = metrics.filter(metric => metric.isSubmitted);
+    const pendingMetrics = metrics.filter(metric => !metric.isSubmitted);
+    const isAddMetricsFormValid = pendingMetrics.length > 0 && pendingMetrics.every(metric =>
+        metric.primarySuccessValue &&
+        metric.parcsCategory &&
+        metric.unitOfMeasurement &&
+        metric.baselineValue &&
+        metric.baselineDate &&
+        metric.targetValue &&
+        metric.targetDate
+    );
+
+    const handleAddMetric = () => {
+        const newMetric = {
+            id: Date.now(),
+            primarySuccessValue: '',
+            parcsCategory: '',
+            unitOfMeasurement: '',
+            baselineValue: '',
+            baselineDate: '',
+            targetValue: '',
+            targetDate: '',
+            reportedValue: '',
+            reportedDate: '',
+            isSubmitted: false,
+        };
+        setMetrics(prev => [...prev, newMetric]);
+    };
+
+    const handleSaveMetrics = () => {
+        if (!isAddMetricsFormValid) return;
+        setMetrics(prev => prev.map(metric =>
+            metric.isSubmitted ? metric : { ...metric, isSubmitted: true }
+        ));
     };
 
     const handleReportMetric = () => {
-        if (metrics.length > 0) {
+        if (reportableMetrics.length > 0) {
             setIsReporting(true);
         }
     };
 
     const handleInputChange = (id, field, value) => {
-        setMetrics(metrics.map(metric =>
+        setMetrics(prev => prev.map(metric =>
             metric.id === id ? { ...metric, [field]: value } : metric
         ));
     };
 
-    const isSubmitEnabled = isReporting && metrics.length > 0 && metrics.every(m => m.reportedValue && m.reportedDate);
+    const isSubmitEnabled = isReporting && reportableMetrics.length > 0 && reportableMetrics.every(m => m.reportedValue && m.reportedDate);
 
     const handleSubmit = () => {
         if (isSubmitEnabled) {
@@ -122,169 +275,313 @@ const MetricReporting = () => {
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-            {/* Use Case Selector Card */}
-            <Card className="shadow-sm">
-                <CardContent className="pt-6">
+            <div className="w-[95%] mx-auto space-y-8">
+                <div className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        Use Case
+                    </label>
                     {loading ? (
                         <div className="flex items-center gap-4">
                             <Skeleton className="h-4 w-16" />
-                            <Skeleton className="h-10 w-64" />
-                            <div className="flex items-center gap-2 ml-auto">
-                                <Skeleton className="h-10 w-32" />
-                                <Skeleton className="h-10 w-32" />
-                                <Skeleton className="h-10 w-24" />
-                            </div>
+                            <Skeleton className="h-9 w-64" />
                         </div>
                     ) : (
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                                    Use Case
-                                </label>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="w-64 justify-between">
-                                            <span className="truncate">{selectedUseCase || "Select a use case"}</span>
-                                            <ChevronDown className="ml-2 h-4 w-4 opacity-50 flex-shrink-0" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent className="w-64">
-                                        {useCases.map((useCase) => (
-                                            <DropdownMenuItem
-                                                key={useCase.id}
-                                                onClick={() => setSelectedUseCase(useCase.title)}
-                                            >
-                                                {useCase.title}
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-
-                            <div className="flex items-center gap-2 ml-auto">
-                                <Button variant="outline" onClick={handleCreateMetric}>
-                                    Create Metric
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={handleReportMetric}
-                                    disabled={metrics.length === 0}
-                                >
-                                    Report Metric
-                                </Button>
-                                <Button
-                                    onClick={handleSubmit}
-                                    disabled={!isSubmitEnabled}
-                                >
-                                    Submit
-                                </Button>
-                            </div>
+                        <div className="max-w-md">
+                            <Input
+                                type="search"
+                                placeholder="Search use case"
+                                className="h-9"
+                                value={selectedUseCase}
+                                onChange={(e) => setSelectedUseCase(e.target.value)}
+                                list="use-case-options"
+                            />
+                            <datalist id="use-case-options">
+                                {useCases.map((useCase) => (
+                                    <option key={useCase.id} value={useCase.title} />
+                                ))}
+                            </datalist>
                         </div>
                     )}
-                </CardContent>
-            </Card>
+                </div>
 
-            {/* Metrics Table Card */}
-            <Card className="shadow-sm">
-                <CardContent className="pt-6">
-                    <style dangerouslySetInnerHTML={{
-                        __html: `
-                            .number-input-no-spinner::-webkit-outer-spin-button,
-                            .number-input-no-spinner::-webkit-inner-spin-button {
-                                -webkit-appearance: none;
-                                margin: 0;
-                            }
-                            .number-input-no-spinner[type=number] {
-                                -moz-appearance: textfield;
-                            }
-                        `
-                    }} />
+                <div className="p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+                        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Add Metrics</h3>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleAddMetric}
+                                className="text-teal-600 border-teal-600 hover:bg-teal-50 h-8"
+                            >
+                                <Plus size={14} className="mr-1" />
+                                Add New Metric
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleSaveMetrics}
+                                disabled={!isAddMetricsFormValid}
+                                className="bg-teal-600 hover:bg-teal-700 text-white h-8"
+                            >
+                                Save
+                            </Button>
+                        </div>
+                    </div>
+
+                    {reportableMetrics.length > 0 ? (
+                        <div className="rounded-md border">
+                            <Table className="table-fixed">
+                                <TableHeader>
+                                    <TableRow>
+                                        {addMetricColumns.map((column) => (
+                                            <TableHead key={column.key} style={{ width: column.width }}>
+                                                {column.label}
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {metrics.map((metric) => (
+                                        <TableRow key={metric.id}>
+                                            <TableCell style={{ width: addMetricColumnSizes.primarySuccessValue }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2 text-nowrap">{metric.primarySuccessValue}</span>
+                                                ) : (
+                                                    <Input
+                                                        type="text"
+                                                        value={metric.primarySuccessValue}
+                                                        onChange={(e) => handleInputChange(metric.id, 'primarySuccessValue', e.target.value)}
+                                                        className="h-9"
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell style={{ width: addMetricColumnSizes.parcsCategory }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2">{metric.parcsCategory}</span>
+                                                ) : (
+                                                    <MetricsSelect
+                                                        value={metric.parcsCategory || ""}
+                                                        onSelect={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
+                                                        options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
+                                                        width="w-[160px]"
+                                                        className="metric-select"
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell style={{ width: addMetricColumnSizes.unitOfMeasurement }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2">{metric.unitOfMeasurement}</span>
+                                                ) : (
+                                                    <MetricsSelect
+                                                        value={metric.unitOfMeasurement || ""}
+                                                        onSelect={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
+                                                        options={[
+                                                            'HoursPerDay',
+                                                            'HoursPerMonth',
+                                                            'HoursPerYear',
+                                                            'HoursPerCase',
+                                                            'HoursPerTransaction',
+                                                            'USDPerMonth',
+                                                            'USDPerYear',
+                                                            'USD',
+                                                            'Users',
+                                                            'Audited Risks'
+                                                        ]}
+                                                        width="w-[160px]"
+                                                        className="metric-select"
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell style={{ width: addMetricColumnSizes.baselineValue }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2">{metric.baselineValue}</span>
+                                                ) : (
+                                                    <Input
+                                                        type="number"
+                                                        className="number-input-no-spinner h-9"
+                                                        value={metric.baselineValue}
+                                                        onChange={(e) => handleInputChange(metric.id, 'baselineValue', e.target.value)}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell style={{ width: addMetricColumnSizes.baselineDate }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2 text-nowrap">{metric.baselineDate}</span>
+                                                ) : (
+                                                    <MetricDatePicker
+                                                        value={metric.baselineDate}
+                                                        onChange={(date) => handleInputChange(metric.id, 'baselineDate', date)}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell style={{ width: addMetricColumnSizes.targetValue }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2">{metric.targetValue}</span>
+                                                ) : (
+                                                    <Input
+                                                        type="number"
+                                                        className="number-input-no-spinner h-9"
+                                                        value={metric.targetValue}
+                                                        onChange={(e) => handleInputChange(metric.id, 'targetValue', e.target.value)}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                            <TableCell style={{ width: addMetricColumnSizes.targetDate }}>
+                                                {metric.isSubmitted ? (
+                                                    <span className="text-sm px-2 text-nowrap">{metric.targetDate}</span>
+                                                ) : (
+                                                    <MetricDatePicker
+                                                        value={metric.targetDate}
+                                                        onChange={(date) => handleInputChange(metric.id, 'targetDate', date)}
+                                                    />
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                        <Empty className="border border-dashed border-gray-200 bg-white/70">
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Plus className="size-5 text-gray-600" />
+                                </EmptyMedia>
+                                <EmptyTitle>No metrics added yet</EmptyTitle>
+                                <EmptyDescription>
+                                    Start by adding a new metric to track your progress.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                            <EmptyContent>
+                                <Button onClick={handleAddMetric}>
+                                    Add New Metric
+                                </Button>
+                            </EmptyContent>
+                        </Empty>
+                    )}
+                </div>
+
+                <div className="p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+                        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Reported Metrics</h3>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleReportMetric}
+                                disabled={reportableMetrics.length === 0}
+                                className="text-teal-600 border-teal-600 hover:bg-teal-50 h-8"
+                            >
+                                Report Metric
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={handleSubmit}
+                                disabled={!isSubmitEnabled}
+                                className="bg-teal-600 hover:bg-teal-700 text-white h-8"
+                            >
+                                Submit
+                            </Button>
+                        </div>
+                    </div>
+
+                    <style
+                        dangerouslySetInnerHTML={{
+                            __html: `
+                                .number-input-no-spinner::-webkit-outer-spin-button,
+                                .number-input-no-spinner::-webkit-inner-spin-button {
+                                    -webkit-appearance: none;
+                                    margin: 0;
+                                }
+                                .number-input-no-spinner[type=number] {
+                                    -moz-appearance: textfield;
+                                }
+                            `,
+                        }}
+                    />
 
                     {metrics.length > 0 ? (
-                        <div className="rounded-md border overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-muted/50">
-                                    <tr>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Primary Success Value</th>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Baseline Value</th>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Baseline Date</th>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Target Value</th>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Target Date</th>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Reported Value</th>
-                                        <th className="text-left p-4 text-sm font-medium text-muted-foreground uppercase tracking-wide">Reported Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {metrics.map((metric) => (
-                                        <tr key={metric.id} className="border-t">
-                                            <td className="p-4">{metric.primarySuccessValue}</td>
-                                            <td className="p-4">{metric.baselineValue}</td>
-                                            <td className="p-4">{metric.baselineDate}</td>
-                                            <td className="p-4">{metric.targetValue}</td>
-                                            <td className="p-4">{metric.targetDate}</td>
-                                            <td className="p-4">
+                        <div className="rounded-md border">
+                            <Table className="table-fixed">
+                                <TableHeader>
+                                    <TableRow>
+                                        {reportMetricColumns.map((column) => (
+                                            <TableHead key={column.key} style={{ width: column.width }}>
+                                                {column.label}
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {reportableMetrics.map((metric) => (
+                                        <TableRow key={metric.id}>
+                                            <TableCell style={{ width: reportMetricColumnSizes.primarySuccessValue }}>
+                                                {metric.primarySuccessValue}
+                                            </TableCell>
+                                            <TableCell style={{ width: reportMetricColumnSizes.baselineValue }}>
+                                                {metric.baselineValue}
+                                            </TableCell>
+                                            <TableCell style={{ width: reportMetricColumnSizes.baselineDate }}>
+                                                {metric.baselineDate}
+                                            </TableCell>
+                                            <TableCell style={{ width: reportMetricColumnSizes.targetValue }}>
+                                                {metric.targetValue}
+                                            </TableCell>
+                                            <TableCell style={{ width: reportMetricColumnSizes.targetDate }}>
+                                                {metric.targetDate}
+                                            </TableCell>
+                                            <TableCell style={{ width: reportMetricColumnSizes.reportedValue }}>
                                                 {isReporting ? (
-                                                    <input
+                                                    <Input
                                                         type="number"
-                                                        className="w-full px-3 py-2 border rounded-md number-input-no-spinner"
+                                                        className="number-input-no-spinner h-9"
                                                         value={metric.reportedValue}
                                                         onChange={(e) => handleInputChange(metric.id, 'reportedValue', e.target.value)}
                                                     />
                                                 ) : (
                                                     metric.reportedValue || '-'
                                                 )}
-                                            </td>
-                                            <td className="p-4">
+                                            </TableCell>
+                                            <TableCell style={{ width: reportMetricColumnSizes.reportedDate }}>
                                                 {isReporting ? (
-                                                    <input
+                                                    <Input
                                                         type="date"
-                                                        className="w-full px-3 py-2 border rounded-md"
+                                                        className="h-9"
                                                         value={metric.reportedDate}
                                                         onChange={(e) => handleInputChange(metric.id, 'reportedDate', e.target.value)}
                                                     />
                                                 ) : (
                                                     <div className="flex items-center gap-2">
                                                         <span>{metric.reportedDate || '-'}</span>
-                                                        {metric.reportedDate && <Calendar size={16} className="text-muted-foreground" />}
+                                                        {metric.reportedDate && <CalendarIcon size={16} className="text-muted-foreground" />}
                                                     </div>
                                                 )}
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
-                                </tbody>
-                            </table>
+                                </TableBody>
+                            </Table>
                         </div>
                     ) : (
                         <Empty className="border border-dashed border-gray-200 bg-white/70">
                             <EmptyHeader>
                                 <EmptyMedia variant="icon">
-                                    <Calendar className="size-5 text-gray-600" />
+                                    <History className="size-5 text-gray-600" />
                                 </EmptyMedia>
                                 <EmptyTitle>No metrics to report</EmptyTitle>
                                 <EmptyDescription>
-                                    Create a metric for this use case before submitting values.
+                                    Add and save a metric above, then click "Report Metric" to start.
                                 </EmptyDescription>
                             </EmptyHeader>
-                            <EmptyContent>
-                                <Button onClick={handleCreateMetric}>
-                                    Create Metric
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => navigate('/')}
-                                >
-                                    Back to Home
-                                </Button>
-                            </EmptyContent>
                         </Empty>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </div>
 
             {showSuccessModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                     <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
-                        <button className="absolute top-4 right-4" onClick={() => setShowSuccessModal(false)}>×</button>
+                        <button className="absolute top-4 right-4" onClick={() => setShowSuccessModal(false)}>A-</button>
                         <div className="flex items-center justify-center mb-4">
                             <Check size={48} className="text-green-600" />
                         </div>
@@ -302,3 +599,4 @@ const MetricReporting = () => {
 };
 
 export default MetricReporting;
+

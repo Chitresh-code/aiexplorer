@@ -36,7 +36,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Empty, EmptyMedia, EmptyTitle, EmptyDescription, EmptyHeader, EmptyContent } from '@/components/ui/empty';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Bot, X, Check, ChevronsUpDown } from "lucide-react";
+import { Bot, Check, ChevronsUpDown } from "lucide-react";
 import { useNavigate, useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import {
@@ -153,6 +153,18 @@ interface Metric {
     reportedDate?: string;
     isSubmitted?: boolean;
 }
+
+const metricColumnSizes = {
+    primarySuccessValue: 160,
+    parcsCategory: 160,
+    unitOfMeasurement: 160,
+    baselineValue: 160,
+    baselineDate: 160,
+    targetValue: 160,
+    targetDate: 160,
+    reportedValue: 160,
+    reportedDate: 160,
+};
 
 const MetricDatePicker = ({
     value,
@@ -550,10 +562,6 @@ const UseCaseDetails = () => {
         setMetrics(prev => [...prev, newMetric]);
     }, []);
 
-    const handleRemoveMetric = useCallback((id: number) => {
-        setMetrics(prev => prev.filter(metric => metric.id !== id));
-    }, []);
-
     const handleInputChange = useCallback((id: number, field: string, value: string) => {
         // Update local input values for immediate feedback
         const inputKey = `${id}-${field}`;
@@ -657,31 +665,31 @@ const UseCaseDetails = () => {
             accessorKey: 'primarySuccessValue',
             header: 'Primary Success Value',
             cell: ({ row }) => <span>{row.original.primarySuccessValue}</span>,
-            size: 140,
+            size: metricColumnSizes.primarySuccessValue,
         },
         {
             accessorKey: 'baselineValue',
             header: 'Baseline Value',
             cell: ({ row }) => <span>{row.original.baselineValue}</span>,
-            size: 100,
+            size: metricColumnSizes.baselineValue,
         },
         {
             accessorKey: 'baselineDate',
             header: 'Baseline Date',
             cell: ({ row }) => <span>{row.original.baselineDate}</span>,
-            size: 130,
+            size: metricColumnSizes.baselineDate,
         },
         {
             accessorKey: 'targetValue',
             header: 'Target Value',
             cell: ({ row }) => <span>{row.original.targetValue}</span>,
-            size: 100,
+            size: metricColumnSizes.targetValue,
         },
         {
             accessorKey: 'targetDate',
             header: 'Target Date',
             cell: ({ row }) => <span>{row.original.targetDate}</span>,
-            size: 130,
+            size: metricColumnSizes.targetDate,
         },
         {
             accessorKey: 'reportedValue',
@@ -694,7 +702,7 @@ const UseCaseDetails = () => {
                     onChange={(e) => handleReportedInputChange(row.original.id, 'reportedValue', e.target.value)}
                 />
             ),
-            size: 100,
+            size: metricColumnSizes.reportedValue,
         },
         {
             accessorKey: 'reportedDate',
@@ -740,24 +748,11 @@ const UseCaseDetails = () => {
                     </Popover>
                 );
             },
-            size: 130,
+            size: metricColumnSizes.reportedDate,
         },
     ], []);
 
     const addMetricsColumns = useMemo<ColumnDef<Metric>[]>(() => [
-        {
-            id: 'remove',
-            header: '',
-            cell: ({ row }) => !row.original.isSubmitted && (
-                <button
-                    className="remove-metric-btn hover:bg-red-50 p-1 rounded transition-colors"
-                    onClick={() => handleRemoveMetric(row.original.id)}
-                >
-                    <X size={16} className="text-red-500" />
-                </button>
-            ),
-            size: 40,
-        },
         {
             accessorKey: 'primarySuccessValue',
             header: 'Primary Success Value',
@@ -772,7 +767,7 @@ const UseCaseDetails = () => {
                     />
                 );
             },
-            size: 140,
+            size: metricColumnSizes.primarySuccessValue,
         },
         {
             accessorKey: 'parcsCategory',
@@ -784,11 +779,11 @@ const UseCaseDetails = () => {
                     value={row.original.parcsCategory}
                     onSelect={(val) => handleInputChange(row.original.id, 'parcsCategory', val)}
                     options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
-                    width="w-[140px]"
+                    width="w-[160px]"
                     className="metric-select"
                 />
             ),
-            size: 120,
+            size: metricColumnSizes.parcsCategory,
         },
         {
             accessorKey: 'unitOfMeasurement',
@@ -811,11 +806,11 @@ const UseCaseDetails = () => {
                         'Users',
                         'Audited Risks'
                     ]}
-                    width="w-[180px]"
+                    width="w-[160px]"
                     className="metric-select"
                 />
             ),
-            size: 130,
+            size: metricColumnSizes.unitOfMeasurement,
         },
         {
             accessorKey: 'baselineValue',
@@ -831,7 +826,7 @@ const UseCaseDetails = () => {
                     />
                 );
             },
-            size: 100,
+            size: metricColumnSizes.baselineValue,
         },
         {
             accessorKey: 'baselineDate',
@@ -850,7 +845,7 @@ const UseCaseDetails = () => {
                     }}
                 />
             ),
-            size: 110,
+            size: metricColumnSizes.baselineDate,
         },
         {
             accessorKey: 'targetValue',
@@ -866,7 +861,7 @@ const UseCaseDetails = () => {
                     />
                 );
             },
-            size: 100,
+            size: metricColumnSizes.targetValue,
         },
         {
             accessorKey: 'targetDate',
@@ -885,9 +880,9 @@ const UseCaseDetails = () => {
                     }}
                 />
             ),
-            size: 110,
+            size: metricColumnSizes.targetDate,
         },
-    ], [handleRemoveMetric, handleInputChange]);
+    ], [handleInputChange]);
 
     const reportedTable = useReactTable({
         data: reportedMetricsForDisplay,
@@ -1658,12 +1653,12 @@ const UseCaseDetails = () => {
 
                             {metrics.length > 0 ? (
                                 <div className="rounded-md border">
-                                    <Table>
+                                    <Table className="table-fixed">
                                         <TableHeader>
                                             {addMetricsTable.getHeaderGroups().map((headerGroup) => (
                                                 <TableRow key={headerGroup.id}>
                                                     {headerGroup.headers.map((header) => (
-                                                        <TableHead key={header.id}>
+                                                        <TableHead key={header.id} style={{ width: header.getSize() }}>
                                                             {header.isPlaceholder
                                                                 ? null
                                                                 : flexRender(
@@ -1683,7 +1678,7 @@ const UseCaseDetails = () => {
                                                         data-state={row.getIsSelected() && "selected"}
                                                     >
                                                         {row.getVisibleCells().map((cell) => (
-                                                            <TableCell key={cell.id}>
+                                                            <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
                                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                             </TableCell>
                                                         ))}
@@ -1739,12 +1734,12 @@ const UseCaseDetails = () => {
                             <div className="flex flex-col gap-6">
                                 {shouldShowReportedTable ? (
                                     <div className="rounded-md border">
-                                        <Table>
+                                        <Table className="table-fixed">
                                             <TableHeader>
                                                 {reportedTable.getHeaderGroups().map((headerGroup) => (
                                                     <TableRow key={headerGroup.id}>
                                                         {headerGroup.headers.map((header) => (
-                                                            <TableHead key={header.id}>
+                                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
                                                                 {header.isPlaceholder
                                                                     ? null
                                                                     : flexRender(
@@ -1760,7 +1755,7 @@ const UseCaseDetails = () => {
                                                 {reportedTable.getRowModel().rows.map((row) => (
                                                     <TableRow key={row.id}>
                                                         {row.getVisibleCells().map((cell) => (
-                                                            <TableCell key={cell.id}>
+                                                            <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
                                                                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                             </TableCell>
                                                         ))}
