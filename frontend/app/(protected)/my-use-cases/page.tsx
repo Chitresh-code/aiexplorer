@@ -21,12 +21,12 @@ import { useUseCases } from '@/hooks/use-usecases';
 import { DataTable } from '@/features/my-use-cases/components/data-table';
 import { createColumns } from '@/features/my-use-cases/components/columns';
 import KanbanView from '@/features/champion/components/kanban-view';
-import { getDropdownData } from '@/lib/submit-use-case';
+import { getBusinessStructure, getBusinessUnitsFromData, getSubTeamsForTeam, getTeamsForBusinessUnit } from '@/lib/submit-use-case';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MyUseCasesPhaseCombobox } from "./phase-combobox";
 import { MyUseCasesBusinessUnitCombobox } from "./business-unit-combobox";
-import { MyUseCasesTargetPersonasCombobox } from "./target-personas-combobox";
-import { MyUseCasesAIThemesCombobox } from "./ai-themes-combobox";
+import { MyUseCasesTeamCombobox } from "./team-combobox";
+import { MyUseCasesSubTeamCombobox } from "./sub-team-combobox";
 
 const UseCaseSkeleton = () => (
     <div className="space-y-4">
@@ -49,46 +49,57 @@ const MyUseCases = () => {
     const [searchUseCase, setSearchUseCase] = useState('');
     const [searchPhase, setSearchPhase] = useState<string[]>([]);
     const [searchBusinessUnit, setSearchBusinessUnit] = useState<string[]>([]);
-    const [searchTargetPersonas, setSearchTargetPersonas] = useState<string[]>([]);
-    const [searchAiThemes, setSearchAiThemes] = useState<string[]>([]);
-    const [dropdownData, setDropdownData] = useState<any>(null);
+    const [searchTeams, setSearchTeams] = useState<string[]>([]);
+    const [searchSubTeams, setSearchSubTeams] = useState<string[]>([]);
+    const [businessStructureData, setBusinessStructureData] = useState<any>(null);
 
-    // Fetch dropdown data on mount
+    // Fetch business structure data on mount
     useEffect(() => {
-        const fetchDropdownData = async () => {
+        const fetchBusinessStructure = async () => {
             try {
-                const data = await getDropdownData();
-                setDropdownData(data);
+                const data = await getBusinessStructure();
+                setBusinessStructureData(data);
             } catch (error) {
-                console.error('Error fetching dropdown data:', error);
+                console.error('Error fetching business structure:', error);
             }
         };
-        fetchDropdownData();
+        fetchBusinessStructure();
     }, []);
 
-    // Computed personas options
-    const personas = useMemo(() => {
-        if (!dropdownData?.personas) return [];
-        const seen = new Set();
-        return dropdownData.personas.filter((item: any) => {
-            const label = item.label.trim().toLowerCase();
-            if (seen.has(label)) return false;
-            seen.add(label);
-            return true;
-        });
-    }, [dropdownData]);
+    const businessUnits = useMemo(() => {
+        return getBusinessUnitsFromData(businessStructureData);
+    }, [businessStructureData]);
 
-    // Computed AI themes options
-    const aiThemes = useMemo(() => {
-        if (!dropdownData?.ai_themes) return [];
-        const seen = new Set();
-        return dropdownData.ai_themes.filter((item: any) => {
-            const label = item.label.trim().toLowerCase();
-            if (seen.has(label)) return false;
-            seen.add(label);
-            return true;
+    const selectedBusinessUnits = useMemo(() => {
+        const filteredUnits = searchBusinessUnit.filter((unit) => unit !== "all");
+        return filteredUnits.length ? filteredUnits : businessUnits;
+    }, [searchBusinessUnit, businessUnits]);
+
+    const teams = useMemo(() => {
+        if (!businessStructureData) return [];
+        const teamSet = new Set<string>();
+        selectedBusinessUnits.forEach((unit) => {
+            getTeamsForBusinessUnit(businessStructureData, unit).forEach((team) => teamSet.add(team));
         });
-    }, [dropdownData]);
+        return Array.from(teamSet).sort().map((name) => ({ label: name, value: name }));
+    }, [businessStructureData, selectedBusinessUnits]);
+
+    const subTeams = useMemo(() => {
+        if (!businessStructureData) return [];
+        const selectedTeams = searchTeams.filter((team) => team !== "all");
+        const teamCandidates = selectedTeams.length ? selectedTeams : teams.map((team) => team.value);
+        const subTeamSet = new Set<string>();
+        selectedBusinessUnits.forEach((unit) => {
+            const teamsForUnit = getTeamsForBusinessUnit(businessStructureData, unit);
+            const teamsToUse = teamCandidates.length
+                ? teamCandidates.filter((team) => teamsForUnit.includes(team))
+                : teamsForUnit;
+            teamsToUse.forEach((team) => {
+                getSubTeamsForTeam(businessStructureData, unit, team).forEach((subTeam) => subTeamSet.add(subTeam));
+            });
+        });
+        return Array.from(subTeamSet).sort().map((name) => ({ label: name, value: name }));
+    }, [businessStructureData, selectedBusinessUnits, searchTeams, teams]);
 
     const phaseOptions = [
         { label: "Idea", value: "Idea" },
@@ -108,15 +119,15 @@ const MyUseCases = () => {
         { label: "People", value: "People" },
     ];
 
-    const finalPersonas = useMemo(() => [
-        { label: "All Personas", value: "all" },
-        ...personas.map((p: any) => ({ label: p.label, value: p.value }))
-    ], [personas]);
+    const finalTeams = useMemo(() => [
+        { label: "All Teams", value: "all" },
+        ...teams.map((team) => ({ label: team.label, value: team.value }))
+    ], [teams]);
 
-    const finalAiThemes = useMemo(() => [
-        { label: "All Themes", value: "all" },
-        ...aiThemes.map((t: any) => ({ label: t.label, value: t.value }))
-    ], [aiThemes]);
+    const finalSubTeams = useMemo(() => [
+        { label: "All Sub Teams", value: "all" },
+        ...subTeams.map((subTeam) => ({ label: subTeam.label, value: subTeam.value }))
+    ], [subTeams]);
 
     const displayUseCases = useMemo(() => {
         if (!backendUseCases) return [];
@@ -130,7 +141,9 @@ const MyUseCases = () => {
             implemented: uc.Phase === 'Implemented' ? (uc.Status || 'In Progress') : 'Not Set',
             delivery: 'FY25Q04',
             priority: 1,
-            status: uc.Status || 'In Progress'
+            status: uc.Status || 'In Progress',
+            teamName: uc.TeamName || uc["Team Name"] || '',
+            subTeamName: uc.SubTeamName || uc["Sub Team Name"] || ''
         }));
 
         // Filter Logic
@@ -145,6 +158,16 @@ const MyUseCases = () => {
                             uc.implemented !== 'Not Set' ? 'Implemented' : '';
                 if (!searchPhase.includes(phase)) return false;
             }
+
+            if (searchTeams.length > 0 && !searchTeams.includes('all')) {
+                const teamValue = (uc.teamName || '').toLowerCase();
+                if (!searchTeams.some((team) => team.toLowerCase() === teamValue)) return false;
+            }
+
+            if (searchSubTeams.length > 0 && !searchSubTeams.includes('all')) {
+                const subTeamValue = (uc.subTeamName || '').toLowerCase();
+                if (!searchSubTeams.some((subTeam) => subTeam.toLowerCase() === subTeamValue)) return false;
+            }
             // Business Unit filtering - assuming it would be available in the future, for now mostly UI
             // if (searchBusinessUnit && searchBusinessUnit !== 'all' && uc.businessUnit !== searchBusinessUnit) return false;
 
@@ -153,7 +176,7 @@ const MyUseCases = () => {
 
         return mapped;
 
-    }, [backendUseCases, searchUseCase, searchPhase, searchBusinessUnit]);
+    }, [backendUseCases, searchUseCase, searchPhase, searchBusinessUnit, searchTeams, searchSubTeams]);
 
     const columns = useMemo(() => createColumns(navigate), [navigate]);
 
@@ -205,19 +228,19 @@ const MyUseCases = () => {
                                 onChange={setSearchBusinessUnit}
                             />
 
-                            <MyUseCasesTargetPersonasCombobox
-                                options={finalPersonas}
-                                value={searchTargetPersonas}
-                                onChange={setSearchTargetPersonas}
+                            <MyUseCasesTeamCombobox
+                                options={finalTeams}
+                                value={searchTeams}
+                                onChange={setSearchTeams}
                             />
 
-                            <MyUseCasesAIThemesCombobox
-                                options={finalAiThemes}
-                                value={searchAiThemes}
-                                onChange={setSearchAiThemes}
+                            <MyUseCasesSubTeamCombobox
+                                options={finalSubTeams}
+                                value={searchSubTeams}
+                                onChange={setSearchSubTeams}
                             />
 
-                            {(searchUseCase || searchPhase.length > 0 || searchBusinessUnit.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || searchBusinessUnit.length > 0 || searchTeams.length > 0 || searchSubTeams.length > 0) && (
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-3 text-sm justify-self-end"
@@ -225,8 +248,8 @@ const MyUseCases = () => {
                                         setSearchUseCase('');
                                         setSearchPhase([]);
                                         setSearchBusinessUnit([]);
-                                        setSearchTargetPersonas([]);
-                                        setSearchAiThemes([]);
+                                        setSearchTeams([]);
+                                        setSearchSubTeams([]);
                                     }}
                                 >
                                     Reset

@@ -238,39 +238,54 @@ const ActionCell = ({ useCase, navigate }: { useCase: UseCase; navigate: (path: 
 
 export const createColumns = (navigate: (path: string, options?: any) => void): ColumnDef<UseCase>[] => [
     {
-        accessorKey: "title",
+        id: "select",
         header: ({ table }) => (
-            <div className="flex items-center gap-2">
-                <Checkbox
-                    checked={
-                        table.getIsAllPageRowsSelected() ||
-                        (table.getIsSomePageRowsSelected() && "indeterminate")
-                    }
-                    onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-                    aria-label="Select all"
-                />
-                Use Case
-            </div>
+            <Checkbox
+                checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && "indeterminate")
+                }
+                onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+                aria-label="Select all"
+            />
+        ),
+        cell: ({ row }) => (
+            <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="Select row"
+                onClick={(e) => e.stopPropagation()}
+            />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+    },
+    {
+        accessorKey: "id",
+        header: () => (
+            <div className="whitespace-nowrap font-medium text-gray-900">Use Case ID</div>
+        ),
+        cell: ({ row }) => {
+            const id = row.getValue("id") as number | string;
+            return <div className="whitespace-nowrap text-gray-600">{id}</div>;
+        }
+    },
+    {
+        accessorKey: "title",
+        header: () => (
+            <div className="font-medium text-gray-900">Use Case</div>
         ),
         cell: ({ row }) => {
             const useCase = row.original;
             return (
-                <div className="flex items-center gap-2">
-                    <Checkbox
-                        checked={row.getIsSelected()}
-                        onCheckedChange={(value) => row.toggleSelected(!!value)}
-                        aria-label="Select row"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                    <div
-                        className="font-medium text-gray-900 cursor-pointer hover:underline"
-                        onClick={() => {
-                            setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen: 'champion' });
-                            navigate(`/use-case-details/${useCase.id}`);
-                        }}
-                    >
-                        {useCase.title}
-                    </div>
+                <div
+                    className="font-medium text-gray-900 cursor-pointer hover:underline"
+                    onClick={() => {
+                        setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen: 'champion' });
+                        navigate(`/use-case-details/${useCase.id}`);
+                    }}
+                >
+                    {useCase.title}
                 </div>
             )
         }

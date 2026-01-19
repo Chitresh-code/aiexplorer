@@ -19,19 +19,19 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface MyUseCasesTargetPersonasComboboxProps {
+interface ChampionSubTeamComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
     className?: string
 }
 
-export function MyUseCasesTargetPersonasCombobox({
+export function ChampionSubTeamCombobox({
     value = [],
     onChange,
     options,
     className,
-}: MyUseCasesTargetPersonasComboboxProps) {
+}: ChampionSubTeamComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {
@@ -85,7 +85,7 @@ export function MyUseCasesTargetPersonasCombobox({
                         <div className="flex items-center gap-2 truncate">
                             <PlusCircle className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">
-                                {value.length ? `${value.length} selected` : "Target Personas"}
+                                {value.length ? `${value.length} selected` : "Sub Team Name"}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -95,8 +95,8 @@ export function MyUseCasesTargetPersonasCombobox({
                 <PopoverContent
                     side="bottom"
                     align="start"
-                    alignOffset={255}
-                    sideOffset={30}
+                    alignOffset={312}
+                    sideOffset={70}
                     avoidCollisions={false}
                     collisionPadding={0}
                     className={cn(

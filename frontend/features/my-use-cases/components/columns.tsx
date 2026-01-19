@@ -62,6 +62,16 @@ const getPriorityColor = (priority: number) => {
 
 export const createColumns = (navigate: (path: string, options?: any) => void): ColumnDef<UseCase>[] => [
     {
+        accessorKey: "id",
+        header: () => (
+            <div className="whitespace-nowrap font-bold text-gray-900">Use Case ID</div>
+        ),
+        cell: ({ row }) => {
+            const id = row.getValue("id") as string | number;
+            return <div className="whitespace-nowrap text-gray-600">{id}</div>;
+        }
+    },
+    {
         accessorKey: "title",
         header: ({ column }) => {
             return (

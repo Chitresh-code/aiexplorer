@@ -10,13 +10,13 @@ import { Input } from "@/components/ui/input";
 import { DataTable } from "@/features/champion/components/data-table";
 import { createColumns, UseCase } from "@/features/champion/components/columns";
 import KanbanView from "@/features/champion/components/kanban-view";
-import { getDropdownData } from '@/lib/submit-use-case';
+import { getBusinessStructure, getBusinessUnitsFromData, getSubTeamsForTeam, getTeamsForBusinessUnit } from '@/lib/submit-use-case';
 import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChampionPhaseCombobox } from "./phase-combobox";
 import { ChampionBusinessUnitCombobox } from "./business-unit-combobox";
-import { ChampionTargetPersonasCombobox } from "./target-personas-combobox";
-import { ChampionAIThemesCombobox } from "./ai-themes-combobox";
+import { ChampionTeamCombobox } from "./team-combobox";
+import { ChampionSubTeamCombobox } from "./sub-team-combobox";
 
 const UseCaseSkeleton = () => (
     <div className="space-y-4">
@@ -38,50 +38,61 @@ const ChampionUseCaseScreen = () => {
     const [sortOption, setSortOption] = useState<string[]>([]);
     const [searchUseCase, setSearchUseCase] = useState('');
     const [searchPhase, setSearchPhase] = useState<string[]>([]);
-    const [searchTargetPersonas, setSearchTargetPersonas] = useState<string[]>([]);
-    const [searchAiThemes, setSearchAiThemes] = useState<string[]>([]);
-    const [dropdownData, setDropdownData] = useState<any>(null);
+    const [searchTeams, setSearchTeams] = useState<string[]>([]);
+    const [searchSubTeams, setSearchSubTeams] = useState<string[]>([]);
+    const [businessStructureData, setBusinessStructureData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch dropdown data on mount
+    // Fetch business structure data on mount
     useEffect(() => {
-        const fetchDropdownData = async () => {
+        const fetchBusinessStructure = async () => {
             setIsLoading(true);
             try {
-                const data = await getDropdownData();
-                setDropdownData(data);
+                const data = await getBusinessStructure();
+                setBusinessStructureData(data);
             } catch (error) {
-                console.error('Error fetching dropdown data:', error);
+                console.error('Error fetching business structure:', error);
             } finally {
                 setIsLoading(false);
             }
         };
-        fetchDropdownData();
+        fetchBusinessStructure();
     }, []);
 
-    // Computed personas options
-    const personas = useMemo(() => {
-        if (!dropdownData?.personas) return [];
-        const seen = new Set();
-        return dropdownData.personas.filter((item: any) => {
-            const label = item.label.trim().toLowerCase();
-            if (seen.has(label)) return false;
-            seen.add(label);
-            return true;
-        });
-    }, [dropdownData]);
+    const businessUnits = useMemo(() => {
+        return getBusinessUnitsFromData(businessStructureData);
+    }, [businessStructureData]);
 
-    // Computed AI themes options
-    const aiThemes = useMemo(() => {
-        if (!dropdownData?.ai_themes) return [];
-        const seen = new Set();
-        return dropdownData.ai_themes.filter((item: any) => {
-            const label = item.label.trim().toLowerCase();
-            if (seen.has(label)) return false;
-            seen.add(label);
-            return true;
+    const selectedBusinessUnits = useMemo(() => {
+        const filteredUnits = sortOption.filter((unit) => unit !== "all");
+        return filteredUnits.length ? filteredUnits : businessUnits;
+    }, [sortOption, businessUnits]);
+
+    const teams = useMemo(() => {
+        if (!businessStructureData) return [];
+        const teamSet = new Set<string>();
+        selectedBusinessUnits.forEach((unit) => {
+            getTeamsForBusinessUnit(businessStructureData, unit).forEach((team) => teamSet.add(team));
         });
-    }, [dropdownData]);
+        return Array.from(teamSet).sort().map((name) => ({ label: name, value: name }));
+    }, [businessStructureData, selectedBusinessUnits]);
+
+    const subTeams = useMemo(() => {
+        if (!businessStructureData) return [];
+        const selectedTeams = searchTeams.filter((team) => team !== "all");
+        const teamCandidates = selectedTeams.length ? selectedTeams : teams.map((team) => team.value);
+        const subTeamSet = new Set<string>();
+        selectedBusinessUnits.forEach((unit) => {
+            const teamsForUnit = getTeamsForBusinessUnit(businessStructureData, unit);
+            const teamsToUse = teamCandidates.length
+                ? teamCandidates.filter((team) => teamsForUnit.includes(team))
+                : teamsForUnit;
+            teamsToUse.forEach((team) => {
+                getSubTeamsForTeam(businessStructureData, unit, team).forEach((subTeam) => subTeamSet.add(subTeam));
+            });
+        });
+        return Array.from(subTeamSet).sort().map((name) => ({ label: name, value: name }));
+    }, [businessStructureData, selectedBusinessUnits, searchTeams, teams]);
 
     const useCases: UseCase[] = [
         { id: 1, title: 'AchmanTest', idea: 'completed', diagnose: '11/21/25 - 11/26/25', design: 'Not Set', implemented: 'Not Set', delivery: 'FY25Q04', priority: 1, status: 'On-Track' },
@@ -114,15 +125,15 @@ const ChampionUseCaseScreen = () => {
         { label: "People", value: "People" },
     ];
 
-    const finalPersonas = useMemo(() => [
-        { label: "All Personas", value: "all" },
-        ...personas
-    ], [personas]);
+    const finalTeams = useMemo(() => [
+        { label: "All Teams", value: "all" },
+        ...teams
+    ], [teams]);
 
-    const finalAiThemes = useMemo(() => [
-        { label: "All Themes", value: "all" },
-        ...aiThemes
-    ], [aiThemes]);
+    const finalSubTeams = useMemo(() => [
+        { label: "All Sub Teams", value: "all" },
+        ...subTeams
+    ], [subTeams]);
 
     // Basic filtering logic (Client-side for this demo)
     const filteredData = useCases.filter(uc => {
@@ -195,19 +206,19 @@ const ChampionUseCaseScreen = () => {
                                 onChange={setSortOption}
                             />
 
-                            <ChampionTargetPersonasCombobox
-                                options={finalPersonas}
-                                value={searchTargetPersonas}
-                                onChange={setSearchTargetPersonas}
+                            <ChampionTeamCombobox
+                                options={finalTeams}
+                                value={searchTeams}
+                                onChange={setSearchTeams}
                             />
 
-                            <ChampionAIThemesCombobox
-                                options={finalAiThemes}
-                                value={searchAiThemes}
-                                onChange={setSearchAiThemes}
+                            <ChampionSubTeamCombobox
+                                options={finalSubTeams}
+                                value={searchSubTeams}
+                                onChange={setSearchSubTeams}
                             />
 
-                            {(searchUseCase || searchPhase.length > 0 || sortOption.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || sortOption.length > 0 || searchTeams.length > 0 || searchSubTeams.length > 0) && (
                                 <Button
                                     variant="ghost"
                                     className="h-10 px-3 text-sm justify-self-end"
@@ -215,8 +226,8 @@ const ChampionUseCaseScreen = () => {
                                         setSearchUseCase('');
                                         setSearchPhase([]);
                                         setSortOption([]);
-                                        setSearchTargetPersonas([]);
-                                        setSearchAiThemes([]);
+                                        setSearchTeams([]);
+                                        setSearchSubTeams([]);
                                     }}
                                 >
                                     Reset

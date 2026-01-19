@@ -19,7 +19,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface MyUseCasesAIThemesComboboxProps {
+interface MyUseCasesSubTeamComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
@@ -28,14 +28,14 @@ interface MyUseCasesAIThemesComboboxProps {
     alignOffset?: number
 }
 
-export function MyUseCasesAIThemesCombobox({
+export function MyUseCasesSubTeamCombobox({
     value = [],
     onChange,
     options,
     className,
-    placeholder = "AI Themes",
+    placeholder = "Sub Team Name",
     alignOffset = 312,
-}: MyUseCasesAIThemesComboboxProps) {
+}: MyUseCasesSubTeamComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {

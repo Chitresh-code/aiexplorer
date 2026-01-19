@@ -19,19 +19,19 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface ChampionAIThemesComboboxProps {
+interface MyUseCasesTeamComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
     className?: string
 }
 
-export function ChampionAIThemesCombobox({
+export function MyUseCasesTeamCombobox({
     value = [],
     onChange,
     options,
     className,
-}: ChampionAIThemesComboboxProps) {
+}: MyUseCasesTeamComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {
@@ -85,7 +85,7 @@ export function ChampionAIThemesCombobox({
                         <div className="flex items-center gap-2 truncate">
                             <PlusCircle className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">
-                                {value.length ? `${value.length} selected` : "AI Themes"}
+                                {value.length ? `${value.length} selected` : "Team Name"}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -95,8 +95,8 @@ export function ChampionAIThemesCombobox({
                 <PopoverContent
                     side="bottom"
                     align="start"
-                    alignOffset={312}
-                    sideOffset={70}
+                    alignOffset={255}
+                    sideOffset={30}
                     avoidCollisions={false}
                     collisionPadding={0}
                     className={cn(
