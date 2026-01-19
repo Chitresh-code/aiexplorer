@@ -14,13 +14,17 @@ import { GalleryVendorCombobox as VendorCombobox } from "./vendor-combobox";
 import { GalleryPersonaMultiCombobox as PersonaMultiCombobox } from "./persona-multi-combobox";
 import { GalleryAIThemeMultiCombobox as AIThemeMultiCombobox } from "./ai-theme-multi-combobox";
 import { GalleryDepartmentCombobox as DepartmentCombobox } from "./department-combobox";
+import { GalleryTeamCombobox as TeamCombobox } from "./team-combobox";
+import { GallerySubTeamCombobox as SubTeamCombobox } from "./sub-team-combobox";
 import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import {
   getDropdownData,
   getBusinessStructure,
   getAllVendors,
   getAllVendorsFromAllVendorsData,
-  getBusinessUnitsFromData
+  getBusinessUnitsFromData,
+  getTeamsForBusinessUnit,
+  getSubTeamsForTeam
 } from '@/lib/submit-use-case';
 import { fetchUseCases } from '@/lib/api';
 
@@ -33,6 +37,8 @@ interface GalleryUseCase {
   persona: string;
   aiTheme: string;
   modelName: string;
+  teamName: string;
+  subTeamName: string;
 }
 
 const AIGallery = () => {
@@ -44,6 +50,14 @@ const AIGallery = () => {
   const [selectedAiThemes, setSelectedAiThemes] = useState<string[]>([]);
   const [selectedVendor, setSelectedVendor] = useState<string[]>([]);
   const [selectedPhase, setSelectedPhase] = useState('');
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [selectedSubTeams, setSelectedSubTeams] = useState<string[]>([]);
+
+  const normalizedDepartments = Array.isArray(selectedDepartment)
+    ? selectedDepartment
+    : selectedDepartment
+      ? [selectedDepartment]
+      : [];
 
   const [useCases, setUseCases] = useState<GalleryUseCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,7 +85,9 @@ const AIGallery = () => {
           department: uc.BusinessUnit || uc.department || 'N/A',
           persona: uc.TargetPersonas || uc.persona || 'All',
           aiTheme: uc.AITheme || uc.aiTheme || 'N/A',
-          modelName: uc.VendorName || uc.modelName || 'N/A'
+          modelName: uc.VendorName || uc.modelName || 'N/A',
+          teamName: uc.TeamName || uc["Team Name"] || '',
+          subTeamName: uc.SubTeamName || uc["Sub Team Name"] || ''
         }));
 
         setUseCases(mappedCases);
@@ -113,6 +129,43 @@ const AIGallery = () => {
       .map(vendor => ({ label: vendor, value: vendor }));
   }, [vendorsData]);
 
+  const teamOptions = useMemo(() => {
+    if (!businessData) return [];
+    const teamSet = new Set<string>();
+    normalizedDepartments.forEach((unit) => {
+      getTeamsForBusinessUnit(businessData, unit).forEach((team) => teamSet.add(team));
+    });
+    // If no specific business unit is selected, you might want to show all teams or none
+    // Usually it's better to show all if none selected, or wait for choice.
+    // Based on My Use Cases, it uses selectedBusinessUnits.
+    if (normalizedDepartments.length === 0) {
+      const allUnits = getBusinessUnitsFromData(businessData);
+      allUnits.forEach((unit) => {
+        getTeamsForBusinessUnit(businessData, unit).forEach((team) => teamSet.add(team));
+      });
+    }
+    return Array.from(teamSet).sort().map((name) => ({ label: name, value: name }));
+  }, [businessData, normalizedDepartments]);
+
+  const subTeamOptions = useMemo(() => {
+    if (!businessData) return [];
+    const teamCandidates = selectedTeams.length ? selectedTeams : teamOptions.map((team) => team.value);
+    const subTeamSet = new Set<string>();
+
+    const unitsToUse = normalizedDepartments.length > 0
+      ? normalizedDepartments
+      : getBusinessUnitsFromData(businessData);
+
+    unitsToUse.forEach((unit) => {
+      const teamsForUnit = getTeamsForBusinessUnit(businessData, unit);
+      const teamsToUse = teamCandidates.filter((team) => teamsForUnit.includes(team));
+      teamsToUse.forEach((team) => {
+        getSubTeamsForTeam(businessData, unit, team).forEach((subTeam) => subTeamSet.add(subTeam));
+      });
+    });
+    return Array.from(subTeamSet).sort().map((name) => ({ label: name, value: name }));
+  }, [businessData, normalizedDepartments, selectedTeams, teamOptions]);
+
   const phaseOptions = [
     { label: 'Idea', value: 'Idea' },
     { label: 'Diagnose', value: 'Diagnose' },
@@ -127,17 +180,13 @@ const AIGallery = () => {
     setSelectedAiThemes([]);
     setSelectedVendor([]);
     setSelectedPhase('');
+    setSelectedTeams([]);
+    setSelectedSubTeams([]);
   };
 
   const handleExplore = (useCase: GalleryUseCase) => {
     navigate(`/gallery/${useCase.id}`, { state: { useCase } });
   };
-
-  const normalizedDepartments = Array.isArray(selectedDepartment)
-    ? selectedDepartment
-    : selectedDepartment
-      ? [selectedDepartment]
-      : [];
 
   const filteredUseCases = useCases.filter(uc => {
     const matchesUseCase = !searchUseCase || uc.title.toLowerCase().includes(searchUseCase.toLowerCase());
@@ -148,8 +197,12 @@ const AIGallery = () => {
     const matchesVendor = selectedVendor.length === 0
       || selectedVendor.some((vendor) => uc.modelName?.includes(vendor));
     const matchesPhase = !selectedPhase || uc.phase === selectedPhase;
+    const matchesTeam = selectedTeams.length === 0
+      || selectedTeams.some((team) => uc.teamName?.toLowerCase() === team.toLowerCase());
+    const matchesSubTeam = selectedSubTeams.length === 0
+      || selectedSubTeams.some((subTeam) => uc.subTeamName?.toLowerCase() === subTeam.toLowerCase());
 
-    return matchesUseCase && matchesDepartment && matchesPersona && matchesAITheme && matchesVendor && matchesPhase;
+    return matchesUseCase && matchesDepartment && matchesPersona && matchesAITheme && matchesVendor && matchesPhase && matchesTeam && matchesSubTeam;
   });
 
   return (
@@ -217,7 +270,7 @@ const AIGallery = () => {
               options={vendorOptions}
               value={selectedVendor}
               onChange={setSelectedVendor}
-              placeholder="Vendor"
+              placeholder="Vendor Names"
               className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
             />
@@ -244,13 +297,31 @@ const AIGallery = () => {
               options={departmentOptions}
               value={normalizedDepartments}
               onChange={setSelectedDepartment}
-              placeholder="Department"
+              placeholder="Business Unit"
               className="h-8 gap-2 border-dashed bg-white px-3"
               icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
             />
+
+            <TeamCombobox
+              options={teamOptions}
+              value={selectedTeams}
+              onChange={setSelectedTeams}
+              className="h-8 gap-2 border-dashed bg-white px-3"
+              alignOffset={65}
+              sideOffset={110}
+            />
+
+            <SubTeamCombobox
+              options={subTeamOptions}
+              value={selectedSubTeams}
+              onChange={setSelectedSubTeams}
+              className="h-8 gap-2 border-dashed bg-white px-3"
+              alignOffset={125}
+              sideOffset={110}
+            />
           </div>
 
-          {(searchUseCase || normalizedDepartments.length > 0 || selectedPhase || selectedPersonas.length > 0 || selectedAiThemes.length > 0 || selectedVendor.length > 0) && (
+          {(searchUseCase || normalizedDepartments.length > 0 || selectedPhase || selectedPersonas.length > 0 || selectedAiThemes.length > 0 || selectedVendor.length > 0 || selectedTeams.length > 0 || selectedSubTeams.length > 0) && (
             <div className="mt-3 flex justify-end">
               <Button
                 variant="ghost"

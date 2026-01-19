@@ -468,6 +468,11 @@ const UseCaseDetails = () => {
         setIsDialogOpen(true);
     };
 
+    const handleDeleteStakeholder = (index: number) => {
+        setStakeholders(prev => prev.filter((_, idx) => idx !== index));
+        toast.success('Stakeholder deleted successfully');
+    };
+
     const handleDialogClose = () => {
         setIsDialogOpen(false);
         setStakeholderName('');
@@ -941,7 +946,7 @@ const UseCaseDetails = () => {
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {/* Tabs and Apply Changes Button on same line */}
-                <div className="sticky top-14 z-[50] bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100 mb-6">
+                <div className="bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100 mb-6">
                     <div className="w-[95%] mx-auto flex items-center justify-between">
                         <TabsList className="grid w-full grid-cols-5 max-w-[650px] h-10 bg-gray-100/50 p-1 border rounded-lg">
                             <TabsTrigger
@@ -1357,10 +1362,18 @@ const UseCaseDetails = () => {
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
-                                                                className="h-6 w-6 mr-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                className="h-6 w-6 text-gray-400 hover:text-teal-600 hover:bg-teal-50 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                 onClick={() => handleEditStakeholder(index)}
                                                             >
                                                                 <Edit className="w-3 h-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 mr-1 text-gray-400 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onClick={() => handleDeleteStakeholder(index)}
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
                                                             </Button>
                                                         </div>
                                                     );
@@ -1923,7 +1936,7 @@ const UseCaseDetails = () => {
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select Decision" />
                                                     </SelectTrigger>
-                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={120} alignOffset={80} className="w-[180px]">
+                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={130} alignOffset={70} className="w-[180px]">
                                                         <SelectItem value="Approve">Approve</SelectItem>
                                                         <SelectItem value="Reject">Reject</SelectItem>
                                                         <SelectItem value="Request Clarification">Request Clarification</SelectItem>

@@ -1024,6 +1024,11 @@ const SubmitUseCase = () => {
         setIsDialogOpen(true);
     }, [addedStakeholders]);
 
+    const handleRemoveStakeholder = useCallback((index: number) => {
+        setAddedStakeholders(prev => prev.filter((_, idx) => idx !== index));
+        toast.success('Stakeholder removed successfully');
+    }, []);
+
     const handleDialogClose = useCallback(() => {
         setIsDialogOpen(false);
         setStakeholderName('');
@@ -1034,7 +1039,7 @@ const SubmitUseCase = () => {
     return (
         <div ref={formContainerRef} className="flex flex-1 flex-col gap-6 p-6 w-full">
 
-            <div className="sticky top-14 z-[50] flex justify-center w-full bg-gray-50 pb-4 pt-4 border-b border-gray-100">
+            <div className="flex justify-center w-full bg-gray-50 pb-4 pt-4 border-b border-gray-100">
                 <div className="flex flex-1 flex-col mx-auto max-w-7xl w-full px-4">
                     <Tabs value={currentStep.toString()} onValueChange={(val) => setCurrentStep(parseInt(val))} className="w-full">
                         <div className="flex justify-start">
@@ -1379,7 +1384,7 @@ const SubmitUseCase = () => {
                             {currentStep === 2 && showChecklistTab && (
                                 <div className="space-y-6 animate-in fade-in duration-500 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                                     <div className="p-6 rounded-lg border border-dashed">
-                                        <div className="flex items-center gap-3 mb-6 sticky top-0 bg-background/80 backdrop-blur-sm py-2 z-10">
+                                        <div className="flex items-center gap-3 mb-6 bg-background/80 backdrop-blur-sm py-2">
                                             <div className="p-2 bg-primary/10 rounded-full text-primary">
                                                 <CheckSquare className="h-5 w-5" />
                                             </div>
@@ -1657,14 +1662,24 @@ const SubmitUseCase = () => {
                                                                         <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
                                                                     </div>
                                                                 </div>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-6 w-6 mr-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
-                                                                    onClick={() => handleEditStakeholder(idx)}
-                                                                >
-                                                                    <Edit className="w-3 h-3" />
-                                                                </Button>
+                                                                <div className="flex items-center gap-1">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
+                                                                        onClick={() => handleEditStakeholder(idx)}
+                                                                    >
+                                                                        <Edit className="w-3 h-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 text-gray-400 hover:text-destructive hover:bg-destructive/10"
+                                                                        onClick={() => handleRemoveStakeholder(idx)}
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3" />
+                                                                    </Button>
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1993,7 +2008,7 @@ const SubmitUseCase = () => {
                                 <SelectTrigger className="col-span-3">
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent position="popper" side="bottom" align="start" alignOffset={180} sideOffset={-120}>
                                     <SelectItem value="Product Manager">Product Manager</SelectItem>
                                     <SelectItem value="Program Manager">Program Manager</SelectItem>
                                     <SelectItem value="Team Member">Team Member</SelectItem>

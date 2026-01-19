@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, PlusCircle, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
     Command,
     CommandEmpty,
@@ -18,41 +19,39 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface GalleryPhaseComboboxProps {
-    value?: string
-    onChange: (value: string) => void
+interface GallerySubTeamComboboxProps {
+    value?: string[]
+    onChange: (value: string[]) => void
     options: { label: string; value: string }[]
-    placeholder?: string
-    searchPlaceholder?: string
-    emptyText?: string
-    disabled?: boolean
     className?: string
-    contentClassName?: string
-    align?: "start" | "center" | "end"
-    icon?: React.ReactNode
     sideOffset?: number
     alignOffset?: number
 }
 
-export function GalleryPhaseCombobox({
-    value,
+export function GallerySubTeamCombobox({
+    value = [],
     onChange,
     options,
-    placeholder = "Select option",
-    searchPlaceholder = "Search...",
-    emptyText = "No option found.",
-    disabled = false,
     className,
-    contentClassName,
-    align = "start",
-    icon,
     sideOffset = 100,
-    alignOffset = 60,
-}: GalleryPhaseComboboxProps) {
+    alignOffset = 0,
+}: GallerySubTeamComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
+    const toggle = (val: string) => {
+        onChange(
+            value.includes(val)
+                ? value.filter((v) => v !== val)
+                : [...value, val]
+        )
+    }
+
+    const removeValue = (val: string) => {
+        onChange(value.filter((v) => v !== val))
+    }
+
     return (
-        <div className="w-full">
+        <div className={cn("flex flex-col gap-2 w-full")}>
             <Popover open={open} onOpenChange={setOpen} modal={false}>
                 <PopoverTrigger asChild>
                     <Button
@@ -60,18 +59,15 @@ export function GalleryPhaseCombobox({
                         role="combobox"
                         aria-expanded={open}
                         className={cn(
-                            "w-full justify-between h-10 px-3",
-                            !value && "text-muted-foreground",
+                            "w-full justify-between h-8 px-3 border-dashed bg-white",
+                            !value.length && "text-muted-foreground",
                             className
                         )}
-                        disabled={disabled}
                     >
                         <div className="flex items-center gap-2 truncate">
-                            {icon}
+                            <PlusCircle className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">
-                                {value
-                                    ? options.find((option) => option.value === value)?.label
-                                    : placeholder}
+                                {value.length ? `${value.length} selected` : "Sub-team Name"}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -80,34 +76,28 @@ export function GalleryPhaseCombobox({
 
                 <PopoverContent
                     side="bottom"
-                    align={align}
-                    alignOffset={alignOffset}
+                    align="start"
                     sideOffset={sideOffset}
-                    avoidCollisions={false}
-                    collisionPadding={0}
-                    className={cn(
-                        "p-0 border shadow-lg w-[calc(var(--radix-popper-anchor-width)-16px)] min-w-[355px] max-w-[240px]",
-                        contentClassName
-                    )}
+                    alignOffset={alignOffset}
+                    className="p-0 border shadow-lg w-[355]"
                 >
                     <Command>
-                        <CommandInput placeholder={searchPlaceholder} />
+                        <CommandInput placeholder="Search..." />
                         <CommandList className="max-h-40 overflow-y-auto">
-                            <CommandEmpty>{emptyText}</CommandEmpty>
+                            <CommandEmpty>No option found.</CommandEmpty>
                             <CommandGroup>
                                 {options.map((option) => (
                                     <CommandItem
                                         key={option.value}
                                         value={option.label}
-                                        onSelect={() => {
-                                            onChange(option.value)
-                                            setOpen(false)
-                                        }}
+                                        onSelect={() => toggle(option.value)}
                                     >
                                         <Check
                                             className={cn(
                                                 "mr-2 h-4 w-4",
-                                                value === option.value ? "opacity-100" : "opacity-0"
+                                                value.includes(option.value)
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
                                             )}
                                         />
                                         {option.label}
