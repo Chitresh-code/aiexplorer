@@ -53,6 +53,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
       'metadata-reporting': 'Metadata Reporting',
       'metric-reporting': 'Metric Reporting',
       'use-case-details': 'Use Case Details',
+      'dashboard': 'Dashboard',
     };
 
     // Check if we're on a page that should show parent context
@@ -143,14 +144,12 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
   }, [isAuthenticated, inProgress, router]);
 
   useEffect(() => {
-    const target = scrollRef.current;
-    if (!target) return;
     const handleScroll = () => {
-      setIsScrolled(target.scrollTop > 0);
+      setIsScrolled(window.scrollY > 0);
     };
     handleScroll();
-    target.addEventListener('scroll', handleScroll);
-    return () => target.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   if (!isAuthenticated) {
@@ -166,7 +165,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <div
-          className={`sticky top-0 z-20 flex h-14 items-center gap-2 bg-gray-50/95 px-4 backdrop-blur ${isScrolled ? 'border-b border-gray-200 shadow-sm' : 'border-b border-transparent'
+          className={`sticky top-0 z-[100] flex h-14 items-center gap-2 bg-white px-4 transition-shadow duration-200 ${isScrolled ? 'border-b border-gray-200 shadow-sm' : ''
             }`}
         >
           <SidebarTrigger />
@@ -190,7 +189,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
           </Breadcrumb>
         </div>
         <div className="flex min-h-screen flex-col bg-gray-50">
-          <div ref={scrollRef} className="flex-1 overflow-auto">{children}</div>
+          <div className="flex-1">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>

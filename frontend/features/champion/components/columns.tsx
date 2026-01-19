@@ -29,6 +29,8 @@ import { setRouteState } from "@/lib/navigation-state";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DeliveryHeaderFilter } from "./delivery-header-filter";
+import { PriorityHeaderFilter } from "./priority-header-filter";
 
 const phaseTooltips = {
     Idea: "Pitch idea. It is submitted for AI Champions or Business Leaders prioritization and approvals.",
@@ -397,17 +399,32 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
     },
     {
         accessorKey: "delivery",
-        header: () => <div className="text-center w-full">Delivery</div>,
-        cell: ({ row }) => <div className="text-center text-gray-600">{row.getValue("delivery")}</div>,
+        header: ({ column }) => (
+            <div className="w-[80px] flex justify-center mx-auto">
+                <DeliveryHeaderFilter column={column} />
+            </div>
+        ),
+        cell: ({ row }) => (
+            <div className="w-[80px] text-center text-gray-600 mx-auto">
+                {row.getValue("delivery")}
+            </div>
+        ),
+        filterFn: (row, id, value) => {
+            return value.includes(row.getValue(id) as string);
+        },
     },
     {
         accessorKey: "priority",
-        header: () => <div className="text-center w-full">Priority</div>,
+        header: ({ column }) => (
+            <div className="w-[80px] flex justify-center mx-auto">
+                <PriorityHeaderFilter column={column} />
+            </div>
+        ),
         cell: ({ row }) => {
             const priority = row.getValue("priority") as number | null;
             if (!priority) return null;
             return (
-                <div className="flex justify-center">
+                <div className="w-[80px] flex justify-center mx-auto">
                     <span className={cn(
                         "px-2 py-0.5 rounded-full text-xs font-semibold border",
                         getPriorityColor(priority)
@@ -416,6 +433,9 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
                     </span>
                 </div>
             )
+        },
+        filterFn: (row, id, value) => {
+            return value.includes(row.getValue(id)?.toString());
         },
     },
     // Temporarily removed actions column

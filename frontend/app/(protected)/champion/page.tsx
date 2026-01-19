@@ -37,7 +37,7 @@ const ChampionUseCaseScreen = () => {
     const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
     const [sortOption, setSortOption] = useState<string[]>([]);
     const [searchUseCase, setSearchUseCase] = useState('');
-    const [searchPhase, setSearchPhase] = useState('');
+    const [searchPhase, setSearchPhase] = useState<string[]>([]);
     const [searchTargetPersonas, setSearchTargetPersonas] = useState<string[]>([]);
     const [searchAiThemes, setSearchAiThemes] = useState<string[]>([]);
     const [dropdownData, setDropdownData] = useState<any>(null);
@@ -128,12 +128,12 @@ const ChampionUseCaseScreen = () => {
     const filteredData = useCases.filter(uc => {
         if (searchUseCase && !uc.title.toLowerCase().includes(searchUseCase.toLowerCase())) return false;
 
-        if (searchPhase && searchPhase !== 'all') {
+        if (searchPhase.length > 0 && !searchPhase.includes('all')) {
             const phase = uc.idea !== 'Not Set' && uc.idea !== 'completed' ? 'Idea' :
                 uc.diagnose !== 'Not Set' ? 'Diagnose' :
                     uc.design !== 'Not Set' ? 'Design' :
                         uc.implemented !== 'Not Set' ? 'Implemented' : '';
-            if (phase !== searchPhase) return false;
+            if (!searchPhase.includes(phase)) return false;
         }
         return true;
     });
@@ -174,12 +174,12 @@ const ChampionUseCaseScreen = () => {
                             </Tabs>
 
                             <div className="relative min-w-[200px]">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Filter use cases..."
                                     value={searchUseCase}
                                     onChange={(e) => setSearchUseCase(e.target.value)}
-                                    className="h-8 w-full pl-9 bg-white text-sm"
+                                    className="h-10 w-full pl-10 bg-white text-sm"
                                 />
                             </div>
 
@@ -207,13 +207,13 @@ const ChampionUseCaseScreen = () => {
                                 onChange={setSearchAiThemes}
                             />
 
-                            {(searchUseCase || searchPhase || sortOption.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || sortOption.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
                                 <Button
                                     variant="ghost"
-                                    className="h-8 px-3 text-sm justify-self-end"
+                                    className="h-10 px-3 text-sm justify-self-end"
                                     onClick={() => {
                                         setSearchUseCase('');
-                                        setSearchPhase('');
+                                        setSearchPhase([]);
                                         setSortOption([]);
                                         setSearchTargetPersonas([]);
                                         setSearchAiThemes([]);

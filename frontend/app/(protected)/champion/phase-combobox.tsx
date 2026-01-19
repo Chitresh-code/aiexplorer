@@ -1,34 +1,137 @@
 "use client"
 
-import { PlusCircle } from "lucide-react"
+import * as React from "react"
+import { Check, ChevronsUpDown, PlusCircle, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Combobox } from "@/components/ui/combobox"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface ChampionPhaseComboboxProps {
-    value?: string
-    onChange: (value: string) => void
+    value?: string[]
+    onChange: (value: string[]) => void
     options: { label: string; value: string }[]
     className?: string
+    alignOffset?: number
 }
 
 export function ChampionPhaseCombobox({
-    value,
+    value = [],
     onChange,
     options,
     className,
+    alignOffset = 140,
 }: ChampionPhaseComboboxProps) {
+    const [open, setOpen] = React.useState(false)
+
+    const toggle = (val: string) => {
+        onChange(
+            value.includes(val)
+                ? value.filter((v) => v !== val)
+                : [...value, val]
+        )
+    }
+
+    const removeValue = (val: string) => {
+        onChange(value.filter((v) => v !== val))
+    }
+
     return (
-        <Combobox
-            options={options}
-            value={value}
-            onChange={onChange}
-            placeholder="Phase"
-            className={cn("h-8 w-full gap-2 border-dashed bg-white px-3", className)}
-            icon={<PlusCircle className="h-4 w-3 text-muted-foreground" />}
-            sideOffset={50}
-            alignOffset={-190}
-            contentClassName="w-[220px] min-w-[300px] max-w-[220px]"
-            listClassName="max-h-none overflow-visible"
-        />
+        <div className={cn("flex flex-col gap-2 w-full", className)}>
+            {value.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                    {value.map((val) => {
+                        const opt = options.find((o) => o.value === val)
+                        return (
+                            <Badge key={val} variant="secondary" className="flex items-center gap-1">
+                                <span>{opt?.label ?? val}</span>
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        removeValue(val)
+                                    }}
+                                    className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+                                    aria-label={`Remove ${opt?.label ?? val}`}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
+                            </Badge>
+                        )
+                    })}
+                </div>
+            )}
+
+            <Popover open={open} onOpenChange={setOpen} modal={false}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        className={cn(
+                            "w-full justify-between h-8 px-3 border-dashed bg-white",
+                            !value.length && "text-muted-foreground"
+                        )}
+                    >
+                        <div className="flex items-center gap-2 truncate">
+                            <PlusCircle className="h-4 w-4 text-muted-foreground" />
+                            <span className="truncate">
+                                {value.length ? `${value.length} selected` : "Phase"}
+                            </span>
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+
+                <PopoverContent
+                    side="bottom"
+                    align="start"
+                    alignOffset={alignOffset}
+                    sideOffset={70}
+                    avoidCollisions={false}
+                    collisionPadding={0}
+                    className={cn(
+                        "p-0 border shadow-lg w-[250px] min-w-[330px]"
+                    )}
+                >
+                    <Command>
+                        <CommandInput placeholder="Search..." />
+                        <CommandList className="max-h-40 overflow-y-auto">
+                            <CommandEmpty>No option found.</CommandEmpty>
+                            <CommandGroup>
+                                {options.map((option) => (
+                                    <CommandItem
+                                        key={option.value}
+                                        value={option.label}
+                                        onSelect={() => toggle(option.value)}
+                                    >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                value.includes(option.value)
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
+                                            )}
+                                        />
+                                        {option.label}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
+        </div>
     )
 }

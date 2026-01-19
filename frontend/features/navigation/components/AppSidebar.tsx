@@ -11,6 +11,7 @@ import {
   Folder,
   LogOut,
   Search,
+  LayoutDashboard,
 } from "lucide-react"
 import { getRouteState } from "@/lib/navigation-state"
 
@@ -32,6 +33,7 @@ import {
 import { cn } from "@/lib/utils"
 
 const navItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Search, label: "AI Gallery", path: "/gallery" },
   { icon: FileText, label: "Submit a Use Case", path: "/submit-use-case" },
   { icon: Folder, label: "My Use Cases", path: "/my-use-cases" },

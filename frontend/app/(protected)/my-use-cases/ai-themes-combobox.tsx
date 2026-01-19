@@ -24,6 +24,8 @@ interface MyUseCasesAIThemesComboboxProps {
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
     className?: string
+    placeholder?: string
+    alignOffset?: number
 }
 
 export function MyUseCasesAIThemesCombobox({
@@ -31,6 +33,8 @@ export function MyUseCasesAIThemesCombobox({
     onChange,
     options,
     className,
+    placeholder = "AI Themes",
+    alignOffset = 312,
 }: MyUseCasesAIThemesComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -85,7 +89,7 @@ export function MyUseCasesAIThemesCombobox({
                         <div className="flex items-center gap-2 truncate">
                             <PlusCircle className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">
-                                {value.length ? `${value.length} selected` : "AI Themes"}
+                                {value.length ? `${value.length} selected` : placeholder}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -95,7 +99,7 @@ export function MyUseCasesAIThemesCombobox({
                 <PopoverContent
                     side="bottom"
                     align="start"
-                    alignOffset={312}
+                    alignOffset={alignOffset}
                     sideOffset={30}
                     avoidCollisions={false}
                     collisionPadding={0}

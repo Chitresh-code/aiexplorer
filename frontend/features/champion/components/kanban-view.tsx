@@ -84,14 +84,14 @@ const KanbanView = ({ data: initialData, navigate, sourceScreen = 'champion' }: 
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <div className="flex items-center gap-1.5 min-w-0 cursor-help">
-                                            <div className={cn("w-1 h-3 rounded-full flex-shrink-0",
+                                            <div className={cn("w-1.5 h-4 rounded-full flex-shrink-0",
                                                 phase === 'Idea' ? "bg-blue-400" :
                                                     phase === 'Diagnose' ? "bg-purple-400" :
                                                         phase === 'Design' ? "bg-amber-400" :
                                                             "bg-emerald-400"
                                             )} />
-                                            <h2 className="font-semibold text-sm text-gray-500 tracking-wider uppercase truncate">{phase}</h2>
-                                            <span className="text-[12px] font-bold text-gray-400 bg-white border border-gray-100 w-4 h-4 flex items-center justify-center rounded-full flex-shrink-0">
+                                            <h2 className="font-bold text-base text-gray-700 tracking-widest uppercase truncate">{phase}</h2>
+                                            <span className="text-[13px] font-bold text-gray-500 bg-gray-50 border border-gray-200 w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0 ml-1.5 shadow-sm">
                                                 {groupedData[phase]?.length || 0}
                                             </span>
                                         </div>

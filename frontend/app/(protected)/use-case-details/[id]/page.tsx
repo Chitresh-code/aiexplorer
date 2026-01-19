@@ -909,8 +909,8 @@ const UseCaseDetails = () => {
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {/* Tabs and Apply Changes Button on same line */}
-                <div className="w-[95%] mx-auto mb-4">
-                    <div className="flex items-center justify-between">
+                <div className="sticky top-14 z-[50] bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100 mb-6">
+                    <div className="w-[95%] mx-auto flex items-center justify-between">
                         <TabsList className="grid w-full grid-cols-5 max-w-[650px] h-10 bg-gray-100/50 p-1 border rounded-lg">
                             <TabsTrigger
                                 value="info"
@@ -1653,40 +1653,42 @@ const UseCaseDetails = () => {
 
                             {metrics.length > 0 ? (
                                 <div className="rounded-md border">
-                                    <Table className="table-fixed">
-                                        <TableHeader>
-                                            {addMetricsTable.getHeaderGroups().map((headerGroup) => (
-                                                <TableRow key={headerGroup.id}>
-                                                    {headerGroup.headers.map((header) => (
-                                                        <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                            {header.isPlaceholder
-                                                                ? null
-                                                                : flexRender(
-                                                                    header.column.columnDef.header,
-                                                                    header.getContext()
-                                                                )}
-                                                        </TableHead>
-                                                    ))}
-                                                </TableRow>
-                                            ))}
-                                        </TableHeader>
-                                        <TableBody>
-                                            {addMetricsTable.getRowModel().rows?.length ? (
-                                                addMetricsTable.getRowModel().rows.map((row) => (
-                                                    <TableRow
-                                                        key={row.id}
-                                                        data-state={row.getIsSelected() && "selected"}
-                                                    >
-                                                        {row.getVisibleCells().map((cell) => (
-                                                            <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                            </TableCell>
+                                    <ScrollArea className="h-[250px]">
+                                        <Table className="table-fixed">
+                                            <TableHeader>
+                                                {addMetricsTable.getHeaderGroups().map((headerGroup) => (
+                                                    <TableRow key={headerGroup.id}>
+                                                        {headerGroup.headers.map((header) => (
+                                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
+                                                                {header.isPlaceholder
+                                                                    ? null
+                                                                    : flexRender(
+                                                                        header.column.columnDef.header,
+                                                                        header.getContext()
+                                                                    )}
+                                                            </TableHead>
                                                         ))}
                                                     </TableRow>
-                                                ))
-                                            ) : null}
-                                        </TableBody>
-                                    </Table>
+                                                ))}
+                                            </TableHeader>
+                                            <TableBody>
+                                                {addMetricsTable.getRowModel().rows?.length ? (
+                                                    addMetricsTable.getRowModel().rows.map((row) => (
+                                                        <TableRow
+                                                            key={row.id}
+                                                            data-state={row.getIsSelected() && "selected"}
+                                                        >
+                                                            {row.getVisibleCells().map((cell) => (
+                                                                <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                </TableCell>
+                                                            ))}
+                                                        </TableRow>
+                                                    ))
+                                                ) : null}
+                                            </TableBody>
+                                        </Table>
+                                    </ScrollArea>
                                 </div>
                             ) : (
                                 <Empty className="border border-dashed border-gray-200 bg-white/70">
@@ -1734,35 +1736,37 @@ const UseCaseDetails = () => {
                             <div className="flex flex-col gap-6">
                                 {shouldShowReportedTable ? (
                                     <div className="rounded-md border">
-                                        <Table className="table-fixed">
-                                            <TableHeader>
-                                                {reportedTable.getHeaderGroups().map((headerGroup) => (
-                                                    <TableRow key={headerGroup.id}>
-                                                        {headerGroup.headers.map((header) => (
-                                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                                {header.isPlaceholder
-                                                                    ? null
-                                                                    : flexRender(
-                                                                        header.column.columnDef.header,
-                                                                        header.getContext()
-                                                                    )}
-                                                            </TableHead>
-                                                        ))}
-                                                    </TableRow>
-                                                ))}
-                                            </TableHeader>
-                                            <TableBody>
-                                                {reportedTable.getRowModel().rows.map((row) => (
-                                                    <TableRow key={row.id}>
-                                                        {row.getVisibleCells().map((cell) => (
-                                                            <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                            </TableCell>
-                                                        ))}
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <ScrollArea className="h-[250px]">
+                                            <Table className="table-fixed">
+                                                <TableHeader>
+                                                    {reportedTable.getHeaderGroups().map((headerGroup) => (
+                                                        <TableRow key={headerGroup.id}>
+                                                            {headerGroup.headers.map((header) => (
+                                                                <TableHead key={header.id} style={{ width: header.getSize() }}>
+                                                                    {header.isPlaceholder
+                                                                        ? null
+                                                                        : flexRender(
+                                                                            header.column.columnDef.header,
+                                                                            header.getContext()
+                                                                        )}
+                                                                </TableHead>
+                                                            ))}
+                                                        </TableRow>
+                                                    ))}
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {reportedTable.getRowModel().rows.map((row) => (
+                                                        <TableRow key={row.id}>
+                                                            {row.getVisibleCells().map((cell) => (
+                                                                <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                </TableCell>
+                                                            ))}
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </ScrollArea>
                                     </div>
                                 ) : (
                                     <Empty className="border border-dashed border-gray-200 bg-white/70">
@@ -1783,7 +1787,7 @@ const UseCaseDetails = () => {
                 </TabsContent>
 
                 <TabsContent value="status" className="space-y-8">
-                    <div className="w-[95%] mx-auto">
+                    <div className="w-[95%] mx-auto space-y-8">
                         {state?.sourceScreen === 'champion' ? (
                             <>
                                 {/* Top Section - 3 Cards */}
@@ -1887,7 +1891,7 @@ const UseCaseDetails = () => {
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select Decision" />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={120} alignOffset={80} className="w-[180px]">
                                                         <SelectItem value="Approve">Approve</SelectItem>
                                                         <SelectItem value="Reject">Reject</SelectItem>
                                                         <SelectItem value="Request Clarification">Request Clarification</SelectItem>
@@ -1945,7 +1949,7 @@ const UseCaseDetails = () => {
                                                     <SelectTrigger className="mt-2">
                                                         <SelectValue />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={70} alignOffset={70} className="w-[200px]">
                                                         <SelectItem value="On-Track">On-Track</SelectItem>
                                                         <SelectItem value="At Risk">At Risk</SelectItem>
                                                         <SelectItem value="Completed">Completed</SelectItem>
@@ -2058,7 +2062,7 @@ const UseCaseDetails = () => {
                                                     <SelectTrigger className="mt-2">
                                                         <SelectValue placeholder="Select Next Phase" />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={120} alignOffset={70} className="w-[200px]">
                                                         <SelectItem value="Diagnose">Diagnose</SelectItem>
                                                         <SelectItem value="Design">Design</SelectItem>
                                                         <SelectItem value="Implement">Implement</SelectItem>

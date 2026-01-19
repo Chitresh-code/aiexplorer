@@ -96,7 +96,7 @@ export function ChampionBusinessUnitCombobox({
                     side="bottom"
                     align="start"
                     alignOffset={200}
-                    sideOffset={50}
+                    sideOffset={70}
                     className={cn(
                         "p-0 border shadow-lg w-[280px] w-[220px] min-w-[330px] max-w-[220px]"
                     )}

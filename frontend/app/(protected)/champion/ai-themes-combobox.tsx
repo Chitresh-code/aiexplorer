@@ -96,7 +96,7 @@ export function ChampionAIThemesCombobox({
                     side="bottom"
                     align="start"
                     alignOffset={312}
-                    sideOffset={50}
+                    sideOffset={70}
                     avoidCollisions={false}
                     collisionPadding={0}
                     className={cn(

@@ -47,7 +47,7 @@ const MyUseCases = () => {
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
     const [searchUseCase, setSearchUseCase] = useState('');
-    const [searchPhase, setSearchPhase] = useState('');
+    const [searchPhase, setSearchPhase] = useState<string[]>([]);
     const [searchBusinessUnit, setSearchBusinessUnit] = useState<string[]>([]);
     const [searchTargetPersonas, setSearchTargetPersonas] = useState<string[]>([]);
     const [searchAiThemes, setSearchAiThemes] = useState<string[]>([]);
@@ -137,13 +137,13 @@ const MyUseCases = () => {
         mapped = mapped.filter(uc => {
             if (searchUseCase && !uc.title.toLowerCase().includes(searchUseCase.toLowerCase())) return false;
 
-            if (searchPhase && searchPhase !== 'all') {
+            if (searchPhase.length > 0 && !searchPhase.includes('all')) {
                 // Determine current phase for filtering
                 const phase = uc.idea !== 'Not Set' && uc.idea !== 'completed' ? 'Idea' :
                     uc.diagnose !== 'Not Set' ? 'Diagnose' :
                         uc.design !== 'Not Set' ? 'Design' :
                             uc.implemented !== 'Not Set' ? 'Implemented' : '';
-                if (phase !== searchPhase) return false;
+                if (!searchPhase.includes(phase)) return false;
             }
             // Business Unit filtering - assuming it would be available in the future, for now mostly UI
             // if (searchBusinessUnit && searchBusinessUnit !== 'all' && uc.businessUnit !== searchBusinessUnit) return false;
@@ -194,7 +194,7 @@ const MyUseCases = () => {
                             </div>
 
                             <MyUseCasesPhaseCombobox
-                                options={phaseOptions}
+                                options={[{ label: "All Phases", value: "all" }, ...phaseOptions]}
                                 value={searchPhase}
                                 onChange={setSearchPhase}
                             />
@@ -217,13 +217,13 @@ const MyUseCases = () => {
                                 onChange={setSearchAiThemes}
                             />
 
-                            {(searchUseCase || searchPhase || searchBusinessUnit.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || searchBusinessUnit.length > 0 || searchTargetPersonas.length > 0 || searchAiThemes.length > 0) && (
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-3 text-sm justify-self-end"
                                     onClick={() => {
                                         setSearchUseCase('');
-                                        setSearchPhase('');
+                                        setSearchPhase([]);
                                         setSearchBusinessUnit([]);
                                         setSearchTargetPersonas([]);
                                         setSearchAiThemes([]);

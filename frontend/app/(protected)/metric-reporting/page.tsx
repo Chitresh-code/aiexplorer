@@ -36,6 +36,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const reportMetricColumnSizes = {
     primarySuccessValue: 160,
@@ -328,118 +329,120 @@ const MetricReporting = () => {
                         </div>
                     </div>
 
-                    {reportableMetrics.length > 0 ? (
+                    {metrics.length > 0 ? (
                         <div className="rounded-md border">
-                            <Table className="table-fixed">
-                                <TableHeader>
-                                    <TableRow>
-                                        {addMetricColumns.map((column) => (
-                                            <TableHead key={column.key} style={{ width: column.width }}>
-                                                {column.label}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {metrics.map((metric) => (
-                                        <TableRow key={metric.id}>
-                                            <TableCell style={{ width: addMetricColumnSizes.primarySuccessValue }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2 text-nowrap">{metric.primarySuccessValue}</span>
-                                                ) : (
-                                                    <Input
-                                                        type="text"
-                                                        value={metric.primarySuccessValue}
-                                                        onChange={(e) => handleInputChange(metric.id, 'primarySuccessValue', e.target.value)}
-                                                        className="h-9"
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: addMetricColumnSizes.parcsCategory }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2">{metric.parcsCategory}</span>
-                                                ) : (
-                                                    <MetricsSelect
-                                                        value={metric.parcsCategory || ""}
-                                                        onSelect={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
-                                                        options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
-                                                        width="w-[160px]"
-                                                        className="metric-select"
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: addMetricColumnSizes.unitOfMeasurement }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2">{metric.unitOfMeasurement}</span>
-                                                ) : (
-                                                    <MetricsSelect
-                                                        value={metric.unitOfMeasurement || ""}
-                                                        onSelect={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
-                                                        options={[
-                                                            'HoursPerDay',
-                                                            'HoursPerMonth',
-                                                            'HoursPerYear',
-                                                            'HoursPerCase',
-                                                            'HoursPerTransaction',
-                                                            'USDPerMonth',
-                                                            'USDPerYear',
-                                                            'USD',
-                                                            'Users',
-                                                            'Audited Risks'
-                                                        ]}
-                                                        width="w-[160px]"
-                                                        className="metric-select"
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: addMetricColumnSizes.baselineValue }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2">{metric.baselineValue}</span>
-                                                ) : (
-                                                    <Input
-                                                        type="number"
-                                                        className="number-input-no-spinner h-9"
-                                                        value={metric.baselineValue}
-                                                        onChange={(e) => handleInputChange(metric.id, 'baselineValue', e.target.value)}
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: addMetricColumnSizes.baselineDate }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2 text-nowrap">{metric.baselineDate}</span>
-                                                ) : (
-                                                    <MetricDatePicker
-                                                        value={metric.baselineDate}
-                                                        onChange={(date) => handleInputChange(metric.id, 'baselineDate', date)}
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: addMetricColumnSizes.targetValue }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2">{metric.targetValue}</span>
-                                                ) : (
-                                                    <Input
-                                                        type="number"
-                                                        className="number-input-no-spinner h-9"
-                                                        value={metric.targetValue}
-                                                        onChange={(e) => handleInputChange(metric.id, 'targetValue', e.target.value)}
-                                                    />
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: addMetricColumnSizes.targetDate }}>
-                                                {metric.isSubmitted ? (
-                                                    <span className="text-sm px-2 text-nowrap">{metric.targetDate}</span>
-                                                ) : (
-                                                    <MetricDatePicker
-                                                        value={metric.targetDate}
-                                                        onChange={(date) => handleInputChange(metric.id, 'targetDate', date)}
-                                                    />
-                                                )}
-                                            </TableCell>
+                            <ScrollArea className="h-[250px]">
+                                <Table className="table-fixed">
+                                    <TableHeader>
+                                        <TableRow>
+                                            {addMetricColumns.map((column) => (
+                                                <TableHead key={column.key} style={{ width: column.width }}>
+                                                    {column.label}
+                                                </TableHead>
+                                            ))}
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {metrics.map((metric) => (
+                                            <TableRow key={metric.id}>
+                                                <TableCell style={{ width: addMetricColumnSizes.primarySuccessValue }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2 text-nowrap">{metric.primarySuccessValue}</span>
+                                                    ) : (
+                                                        <Input
+                                                            type="text"
+                                                            value={metric.primarySuccessValue}
+                                                            onChange={(e) => handleInputChange(metric.id, 'primarySuccessValue', e.target.value)}
+                                                            className="h-9"
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.parcsCategory }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2">{metric.parcsCategory}</span>
+                                                    ) : (
+                                                        <MetricsSelect
+                                                            value={metric.parcsCategory || ""}
+                                                            onSelect={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
+                                                            options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
+                                                            width="w-[160px]"
+                                                            className="metric-select"
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.unitOfMeasurement }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2">{metric.unitOfMeasurement}</span>
+                                                    ) : (
+                                                        <MetricsSelect
+                                                            value={metric.unitOfMeasurement || ""}
+                                                            onSelect={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
+                                                            options={[
+                                                                'HoursPerDay',
+                                                                'HoursPerMonth',
+                                                                'HoursPerYear',
+                                                                'HoursPerCase',
+                                                                'HoursPerTransaction',
+                                                                'USDPerMonth',
+                                                                'USDPerYear',
+                                                                'USD',
+                                                                'Users',
+                                                                'Audited Risks'
+                                                            ]}
+                                                            width="w-[160px]"
+                                                            className="metric-select"
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.baselineValue }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2">{metric.baselineValue}</span>
+                                                    ) : (
+                                                        <Input
+                                                            type="number"
+                                                            className="number-input-no-spinner h-9"
+                                                            value={metric.baselineValue}
+                                                            onChange={(e) => handleInputChange(metric.id, 'baselineValue', e.target.value)}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.baselineDate }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2 text-nowrap">{metric.baselineDate}</span>
+                                                    ) : (
+                                                        <MetricDatePicker
+                                                            value={metric.baselineDate}
+                                                            onChange={(date) => handleInputChange(metric.id, 'baselineDate', date)}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.targetValue }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2">{metric.targetValue}</span>
+                                                    ) : (
+                                                        <Input
+                                                            type="number"
+                                                            className="number-input-no-spinner h-9"
+                                                            value={metric.targetValue}
+                                                            onChange={(e) => handleInputChange(metric.id, 'targetValue', e.target.value)}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.targetDate }}>
+                                                    {metric.isSubmitted ? (
+                                                        <span className="text-sm px-2 text-nowrap">{metric.targetDate}</span>
+                                                    ) : (
+                                                        <MetricDatePicker
+                                                            value={metric.targetDate}
+                                                            onChange={(date) => handleInputChange(metric.id, 'targetDate', date)}
+                                                        />
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
                         </div>
                     ) : (
                         <Empty className="border border-dashed border-gray-200 bg-white/70">
@@ -502,65 +505,67 @@ const MetricReporting = () => {
 
                     {metrics.length > 0 ? (
                         <div className="rounded-md border">
-                            <Table className="table-fixed">
-                                <TableHeader>
-                                    <TableRow>
-                                        {reportMetricColumns.map((column) => (
-                                            <TableHead key={column.key} style={{ width: column.width }}>
-                                                {column.label}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {reportableMetrics.map((metric) => (
-                                        <TableRow key={metric.id}>
-                                            <TableCell style={{ width: reportMetricColumnSizes.primarySuccessValue }}>
-                                                {metric.primarySuccessValue}
-                                            </TableCell>
-                                            <TableCell style={{ width: reportMetricColumnSizes.baselineValue }}>
-                                                {metric.baselineValue}
-                                            </TableCell>
-                                            <TableCell style={{ width: reportMetricColumnSizes.baselineDate }}>
-                                                {metric.baselineDate}
-                                            </TableCell>
-                                            <TableCell style={{ width: reportMetricColumnSizes.targetValue }}>
-                                                {metric.targetValue}
-                                            </TableCell>
-                                            <TableCell style={{ width: reportMetricColumnSizes.targetDate }}>
-                                                {metric.targetDate}
-                                            </TableCell>
-                                            <TableCell style={{ width: reportMetricColumnSizes.reportedValue }}>
-                                                {isReporting ? (
-                                                    <Input
-                                                        type="number"
-                                                        className="number-input-no-spinner h-9"
-                                                        value={metric.reportedValue}
-                                                        onChange={(e) => handleInputChange(metric.id, 'reportedValue', e.target.value)}
-                                                    />
-                                                ) : (
-                                                    metric.reportedValue || '-'
-                                                )}
-                                            </TableCell>
-                                            <TableCell style={{ width: reportMetricColumnSizes.reportedDate }}>
-                                                {isReporting ? (
-                                                    <Input
-                                                        type="date"
-                                                        className="h-9"
-                                                        value={metric.reportedDate}
-                                                        onChange={(e) => handleInputChange(metric.id, 'reportedDate', e.target.value)}
-                                                    />
-                                                ) : (
-                                                    <div className="flex items-center gap-2">
-                                                        <span>{metric.reportedDate || '-'}</span>
-                                                        {metric.reportedDate && <CalendarIcon size={16} className="text-muted-foreground" />}
-                                                    </div>
-                                                )}
-                                            </TableCell>
+                            <ScrollArea className="h-[250px]">
+                                <Table className="table-fixed">
+                                    <TableHeader>
+                                        <TableRow>
+                                            {reportMetricColumns.map((column) => (
+                                                <TableHead key={column.key} style={{ width: column.width }}>
+                                                    {column.label}
+                                                </TableHead>
+                                            ))}
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {reportableMetrics.map((metric) => (
+                                            <TableRow key={metric.id}>
+                                                <TableCell style={{ width: reportMetricColumnSizes.primarySuccessValue }}>
+                                                    {metric.primarySuccessValue}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.baselineValue }}>
+                                                    {metric.baselineValue}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.baselineDate }}>
+                                                    {metric.baselineDate}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.targetValue }}>
+                                                    {metric.targetValue}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.targetDate }}>
+                                                    {metric.targetDate}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.reportedValue }}>
+                                                    {isReporting ? (
+                                                        <Input
+                                                            type="number"
+                                                            className="number-input-no-spinner h-9"
+                                                            value={metric.reportedValue}
+                                                            onChange={(e) => handleInputChange(metric.id, 'reportedValue', e.target.value)}
+                                                        />
+                                                    ) : (
+                                                        metric.reportedValue || '-'
+                                                    )}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.reportedDate }}>
+                                                    {isReporting ? (
+                                                        <Input
+                                                            type="date"
+                                                            className="h-9"
+                                                            value={metric.reportedDate}
+                                                            onChange={(e) => handleInputChange(metric.id, 'reportedDate', e.target.value)}
+                                                        />
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <span>{metric.reportedDate || '-'}</span>
+                                                            {metric.reportedDate && <CalendarIcon size={16} className="text-muted-foreground" />}
+                                                        </div>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
                         </div>
                     ) : (
                         <Empty className="border border-dashed border-gray-200 bg-white/70">
