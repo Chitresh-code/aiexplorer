@@ -9,6 +9,7 @@ import {
     getCoreRowModel,
     getSortedRowModel,
     getFilteredRowModel,
+    getFacetedUniqueValues,
     useReactTable,
 } from "@tanstack/react-table"
 
@@ -45,6 +46,7 @@ export function DataTable<TData, TValue>({
         onRowSelectionChange: setRowSelection,
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
+        getFacetedUniqueValues: getFacetedUniqueValues(),
         enableRowSelection: true,
         state: {
             sorting,

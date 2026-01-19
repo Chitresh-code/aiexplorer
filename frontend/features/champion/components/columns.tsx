@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DeliveryHeaderFilter } from "./delivery-header-filter";
 import { PriorityHeaderFilter } from "./priority-header-filter";
+import { IdHeaderFilter } from "./id-header-filter";
 
 const phaseTooltips = {
     Idea: "Pitch idea. It is submitted for AI Champions or Business Leaders prioritization and approvals.",
@@ -262,13 +263,18 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
     },
     {
         accessorKey: "id",
-        header: () => (
-            <div className="whitespace-nowrap font-medium text-gray-900">Use Case ID</div>
+        header: ({ column, table }) => (
+            <div className="w-[80px] flex justify-center mx-auto">
+                <IdHeaderFilter column={column} table={table} />
+            </div>
         ),
         cell: ({ row }) => {
             const id = row.getValue("id") as number | string;
-            return <div className="whitespace-nowrap text-gray-600">{id}</div>;
-        }
+            return <div className="w-[80px] text-center text-gray-600 mx-auto">{id}</div>;
+        },
+        filterFn: (row, id, value) => {
+            return value.includes(row.getValue(id)?.toString());
+        },
     },
     {
         accessorKey: "title",

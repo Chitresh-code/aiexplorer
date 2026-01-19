@@ -17,22 +17,44 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { Column } from "@tanstack/react-table"
+import { Column, Table } from "@tanstack/react-table"
 
-interface PriorityHeaderFilterProps<TData, TValue> {
+interface IdHeaderFilterProps<TData, TValue> {
     column: Column<TData, TValue>
+    table: Table<TData>
 }
 
-export function PriorityHeaderFilter<TData, TValue>({
+export function IdHeaderFilter<TData, TValue>({
     column,
-}: PriorityHeaderFilterProps<TData, TValue>) {
-    const options = [
-        { label: "1", value: "1" },
-        { label: "2", value: "2" },
-        { label: "3", value: "3" },
-        { label: "4", value: "4" },
-        { label: "5", value: "5" },
-    ]
+    table,
+}: IdHeaderFilterProps<TData, TValue>) {
+    // Get unique IDs from the column
+    const sortedUniqueValues = React.useMemo(
+        () => {
+            const values = new Set<string>()
+            column.getFacetedUniqueValues?.()?.forEach((_, value) => {
+                if (value !== null && value !== undefined) {
+                    values.add(String(value))
+                }
+            })
+
+            // If getFacetedUniqueValues is not available, we might need another way
+            // or we just rely on it being added to the table.
+            // For now, let's try to get them from the table rows if faceted is empty
+            if (values.size === 0) {
+                table.getCoreRowModel().flatRows.forEach((row: any) => {
+                    const value = row.getValue(column.id)
+                    if (value !== null && value !== undefined) {
+                        values.add(String(value))
+                    }
+                })
+            }
+
+            return Array.from(values).sort()
+        },
+        [column]
+    )
+
     const selectedValues = new Set(column.getFilterValue() as string[])
 
     return (
@@ -40,7 +62,7 @@ export function PriorityHeaderFilter<TData, TValue>({
             <Popover>
                 <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="-ml-3 h-8 data-[state=open]:bg-accent">
-                        <span className="font-bold text-gray-900">Priority</span>
+                        <span className="font-bold text-gray-900">ID</span>
                         {selectedValues.size > 0 && (
                             <div className="ml-2 rounded-sm bg-teal-100 px-1 text-[10px] font-medium text-teal-800">
                                 {selectedValues.size}
@@ -50,27 +72,25 @@ export function PriorityHeaderFilter<TData, TValue>({
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                    className="w-[120px] p-0"
-                    align="end"
-                    sideOffset={45}
-                    alignOffset={-370}
-                    avoidCollisions={false}
+                    className="w-[95px] p-0"
+                    alignOffset={65}
+                    sideOffset={55}
                 >
                     <Command>
-                        <CommandInput placeholder="Priority" />
+                        <CommandInput placeholder="ID" />
                         <CommandList>
                             <CommandEmpty>No results found.</CommandEmpty>
                             <CommandGroup>
-                                {options.map((option) => {
-                                    const isSelected = selectedValues.has(option.value)
+                                {sortedUniqueValues.map((value) => {
+                                    const isSelected = selectedValues.has(value)
                                     return (
                                         <CommandItem
-                                            key={option.value}
+                                            key={value}
                                             onSelect={() => {
                                                 if (isSelected) {
-                                                    selectedValues.delete(option.value)
+                                                    selectedValues.delete(value)
                                                 } else {
-                                                    selectedValues.add(option.value)
+                                                    selectedValues.add(value)
                                                 }
                                                 const filterValues = Array.from(selectedValues)
                                                 column.setFilterValue(filterValues.length ? filterValues : undefined)
@@ -86,7 +106,7 @@ export function PriorityHeaderFilter<TData, TValue>({
                                             >
                                                 <Check className={cn("h-4 w-4")} />
                                             </div>
-                                            <span>{option.label}</span>
+                                            <span>{value}</span>
                                         </CommandItem>
                                     )
                                 })}

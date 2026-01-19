@@ -4,9 +4,10 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation } from '@/lib/router';
-import { Calendar as CalendarIcon, Check, History, Plus } from 'lucide-react';
+import { Calendar as CalendarIcon, Check, History, Plus, Trash2 } from 'lucide-react';
 import { useUseCases } from '@/hooks/use-usecases';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -16,6 +17,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { ParcsCategorySelect } from './components/ParcsCategorySelect';
+import { UnitOfMeasurementSelect } from './components/UnitOfMeasurementSelect';
 import {
     Empty,
     EmptyContent,
@@ -46,6 +49,7 @@ const reportMetricColumnSizes = {
     targetDate: 160,
     reportedValue: 160,
     reportedDate: 160,
+    actions: 60,
 };
 
 const reportMetricColumns = [
@@ -56,6 +60,7 @@ const reportMetricColumns = [
     { key: 'targetDate', label: 'Target Date', width: reportMetricColumnSizes.targetDate },
     { key: 'reportedValue', label: 'Reported Value', width: reportMetricColumnSizes.reportedValue },
     { key: 'reportedDate', label: 'Reported Date', width: reportMetricColumnSizes.reportedDate },
+    { key: 'actions', label: '', width: reportMetricColumnSizes.actions },
 ];
 
 const addMetricColumnSizes = {
@@ -66,6 +71,7 @@ const addMetricColumnSizes = {
     baselineDate: 160,
     targetValue: 160,
     targetDate: 160,
+    actions: 60,
 };
 
 const addMetricColumns = [
@@ -76,53 +82,10 @@ const addMetricColumns = [
     { key: 'baselineDate', label: 'Baseline Date', width: addMetricColumnSizes.baselineDate },
     { key: 'targetValue', label: 'Target Value', width: addMetricColumnSizes.targetValue },
     { key: 'targetDate', label: 'Target Date', width: addMetricColumnSizes.targetDate },
+    { key: 'actions', label: '', width: addMetricColumnSizes.actions },
 ];
 
-const MetricsSelect = ({
-    value,
-    options,
-    onSelect,
-    placeholder = "Select",
-    width = "w-[160px]",
-    className,
-    sideOffset = 50,
-    alignOffset = 200,
-    align = "start",
-}: {
-    value: string;
-    options: string[];
-    onSelect: (value: string) => void;
-    placeholder?: string;
-    width?: string;
-    className?: string;
-    sideOffset?: number;
-    alignOffset?: number;
-    align?: "start" | "center" | "end";
-}) => {
-    const handleValueChange = (newValue: string) => {
-        onSelect(newValue === " " ? "" : newValue);
-    };
 
-    const displayValue = value === "" ? " " : value;
-
-    return (
-        <Select value={displayValue} onValueChange={handleValueChange}>
-            <SelectTrigger className={cn("w-full h-9 px-2 text-xs", className)}>
-                <SelectValue placeholder={placeholder} />
-            </SelectTrigger>
-            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset}>
-                <SelectItem value=" " className="text-muted-foreground">
-                    {placeholder}
-                </SelectItem>
-                {options.map((option) => (
-                    <SelectItem key={option} value={option}>
-                        {option}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
-    );
-};
 
 const MetricDatePicker = ({
     value,
@@ -248,6 +211,11 @@ const MetricReporting = () => {
         ));
     };
 
+    const handleDeleteMetric = (id) => {
+        setMetrics(prev => prev.filter(metric => metric.id !== id));
+        toast.success('Metric deleted successfully');
+    };
+
     const handleReportMetric = () => {
         if (reportableMetrics.length > 0) {
             setIsReporting(true);
@@ -361,11 +329,9 @@ const MetricReporting = () => {
                                                     {metric.isSubmitted ? (
                                                         <span className="text-sm px-2">{metric.parcsCategory}</span>
                                                     ) : (
-                                                        <MetricsSelect
+                                                        <ParcsCategorySelect
                                                             value={metric.parcsCategory || ""}
                                                             onSelect={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
-                                                            options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
-                                                            width="w-[160px]"
                                                             className="metric-select"
                                                         />
                                                     )}
@@ -374,22 +340,9 @@ const MetricReporting = () => {
                                                     {metric.isSubmitted ? (
                                                         <span className="text-sm px-2">{metric.unitOfMeasurement}</span>
                                                     ) : (
-                                                        <MetricsSelect
+                                                        <UnitOfMeasurementSelect
                                                             value={metric.unitOfMeasurement || ""}
                                                             onSelect={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
-                                                            options={[
-                                                                'HoursPerDay',
-                                                                'HoursPerMonth',
-                                                                'HoursPerYear',
-                                                                'HoursPerCase',
-                                                                'HoursPerTransaction',
-                                                                'USDPerMonth',
-                                                                'USDPerYear',
-                                                                'USD',
-                                                                'Users',
-                                                                'Audited Risks'
-                                                            ]}
-                                                            width="w-[160px]"
                                                             className="metric-select"
                                                         />
                                                     )}
@@ -437,6 +390,18 @@ const MetricReporting = () => {
                                                             onChange={(date) => handleInputChange(metric.id, 'targetDate', date)}
                                                         />
                                                     )}
+                                                </TableCell>
+                                                <TableCell style={{ width: addMetricColumnSizes.actions }}>
+                                                    <div className="flex justify-center">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleDeleteMetric(metric.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -503,7 +468,7 @@ const MetricReporting = () => {
                         }}
                     />
 
-                    {metrics.length > 0 ? (
+                    {reportableMetrics.length > 0 ? (
                         <div className="rounded-md border">
                             <ScrollArea className="h-[250px]">
                                 <Table className="table-fixed">
@@ -560,6 +525,18 @@ const MetricReporting = () => {
                                                             {metric.reportedDate && <CalendarIcon size={16} className="text-muted-foreground" />}
                                                         </div>
                                                     )}
+                                                </TableCell>
+                                                <TableCell style={{ width: reportMetricColumnSizes.actions }}>
+                                                    <div className="flex justify-center">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                            onClick={() => handleDeleteMetric(metric.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

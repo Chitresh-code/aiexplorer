@@ -26,7 +26,8 @@ import { ConfidenceCombobox } from "./components/reprioritize/ConfidenceCombobox
 import { DeliveryCombobox } from "./components/reprioritize/DeliveryCombobox";
 import { EffortCombobox } from "./components/reprioritize/EffortCombobox";
 import { ImpactCombobox } from "./components/reprioritize/ImpactCombobox";
-import { MetricsSelect } from "./components/MetricsSelect";
+import { ParcsCategorySelect } from "./components/ParcsCategorySelect";
+import { UnitOfMeasurementSelect } from "./components/UnitOfMeasurementSelect";
 import { PriorityCombobox } from "./components/reprioritize/PriorityCombobox";
 import { ReportingFrequencyCombobox } from "./components/reprioritize/ReportingFrequencyCombobox";
 import { UserBaseCombobox } from "./components/reprioritize/UserBaseCombobox";
@@ -61,7 +62,8 @@ import {
     FileText,
     History,
     Library,
-    Wand2
+    Wand2,
+    Trash2
 } from 'lucide-react';
 import { useUseCases } from '@/hooks/use-usecases';
 import { useMemo, useState, useEffect, useCallback } from 'react';
@@ -164,6 +166,7 @@ const metricColumnSizes = {
     targetDate: 160,
     reportedValue: 160,
     reportedDate: 160,
+    actions: 60,
 };
 
 const MetricDatePicker = ({
@@ -573,6 +576,16 @@ const UseCaseDetails = () => {
         ));
     }, []);
 
+    const handleDeleteMetric = useCallback((id: number) => {
+        setMetrics(prev => prev.filter(metric => metric.id !== id));
+        toast.success('Metric deleted successfully');
+    }, []);
+
+    const handleDeleteReportedMetric = useCallback((id: number) => {
+        setReportedMetrics(prev => prev.filter(metric => metric.id !== id));
+        toast.success('Metric removed from reporting');
+    }, []);
+
     const handleReportedInputChange = useCallback((id: number, field: string, value: string) => {
         // Update reported metrics state
         setReportedMetrics(prev => prev.map(metric =>
@@ -750,7 +763,24 @@ const UseCaseDetails = () => {
             },
             size: metricColumnSizes.reportedDate,
         },
-    ], []);
+        {
+            id: 'actions',
+            header: '',
+            cell: ({ row }) => (
+                <div className="flex justify-center">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteReportedMetric(row.original.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            ),
+            size: metricColumnSizes.actions,
+        },
+    ], [handleReportedInputChange, handleDeleteReportedMetric]);
 
     const addMetricsColumns = useMemo<ColumnDef<Metric>[]>(() => [
         {
@@ -775,11 +805,9 @@ const UseCaseDetails = () => {
             cell: ({ row }) => row.original.isSubmitted ? (
                 <span className="text-sm px-2">{row.original.parcsCategory}</span>
             ) : (
-                <MetricsSelect
+                <ParcsCategorySelect
                     value={row.original.parcsCategory}
                     onSelect={(val) => handleInputChange(row.original.id, 'parcsCategory', val)}
-                    options={['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale']}
-                    width="w-[160px]"
                     className="metric-select"
                 />
             ),
@@ -791,22 +819,9 @@ const UseCaseDetails = () => {
             cell: ({ row }) => row.original.isSubmitted ? (
                 <span className="text-sm px-2">{row.original.unitOfMeasurement}</span>
             ) : (
-                <MetricsSelect
+                <UnitOfMeasurementSelect
                     value={row.original.unitOfMeasurement}
                     onSelect={(val) => handleInputChange(row.original.id, 'unitOfMeasurement', val)}
-                    options={[
-                        'HoursPerDay',
-                        'HoursPerMonth',
-                        'HoursPerYear',
-                        'HoursPerCase',
-                        'HoursPerTransaction',
-                        'USDPerMonth',
-                        'USDPerYear',
-                        'USD',
-                        'Users',
-                        'Audited Risks'
-                    ]}
-                    width="w-[160px]"
                     className="metric-select"
                 />
             ),
@@ -882,7 +897,24 @@ const UseCaseDetails = () => {
             ),
             size: metricColumnSizes.targetDate,
         },
-    ], [handleInputChange]);
+        {
+            id: 'actions',
+            header: '',
+            cell: ({ row }) => (
+                <div className="flex justify-center">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteMetric(row.original.id)}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                </div>
+            ),
+            size: metricColumnSizes.actions,
+        },
+    ], [handleInputChange, handleDeleteMetric]);
 
     const reportedTable = useReactTable({
         data: reportedMetricsForDisplay,

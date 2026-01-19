@@ -165,7 +165,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <div
-          className={`sticky top-0 z-[100] flex h-14 items-center gap-2 bg-white px-4 transition-shadow duration-200 ${isScrolled ? 'border-b border-gray-200 shadow-sm' : ''
+          className={`sticky top-0 z-[40] flex h-14 items-center gap-2 bg-white px-4 transition-shadow duration-200 ${isScrolled ? 'border-b border-gray-200 shadow-sm' : ''
             }`}
         >
           <SidebarTrigger />

@@ -49,10 +49,10 @@ export function DeliveryHeaderFilter<TData, TValue>({
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                    className="w-[200px] p-0"
+                    className="w-[120px] p-0"
                     align="end"
                     sideOffset={45}
-                    alignOffset={-350}
+                    alignOffset={-345}
                     avoidCollisions={false}
                 >
                     <Command>

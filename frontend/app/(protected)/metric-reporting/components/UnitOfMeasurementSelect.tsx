@@ -8,9 +8,8 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-interface MetricsSelectProps {
+interface UnitOfMeasurementSelectProps {
     value: string;
-    options: string[];
     onSelect: (value: string) => void;
     placeholder?: string;
     width?: string;
@@ -20,24 +19,33 @@ interface MetricsSelectProps {
     align?: "start" | "center" | "end";
 }
 
-export function MetricsSelect({
+const options = [
+    'HoursPerDay',
+    'HoursPerMonth',
+    'HoursPerYear',
+    'HoursPerCase',
+    'HoursPerTransaction',
+    'USDPerMonth',
+    'USDPerYear',
+    'USD',
+    'Users',
+    'Audited Risks'
+];
+
+export function UnitOfMeasurementSelect({
     value,
-    options,
     onSelect,
-    sideOffset = 65,
+    sideOffset = 70,
     alignOffset = 150,
     placeholder = "Select",
-    width = "w-[240px]",
+    width = "w-[220px]",
     className,
     align = "start"
-}: MetricsSelectProps) {
+}: UnitOfMeasurementSelectProps) {
     const handleValueChange = (newValue: string) => {
-        // Map the space back to empty string if selected
         onSelect(newValue === " " ? "" : newValue);
     };
 
-    // Map empty value to space for the Select component state
-    // Radix Select requires a valid value that matches one of the items if controlled
     const displayValue = value === "" ? " " : value;
 
     return (
@@ -47,7 +55,7 @@ export function MetricsSelect({
             >
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>
-            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset}>
+            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset} avoidCollisions={false}>
                 <SelectItem value=" " className="text-muted-foreground">{placeholder}</SelectItem>
                 {options.map((option) => (
                     <SelectItem key={option} value={option}>
