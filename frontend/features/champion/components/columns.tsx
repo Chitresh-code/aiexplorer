@@ -273,6 +273,7 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
             return <div className="w-[80px] text-center text-gray-600 mx-auto">{id}</div>;
         },
         filterFn: (row, id, value) => {
+            if (!value || value.length === 0) return true;
             return value.includes(row.getValue(id)?.toString());
         },
     },
@@ -431,7 +432,8 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
             </div>
         ),
         filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id) as string);
+            if (!value || value.length === 0) return true;
+            return value.includes(String(row.getValue(id)));
         },
     },
     {
@@ -456,7 +458,8 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
             )
         },
         filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id)?.toString());
+            if (!value || value.length === 0) return true;
+            return value.includes(String(row.getValue(id)));
         },
     },
     // Temporarily removed actions column

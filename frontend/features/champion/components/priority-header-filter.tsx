@@ -34,12 +34,32 @@ export function PriorityHeaderFilter<TData, TValue>({
         { label: "4", value: "4" },
         { label: "5", value: "5" },
     ]
-    const normalizeFilterValues = (value: unknown) => {
-        if (Array.isArray(value)) return value.map((item) => String(item))
-        if (value === null || value === undefined) return []
-        return [String(value)]
+
+    // Use local state to track selections and force re-renders
+    const [selectedValues, setSelectedValues] = React.useState<Set<string>>(new Set())
+
+    // Sync with column filter value
+    React.useEffect(() => {
+        const filterValue = column.getFilterValue() as string[] | undefined
+        setSelectedValues(new Set(filterValue ?? []))
+    }, [column.getFilterValue()])
+
+    const handleSelect = (value: string) => {
+        const newSelectedValues = new Set(selectedValues)
+        if (newSelectedValues.has(value)) {
+            newSelectedValues.delete(value)
+        } else {
+            newSelectedValues.add(value)
+        }
+        setSelectedValues(newSelectedValues)
+        const filterValues = Array.from(newSelectedValues)
+        column.setFilterValue(filterValues.length ? filterValues : undefined)
     }
-    const selectedValues = new Set(normalizeFilterValues(column.getFilterValue()))
+
+    const handleClear = () => {
+        setSelectedValues(new Set())
+        column.setFilterValue(undefined)
+    }
 
     return (
         <div className="flex items-center justify-center w-full">
@@ -57,10 +77,9 @@ export function PriorityHeaderFilter<TData, TValue>({
                 </PopoverTrigger>
                 <PopoverContent
                     className="w-[200px] p-0"
-                    align="end"
-                    sideOffset={80}
-                    alignOffset={-390}
-                    avoidCollisions={false}
+                    align="start"
+                    sideOffset={10}
+                    alignOffset={0}
                 >
                     <Command>
                         <CommandInput placeholder="Priority" />
@@ -70,9 +89,8 @@ export function PriorityHeaderFilter<TData, TValue>({
                                 <>
                                     <CommandGroup>
                                         <CommandItem
-                                            value="__clear__"
-                                            onSelect={() => column.setFilterValue(undefined)}
-                                            className="justify-center text-center"
+                                            onSelect={handleClear}
+                                            className="justify-center text-center cursor-pointer"
                                         >
                                             Clear filters
                                         </CommandItem>
@@ -87,16 +105,7 @@ export function PriorityHeaderFilter<TData, TValue>({
                                         <CommandItem
                                             key={option.value}
                                             value={option.value}
-                                            onSelect={() => {
-                                                const nextValues = new Set(normalizeFilterValues(column.getFilterValue()))
-                                                if (isSelected) {
-                                                    nextValues.delete(option.value)
-                                                } else {
-                                                    nextValues.add(option.value)
-                                                }
-                                                const updatedValues = Array.from(nextValues)
-                                                column.setFilterValue(updatedValues.length ? updatedValues : undefined)
-                                            }}
+                                            onSelect={() => handleSelect(option.value)}
                                         >
                                             <div
                                                 className={cn(
@@ -106,7 +115,7 @@ export function PriorityHeaderFilter<TData, TValue>({
                                                         : "opacity-50 [&_svg]:invisible"
                                                 )}
                                             >
-                                                <Check className={cn("h-4 w-4")} />
+                                                <Check className="h-4 w-4" />
                                             </div>
                                             <span>{option.label}</span>
                                         </CommandItem>

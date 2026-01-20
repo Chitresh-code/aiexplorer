@@ -52,7 +52,31 @@ export function IdHeaderFilter<TData, TValue>({
         [column, table]
     )
 
-    const selectedValues = new Set(column.getFilterValue() as string[])
+    // Use local state to track selections and force re-renders
+    const [selectedValues, setSelectedValues] = React.useState<Set<string>>(new Set())
+
+    // Sync with column filter value
+    React.useEffect(() => {
+        const filterValue = column.getFilterValue() as string[] | undefined
+        setSelectedValues(new Set(filterValue ?? []))
+    }, [column.getFilterValue()])
+
+    const handleSelect = (value: string) => {
+        const newSelectedValues = new Set(selectedValues)
+        if (newSelectedValues.has(value)) {
+            newSelectedValues.delete(value)
+        } else {
+            newSelectedValues.add(value)
+        }
+        setSelectedValues(newSelectedValues)
+        const filterValues = Array.from(newSelectedValues)
+        column.setFilterValue(filterValues.length ? filterValues : undefined)
+    }
+
+    const handleClear = () => {
+        setSelectedValues(new Set())
+        column.setFilterValue(undefined)
+    }
 
     return (
         <div className="flex items-center justify-center w-full">
@@ -70,8 +94,9 @@ export function IdHeaderFilter<TData, TValue>({
                 </PopoverTrigger>
                 <PopoverContent
                     className="w-[90px] p-0"
-                    alignOffset={125}
-                    sideOffset={85}
+                    align="start"
+                    sideOffset={10}
+                    alignOffset={0}
                 >
                     <Command>
                         <CommandInput placeholder="ID" />
@@ -81,8 +106,8 @@ export function IdHeaderFilter<TData, TValue>({
                                 <>
                                     <CommandGroup>
                                         <CommandItem
-                                            onSelect={() => column.setFilterValue(undefined)}
-                                            className="justify-center text-center"
+                                            onSelect={handleClear}
+                                            className="justify-center text-center cursor-pointer"
                                         >
                                             Clear filters
                                         </CommandItem>
@@ -96,15 +121,7 @@ export function IdHeaderFilter<TData, TValue>({
                                     return (
                                         <CommandItem
                                             key={value}
-                                            onSelect={() => {
-                                                if (isSelected) {
-                                                    selectedValues.delete(value)
-                                                } else {
-                                                    selectedValues.add(value)
-                                                }
-                                                const filterValues = Array.from(selectedValues)
-                                                column.setFilterValue(filterValues.length ? filterValues : undefined)
-                                            }}
+                                            onSelect={() => handleSelect(value)}
                                         >
                                             <div
                                                 className={cn(
@@ -114,7 +131,7 @@ export function IdHeaderFilter<TData, TValue>({
                                                         : "opacity-50 [&_svg]:invisible"
                                                 )}
                                             >
-                                                <Check className={cn("h-4 w-4")} />
+                                                <Check className="h-4 w-4" />
                                             </div>
                                             <span>{value}</span>
                                         </CommandItem>
