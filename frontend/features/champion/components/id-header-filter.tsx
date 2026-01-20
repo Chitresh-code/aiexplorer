@@ -95,8 +95,8 @@ export function IdHeaderFilter<TData, TValue>({
                 <PopoverContent
                     className="w-[90px] p-0"
                     align="start"
-                    sideOffset={10}
-                    alignOffset={0}
+                    sideOffset={100}
+                    alignOffset={75}
                 >
                     <Command>
                         <CommandInput placeholder="ID" />
