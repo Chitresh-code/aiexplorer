@@ -75,10 +75,12 @@ export function DeliveryHeaderFilter<TData, TValue>({
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                    className="w-[200px] p-0"
-                    align="start"
-                    sideOffset={10}
-                    alignOffset={0}
+                    className="w-[130px] p-0"
+                    align="end"
+                    side="bottom"
+                    sideOffset={80}
+                    alignOffset={-340}
+                    avoidCollisions={false}
                 >
                     <Command>
                         <CommandInput placeholder="Delivery" />
