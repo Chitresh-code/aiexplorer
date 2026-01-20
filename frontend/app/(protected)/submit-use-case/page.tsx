@@ -305,6 +305,7 @@ const SubmitUseCase = () => {
     const [loadingError, setLoadingError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
+    const [isOpportunityGenerating, setIsOpportunityGenerating] = useState(false);
 
     // Raw data from APIs
     const [aiModelsData, setAiModelsData] = useState(null);
@@ -387,6 +388,42 @@ const SubmitUseCase = () => {
     const selectedModel = form.watch("selectedModel");
 
     const showChecklistTab = true;
+
+    const handleGenerateOpportunity = useCallback(async () => {
+        const draft = (form.getValues("opportunity") || "").trim();
+        if (draft.length < 10) {
+            toast.error("Add a few lines so AI can expand the opportunity.");
+            return;
+        }
+
+        setIsOpportunityGenerating(true);
+        try {
+            const response = await fetch("/api/opportunity-suggest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ draft }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data?.error || "AI request failed.");
+            }
+            const suggestion = (data?.text || "").trim();
+            if (!suggestion) {
+                throw new Error("AI returned an empty response.");
+            }
+            form.setValue("opportunity", suggestion, {
+                shouldDirty: true,
+                shouldValidate: true,
+            });
+            toast.success("Opportunity updated with AI.");
+        } catch (error) {
+            const message =
+                error instanceof Error ? error.message : "AI request failed.";
+            toast.error(message);
+        } finally {
+            setIsOpportunityGenerating(false);
+        }
+    }, [form]);
 
     // Stakeholder form values
     const [selectedRole, setSelectedRole] = useState('');
@@ -1128,6 +1165,27 @@ const SubmitUseCase = () => {
                                                     <Field>
                                                         <FieldLabel>Opportunity</FieldLabel>
                                                         <FieldContent>
+                                                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    Write a short draft, then let AI complete it.
+                                                                </span>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={handleGenerateOpportunity}
+                                                                    disabled={isOpportunityGenerating || !opportunity?.trim()}
+                                                                >
+                                                                    {isOpportunityGenerating ? (
+                                                                        <>
+                                                                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                                                            Writing...
+                                                                        </>
+                                                                    ) : (
+                                                                        "Write this with AI"
+                                                                    )}
+                                                                </Button>
+                                                            </div>
                                                             <Textarea rows={3} placeholder="What is AI being used for?" {...field} className="form-textarea" />
                                                             <FieldError errors={[fieldState.error]} />
                                                         </FieldContent>
