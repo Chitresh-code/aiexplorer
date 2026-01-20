@@ -111,8 +111,46 @@ export default function DashboardPage() {
         });
     };
 
+    const triggerPowerAutomate = async () => {
+        try {
+            const response = await fetch(
+                "https://ad35491b5e07e8ee86b3dc7c9e5e52.05.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/96a0b0e4b274467cbf32e4066d5b42f7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=MuUwDFuoQ928DbrrenArGrEjpgp_b9MRXCkyQXDKwQ8",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        name: "John",
+                        source: "ReactButton"
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            console.log("Flow triggered successfully");
+            toast.success("Flow triggered successfully!");
+        } catch (error) {
+            console.error("Error triggering flow:", error);
+            toast.error("Failed to trigger flow");
+        }
+    };
+
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
+            <div className="flex justify-end">
+                <Button 
+                    onClick={triggerPowerAutomate}
+                    variant="outline"
+                    className="bg-primary/10 hover:bg-primary/20 border-primary/20"
+                >
+                    <Zap className="mr-2 h-4 w-4" />
+                    Trigger Power Automate Flow (Test)
+                </Button>
+            </div>
             {/* Section Cards - KPI Metrics - Temporarily removed */}
             {/* <SectionCards /> */}
 
