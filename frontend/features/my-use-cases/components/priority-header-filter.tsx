@@ -11,6 +11,7 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
+    CommandSeparator,
 } from "@/components/ui/command"
 import {
     Popover,
@@ -33,7 +34,12 @@ export function PriorityHeaderFilter<TData, TValue>({
         { label: "4", value: "4" },
         { label: "5", value: "5" },
     ]
-    const selectedValues = new Set(column.getFilterValue() as string[])
+    const normalizeFilterValues = (value: unknown) => {
+        if (Array.isArray(value)) return value.map((item) => String(item))
+        if (value === null || value === undefined) return []
+        return [String(value)]
+    }
+    const selectedValues = new Set(normalizeFilterValues(column.getFilterValue()))
 
     return (
         <div className="flex items-center justify-center w-full">
@@ -60,20 +66,36 @@ export function PriorityHeaderFilter<TData, TValue>({
                         <CommandInput placeholder="Priority" />
                         <CommandList>
                             <CommandEmpty>No results found.</CommandEmpty>
+                            {selectedValues.size > 0 && (
+                                <>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            value="__clear__"
+                                            onSelect={() => column.setFilterValue(undefined)}
+                                            className="justify-center text-center"
+                                        >
+                                            Clear filters
+                                        </CommandItem>
+                                    </CommandGroup>
+                                    <CommandSeparator />
+                                </>
+                            )}
                             <CommandGroup>
                                 {options.map((option) => {
                                     const isSelected = selectedValues.has(option.value)
                                     return (
                                         <CommandItem
                                             key={option.value}
+                                            value={option.value}
                                             onSelect={() => {
+                                                const nextValues = new Set(normalizeFilterValues(column.getFilterValue()))
                                                 if (isSelected) {
-                                                    selectedValues.delete(option.value)
+                                                    nextValues.delete(option.value)
                                                 } else {
-                                                    selectedValues.add(option.value)
+                                                    nextValues.add(option.value)
                                                 }
-                                                const filterValues = Array.from(selectedValues)
-                                                column.setFilterValue(filterValues.length ? filterValues : undefined)
+                                                const updatedValues = Array.from(nextValues)
+                                                column.setFilterValue(updatedValues.length ? updatedValues : undefined)
                                             }}
                                         >
                                             <div
@@ -91,19 +113,6 @@ export function PriorityHeaderFilter<TData, TValue>({
                                     )
                                 })}
                             </CommandGroup>
-                            {selectedValues.size > 0 && (
-                                <>
-                                    <div className="h-px bg-border" />
-                                    <CommandGroup>
-                                        <CommandItem
-                                            onSelect={() => column.setFilterValue(undefined)}
-                                            className="justify-center text-center"
-                                        >
-                                            Clear filters
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </>
-                            )}
                         </CommandList>
                     </Command>
                 </PopoverContent>

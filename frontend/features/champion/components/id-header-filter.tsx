@@ -77,6 +77,19 @@ export function IdHeaderFilter<TData, TValue>({
                         <CommandInput placeholder="ID" />
                         <CommandList>
                             <CommandEmpty>No results found.</CommandEmpty>
+                            {selectedValues.size > 0 && (
+                                <>
+                                    <CommandGroup>
+                                        <CommandItem
+                                            onSelect={() => column.setFilterValue(undefined)}
+                                            className="justify-center text-center"
+                                        >
+                                            Clear filters
+                                        </CommandItem>
+                                    </CommandGroup>
+                                    <div className="h-px bg-border" />
+                                </>
+                            )}
                             <CommandGroup>
                                 {sortedUniqueValues.map((value) => {
                                     const isSelected = selectedValues.has(value)
@@ -108,19 +121,6 @@ export function IdHeaderFilter<TData, TValue>({
                                     )
                                 })}
                             </CommandGroup>
-                            {selectedValues.size > 0 && (
-                                <>
-                                    <div className="h-px bg-border" />
-                                    <CommandGroup>
-                                        <CommandItem
-                                            onSelect={() => column.setFilterValue(undefined)}
-                                            className="justify-center text-center"
-                                        >
-                                            Clear filters
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </>
-                            )}
                         </CommandList>
                     </Command>
                 </PopoverContent>

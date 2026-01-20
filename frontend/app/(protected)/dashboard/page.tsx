@@ -3,33 +3,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    AlertCircle,
     Award,
     BarChart2,
-    ChevronDown,
-    ChevronUp,
     FilePlus,
     FileText,
-    TrendingUp,
-    Layers,
     Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { ActionCard } from '@/components/shared/cards/ActionCard';
-import { ChartAreaInteractive } from '@/features/dashboard/components/charts/ChartAreaInteractive';
 import { RecentSubmissionsCarousel } from '@/features/dashboard/components/RecentSubmissionsCarousel';
-import { SectionCards } from '@/features/dashboard/components/SectionCards';
-import { useKPIData } from '@/features/dashboard/hooks/useKPIData';
 import { Button } from '@/components/ui/button';
-import {
-    Carousel,
-    CarouselContent,
-    CarouselItem,
-    CarouselNext,
-    CarouselPrevious,
-} from '@/components/ui/carousel';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+
+interface RecentSubmission {
+    ID: string;
+    UseCase: string;
+    AITheme: string;
+    Status: string;
+    Created: string;
+}
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -38,7 +30,8 @@ export default function DashboardPage() {
     const [showAlertModal, setShowAlertModal] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(false);
 
-    const { recentSubmissions, loading } = useKPIData();
+    const [recentSubmissions, setRecentSubmissions] = useState<RecentSubmission[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const onScroll = () => {
@@ -53,6 +46,47 @@ export default function DashboardPage() {
         scrollContainer?.addEventListener('scroll', onScroll);
 
         return () => scrollContainer?.removeEventListener('scroll', onScroll);
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+        const controller = new AbortController();
+
+        const fetchRecentSubmissions = async () => {
+            setLoading(true);
+            try {
+                const response = await fetch('/api/recent-submissions', {
+                    cache: 'no-store',
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to load KPI data (${response.status})`);
+                }
+
+                const data = (await response.json()) as RecentSubmission[];
+                if (isMounted) {
+                    setRecentSubmissions(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
+                const name = (error as { name?: string })?.name;
+                if (name !== 'AbortError') {
+                    console.error('Failed to fetch recent submissions:', error);
+                    toast.error('Failed to load recent submissions');
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        fetchRecentSubmissions();
+
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
     }, []);
 
     const handleMyUseCasesClick = () => {
