@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
+import { ClientLayout } from "@/components/layout/ClientLayout";
 import { AppProviders } from "@/components/providers/app-providers";
 
 const dmSans = DM_Sans({
@@ -23,17 +23,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        {process.env.NODE_ENV === "development" && (
-          <Script
-            src="//unpkg.com/react-grab/dist/index.global.js"
-            crossOrigin="anonymous"
-            strategy="beforeInteractive"
-          />
-        )}
-      </head>
       <body className={`${dmSans.variable} bg-white text-gray-900`}>
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <ClientLayout>{children}</ClientLayout>
+        </AppProviders>
       </body>
     </html>
   );

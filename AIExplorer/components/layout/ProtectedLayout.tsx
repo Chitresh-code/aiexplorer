@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { CSSProperties, ReactNode } from 'react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import { useRouter } from 'next/navigation';
 import { getRouteState } from '@/lib/navigation-state';
@@ -23,13 +24,12 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 
-export default function ProtectedLayout({ children }: { children: ReactNode }) {
+export function ProtectedLayout({ children }: { children: ReactNode }) {
   const isAuthenticated = useIsAuthenticated();
   const { inProgress } = useMsal();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const breadcrumbItems = useMemo(() => {
@@ -168,6 +168,16 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
           className={`flex h-14 items-center gap-2 bg-white px-4 transition-shadow duration-200 ${isScrolled ? 'border-b border-gray-200 shadow-sm' : ''
             }`}
         >
+          <Link href="/" className="flex items-center">
+            <Image
+              src="/ukg-logo.png"
+              alt="UKG Logo"
+              width={96}
+              height={24}
+              className="h-6 w-auto"
+              priority
+            />
+          </Link>
           <SidebarTrigger />
           <Breadcrumb>
             <BreadcrumbList>
