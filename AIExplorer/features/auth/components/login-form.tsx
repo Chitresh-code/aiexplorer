@@ -4,7 +4,9 @@
 import { useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 
-import { loginRequest } from '@/lib/msal';
+import { isProd } from '@/lib/app-env';
+import { getUiErrorMessage, logErrorTrace } from '@/lib/error-utils';
+import { getLoginRequest } from '@/lib/msal';
 
 export function LoginForm({ className }: { className?: string }) {
   const { instance } = useMsal();
@@ -16,10 +18,16 @@ export function LoginForm({ className }: { className?: string }) {
     setError(null);
 
     try {
-      await instance.loginPopup(loginRequest);
+      await instance.loginPopup(getLoginRequest());
     } catch (err) {
-      console.error('Login error', err);
-      setError(err instanceof Error ? err.message : 'Unable to login');
+      logErrorTrace('Login error', err);
+      setError(
+        getUiErrorMessage(
+          err,
+          'Unable to sign in right now. Please try again.',
+        ),
+      );
+    } finally {
       setIsLoading(false);
     }
   };
@@ -33,7 +41,7 @@ export function LoginForm({ className }: { className?: string }) {
       </div>
 
       {error && (
-        <div className="login-error">
+        <div className="login-error" role="alert" aria-live="polite">
           <svg
             className="login-error-icon"
             fill="none"
@@ -47,7 +55,11 @@ export function LoginForm({ className }: { className?: string }) {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span>{error}</span>
+          {isProd ? (
+            <span>{error}</span>
+          ) : (
+            <pre className="whitespace-pre-wrap">{error}</pre>
+          )}
         </div>
       )}
 
@@ -70,11 +82,11 @@ export function LoginForm({ className }: { className?: string }) {
 
       <div className="login-form-footer">
         By clicking, you agree to our{' '}
-        <a href="#" className="login-link">
+        <a href="/terms" className="login-link">
           Terms of Service
         </a>{' '}
         and{' '}
-        <a href="#" className="login-link">
+        <a href="/privacy" className="login-link">
           Privacy Policy
         </a>
         .

@@ -10,7 +10,11 @@ export default function LoginPage() {
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = searchParams.get('returnTo') || '/';
+  const rawReturnTo = searchParams.get('returnTo');
+  const returnTo =
+    rawReturnTo && rawReturnTo.startsWith('/') && !rawReturnTo.startsWith('//')
+      ? rawReturnTo
+      : '/';
 
   useEffect(() => {
     if (isAuthenticated) {
