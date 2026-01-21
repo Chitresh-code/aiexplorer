@@ -3,6 +3,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import * as React from "react"
 import { useMsal } from "@azure/msal-react"
 import {
   Award,
@@ -14,6 +15,7 @@ import {
   LayoutDashboard,
 } from "lucide-react"
 import { getRouteState } from "@/lib/navigation-state"
+import { type NavItemConfig, type NavIconKey } from "@/features/navigation/config"
 
 import {
   Sidebar as UISidebar,
@@ -32,14 +34,14 @@ import {
 } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Search, label: "AI Gallery", path: "/gallery" },
-  { icon: FileText, label: "Submit a Use Case", path: "/submit-use-case" },
-  { icon: Folder, label: "My Use Cases", path: "/my-use-cases" },
-  { icon: BarChart2, label: "Report Metrics", path: "/metric-reporting" },
-  { icon: Award, label: "Champion Use Cases", path: "/champion" },
-]
+const iconMap: Record<NavIconKey, typeof LayoutDashboard> = {
+  dashboard: LayoutDashboard,
+  gallery: Search,
+  submit: FileText,
+  "my-use-cases": Folder,
+  metrics: BarChart2,
+  champion: Award,
+}
 
 const extraMatches: Record<string, string[]> = {
   "/metric-reporting": ["/metrics"],
@@ -66,6 +68,7 @@ export function AppSidebar() {
   const router = useRouter()
   const { instance, accounts } = useMsal()
   const { state } = useSidebar()
+  const [navItems, setNavItems] = React.useState<NavItemConfig[]>([])
 
   const handleLogout = () => {
     instance
@@ -115,19 +118,52 @@ export function AppSidebar() {
   const email = accounts[0]?.username || ""
   const isCollapsed = state === "collapsed"
 
+  React.useEffect(() => {
+    let isMounted = true
+    const controller = new AbortController()
+    const loadNav = async () => {
+      try {
+        const response = await fetch("/api/navigation", {
+          cache: "no-store",
+          signal: controller.signal,
+        })
+        if (!response.ok) {
+          throw new Error("Failed to load navigation")
+        }
+        const data = (await response.json()) as NavItemConfig[]
+        if (isMounted) {
+          setNavItems(Array.isArray(data) ? data : [])
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return
+        console.error("Navigation load failed", error)
+        if (isMounted) {
+          setNavItems([])
+        }
+      }
+    }
+    loadNav()
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
+  }, [])
+
   return (
     <>
       <UISidebar collapsible="icon" className="border-r border-sidebar-border">
         <SidebarHeader className="px-1 pt-5">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="flex w-full items-center justify-start rounded-lg px-3 pb-0 text-left text-base font-semibold text-sidebar-foreground transition hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
-          >
-            <div className="flex w-full items-center justify-start rounded-lg px-0 group-data-[collapsible=icon]:justify-center">
-              <img src="/ukg-logo.png" alt="UKG Logo" className="h-12 w-auto" />
-            </div>
-          </button>
+          {!isCollapsed && (
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="flex w-full items-center justify-start rounded-lg px-3 pb-0 text-left text-base font-semibold text-sidebar-foreground transition hover:bg-sidebar-accent group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            >
+              <div className="flex w-full items-center justify-start rounded-lg px-0 group-data-[collapsible=icon]:justify-center">
+                <img src="/ukg-logo.png" alt="UKG Logo" className="h-12 w-auto" />
+              </div>
+            </button>
+          )}
         </SidebarHeader>
 
         <SidebarContent className="pt-0">
@@ -137,6 +173,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 {navItems.map((item) => {
                   const active = isActive(item.path)
+                  const Icon = iconMap[item.icon]
                   return (
                     <SidebarMenuItem key={item.path}>
                       <SidebarMenuButton
@@ -149,7 +186,7 @@ export function AppSidebar() {
                         )}
                       >
                         <Link href={item.path}>
-                          <item.icon
+                          <Icon
                             className={cn(
                               "text-sidebar-foreground",
                               active && "text-gray-900",

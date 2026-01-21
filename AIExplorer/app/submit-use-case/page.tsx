@@ -7,6 +7,7 @@ import { useNavigate, useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import { X, Loader2, CheckSquare, Users, Plus, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getLoginRequest } from '@/lib/msal';
 import {
     getSubmitUseCaseData,
     getVendorsFromData,
@@ -277,7 +278,7 @@ const formSchema = z.object({
 const SubmitUseCase = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { accounts } = useMsal();
+    const { accounts, instance } = useMsal();
     const [currentStep, setCurrentStep] = useState(location.state?.initialStep || 1);
     const formContainerRef = useRef(null);
     const aiCardRef = useRef(null);
@@ -289,11 +290,12 @@ const SubmitUseCase = () => {
             const account = accounts[0];
             const name = account.name || account.username || 'Unknown User';
             const role = 'Primary Contact';
+            const email = account.username;
 
             setAddedStakeholders(prev => {
                 const exists = prev.some(s => s.name === name && s.role === role);
                 if (!exists) {
-                    return [...prev, { name, role }];
+                    return [...prev, { name, role, email }];
                 }
                 return prev;
             });
@@ -302,7 +304,6 @@ const SubmitUseCase = () => {
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
-    const [loadingError, setLoadingError] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [isOpportunityGenerating, setIsOpportunityGenerating] = useState(false);
@@ -433,7 +434,10 @@ const SubmitUseCase = () => {
     // Stakeholder dialog states
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [stakeholderName, setStakeholderName] = useState('');
+    const [stakeholderEmail, setStakeholderEmail] = useState('');
     const [stakeholderRole, setStakeholderRole] = useState('');
+    const [stakeholderSearchResults, setStakeholderSearchResults] = useState([]);
+    const [isStakeholderSearching, setIsStakeholderSearching] = useState(false);
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
     // Step 3 form values - Launch Plan dates
@@ -738,8 +742,6 @@ const SubmitUseCase = () => {
                 if (!hasCache) {
                     setIsLoading(true);
                 }
-                setLoadingError(null);
-
                 const consolidatedData = await getSubmitUseCaseData();
                 if (!isMounted) return;
 
@@ -752,9 +754,6 @@ const SubmitUseCase = () => {
                 }
             } catch (error) {
                 console.error("Error fetching data:", error);
-                if (!hasCache) {
-                    setLoadingError("Failed to load form data. Please refresh the page.");
-                }
             } finally {
                 if (!hasCache && isMounted) {
                     setIsLoading(false);
@@ -818,7 +817,7 @@ const SubmitUseCase = () => {
     const roles = useMemo(() => {
         const roleNames = getRolesFromData(rolesData);
         const seen = new Set();
-        return roleNames
+        const normalized = roleNames
             .filter(name => {
                 const label = name.trim().toLowerCase();
                 if (seen.has(label)) return false;
@@ -826,6 +825,10 @@ const SubmitUseCase = () => {
                 return true;
             })
             .map(name => ({ value: name, label: name }));
+        if (!normalized.some((role) => role.value === 'Primary Contact')) {
+            normalized.unshift({ value: 'Primary Contact', label: 'Primary Contact' });
+        }
+        return normalized;
     }, [rolesData]);
 
     const vendors = useMemo(() => {
@@ -898,6 +901,67 @@ const SubmitUseCase = () => {
         }
     }, [primaryContactOptions, form]);
 
+    useEffect(() => {
+        if (stakeholderEmail) {
+            setStakeholderSearchResults([]);
+            setIsStakeholderSearching(false);
+            return;
+        }
+
+        const searchTerm = stakeholderName.trim();
+        if (searchTerm.length < 2) {
+            setStakeholderSearchResults([]);
+            setIsStakeholderSearching(false);
+            return;
+        }
+
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(async () => {
+            try {
+                setIsStakeholderSearching(true);
+                const account = instance.getActiveAccount() ?? accounts[0];
+                if (!account) {
+                    setStakeholderSearchResults([]);
+                    return;
+                }
+
+                const tokenResponse = await instance.acquireTokenSilent({
+                    ...getLoginRequest(),
+                    account,
+                });
+
+                const escaped = searchTerm.replace(/'/g, "''");
+                const filter = `startswith(displayName,'${escaped}') or startswith(mail,'${escaped}') or startswith(userPrincipalName,'${escaped}')`;
+                const url = `https://graph.microsoft.com/v1.0/users?$filter=${encodeURIComponent(filter)}&$select=id,displayName,mail,userPrincipalName&$top=8`;
+                const response = await fetch(url, {
+                    headers: {
+                        Authorization: `Bearer ${tokenResponse.accessToken}`,
+                    },
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    setStakeholderSearchResults([]);
+                    return;
+                }
+
+                const data = await response.json();
+                setStakeholderSearchResults(data.value ?? []);
+            } catch (error) {
+                if (error instanceof DOMException && error.name === "AbortError") return;
+                console.error("User search failed", error);
+                setStakeholderSearchResults([]);
+            } finally {
+                setIsStakeholderSearching(false);
+            }
+        }, 300);
+
+        return () => {
+            controller.abort();
+            clearTimeout(timeoutId);
+        };
+    }, [stakeholderName, stakeholderEmail, instance, accounts]);
+
     // Redirect mapping if currentStep is no longer valid
     useEffect(() => {
         if (currentStep === 2 && !showChecklistTab) {
@@ -924,6 +988,9 @@ const SubmitUseCase = () => {
                 const values = form.getValues();
 
                 // Prepare use case data
+                const primaryStakeholder = addedStakeholders.find(
+                    (stakeholder) => stakeholder.role === 'Primary Contact'
+                );
                 const useCaseData = {
                     Title: values.useCaseTitle,
                     Headlines: values.headline,
@@ -936,7 +1003,12 @@ const SubmitUseCase = () => {
                     ModelName: values.selectedModel,
                     BusinessUnit: values.selectedBusinessUnit,
                     TeamName: values.selectedTeam,
-                    PrimaryContact: values.primaryContact || primaryContactOptions[0]?.value || '',
+                    PrimaryContact:
+                        values.primaryContact ||
+                        primaryStakeholder?.email ||
+                        primaryStakeholder?.name ||
+                        primaryContactOptions[0]?.value ||
+                        '',
                     CreatedBy: accounts[0]?.username || accounts[0]?.name || 'Unknown',
                     ESEResourcesNeeded: values.eseResourceValue === 'Yes',
                     Phase: 'Idea', // Default phase
@@ -1026,14 +1098,11 @@ const SubmitUseCase = () => {
 
     const handleUpdateStakeholder = useCallback(() => {
         if (stakeholderName && stakeholderRole) {
-            // Generate initials from the name
-            const initial = stakeholderName.split(' ').map(n => n[0]).join('').toUpperCase();
-
             if (editingIndex !== null) {
                 // Update existing stakeholder
                 setAddedStakeholders(prev => prev.map((stakeholder, idx) =>
                     idx === editingIndex
-                        ? { ...stakeholder, name: stakeholderName, role: stakeholderRole }
+                        ? { ...stakeholder, name: stakeholderName, role: stakeholderRole, email: stakeholderEmail }
                         : stakeholder
                 ));
                 toast.success('Stakeholder updated successfully');
@@ -1041,22 +1110,33 @@ const SubmitUseCase = () => {
                 // Add new stakeholder to the list
                 setAddedStakeholders(prev => [...prev, {
                     name: stakeholderName,
-                    role: stakeholderRole
+                    role: stakeholderRole,
+                    email: stakeholderEmail
                 }]);
                 toast.success('Stakeholder added successfully');
             }
 
+            if (stakeholderRole === 'Primary Contact') {
+                form.setValue('primaryContact', stakeholderEmail || stakeholderName);
+            }
+
             setIsDialogOpen(false);
             setStakeholderName('');
+            setStakeholderEmail('');
             setStakeholderRole('');
+            setStakeholderSearchResults([]);
+            setIsStakeholderSearching(false);
             setEditingIndex(null);
         }
-    }, [stakeholderName, stakeholderRole, editingIndex]);
+    }, [stakeholderName, stakeholderRole, editingIndex, stakeholderEmail, form]);
 
     const handleEditStakeholder = useCallback((index: number) => {
         const stakeholder = addedStakeholders[index];
         setStakeholderName(stakeholder.name);
         setStakeholderRole(stakeholder.role);
+        setStakeholderEmail(stakeholder.email ?? '');
+        setStakeholderSearchResults([]);
+        setIsStakeholderSearching(false);
         setEditingIndex(index);
         setIsDialogOpen(true);
     }, [addedStakeholders]);
@@ -1069,7 +1149,10 @@ const SubmitUseCase = () => {
     const handleDialogClose = useCallback(() => {
         setIsDialogOpen(false);
         setStakeholderName('');
+        setStakeholderEmail('');
         setStakeholderRole('');
+        setStakeholderSearchResults([]);
+        setIsStakeholderSearching(false);
         setEditingIndex(null);
     }, []);
 
@@ -1102,14 +1185,6 @@ const SubmitUseCase = () => {
                 </div>
             )}
 
-            {/* Error message */}
-            {loadingError && (
-                <div className="error-message">
-                    <p>{loadingError}</p>
-                    <button onClick={() => window.location.reload()}>Retry</button>
-                </div>
-            )}
-
             {/* Submit error message */}
             {submitError && (
                 <div className="error-message">
@@ -1117,7 +1192,7 @@ const SubmitUseCase = () => {
                 </div>
             )}
 
-            {!isLoading && !loadingError && (
+            {!isLoading && (
                 <Form {...form}>
                     <div className="flex justify-center w-full">
                         <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
@@ -2050,13 +2125,50 @@ const SubmitUseCase = () => {
                             <label htmlFor="name" className="text-right text-sm font-medium">
                                 Name
                             </label>
-                            <Input
-                                id="name"
-                                value={stakeholderName}
-                                onChange={(e) => setStakeholderName(e.target.value)}
-                                className="col-span-3"
-                                placeholder="Enter stakeholder name"
-                            />
+                            <div className="col-span-3 space-y-2">
+                                <Input
+                                    id="name"
+                                    value={stakeholderName}
+                                    onChange={(e) => {
+                                        setStakeholderName(e.target.value);
+                                        setStakeholderEmail('');
+                                    }}
+                                    placeholder="Search for a user"
+                                />
+                                {stakeholderName.trim().length >= 2 && !stakeholderEmail && (
+                                    <div className="rounded-md border bg-white shadow-sm max-h-40 overflow-y-auto">
+                                        {isStakeholderSearching && (
+                                            <div className="px-3 py-2 text-xs text-muted-foreground">
+                                                Searching...
+                                            </div>
+                                        )}
+                                        {!isStakeholderSearching && stakeholderSearchResults.length === 0 && (
+                                            <div className="px-3 py-2 text-xs text-muted-foreground">
+                                                No users found.
+                                            </div>
+                                        )}
+                                        {stakeholderSearchResults.map((user) => {
+                                            const label = user.displayName || user.userPrincipalName || user.mail;
+                                            const email = user.mail || user.userPrincipalName || '';
+                                            return (
+                                                <button
+                                                    key={user.id}
+                                                    type="button"
+                                                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted"
+                                                    onClick={() => {
+                                                        setStakeholderName(label || '');
+                                                        setStakeholderEmail(email);
+                                                        setStakeholderSearchResults([]);
+                                                    }}
+                                                >
+                                                    <div className="font-medium text-gray-900">{label}</div>
+                                                    {email && <div className="text-xs text-gray-500">{email}</div>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <label htmlFor="role" className="text-right text-sm font-medium">
@@ -2067,18 +2179,11 @@ const SubmitUseCase = () => {
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
                                 <SelectContent position="popper" side="bottom" align="start" alignOffset={180} sideOffset={-120}>
-                                    <SelectItem value="Product Manager">Product Manager</SelectItem>
-                                    <SelectItem value="Program Manager">Program Manager</SelectItem>
-                                    <SelectItem value="Team Member">Team Member</SelectItem>
-                                    <SelectItem value="Champion">Champion</SelectItem>
-                                    <SelectItem value="Executive Sponsor">Executive Sponsor</SelectItem>
-                                    <SelectItem value="Process Owner">Process Owner</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                    <SelectItem value="Engineering Lead">Engineering Lead</SelectItem>
-                                    <SelectItem value="Security Lead">Security Lead</SelectItem>
-                                    <SelectItem value="Procurement Lead">Procurement Lead</SelectItem>
-                                    <SelectItem value="Legal lead">Legal lead</SelectItem>
-                                    <SelectItem value="Arch Review">Arch Review</SelectItem>
+                                    {roles.map((role) => (
+                                        <SelectItem key={role.value} value={role.value}>
+                                            {role.label}
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>

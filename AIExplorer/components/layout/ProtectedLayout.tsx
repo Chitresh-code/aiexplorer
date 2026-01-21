@@ -22,6 +22,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 
 export function ProtectedLayout({ children }: { children: ReactNode }) {
@@ -164,44 +165,65 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
     <SidebarProvider style={{ '--sidebar-width-icon': '4rem' } as CSSProperties}>
       <AppSidebar />
       <SidebarInset className="min-w-0">
-        <div
-          className={`flex h-14 items-center gap-2 bg-white px-4 transition-shadow duration-200 ${isScrolled ? 'border-b border-gray-200 shadow-sm' : ''
-            }`}
-        >
-          <Link href="/" className="flex items-center">
-            <Image
-              src="/ukg-logo.png"
-              alt="UKG Logo"
-              width={96}
-              height={24}
-              className="h-6 w-auto"
-              priority
-            />
-          </Link>
-          <SidebarTrigger />
-          <Breadcrumb>
-            <BreadcrumbList>
-              {breadcrumbItems.map((item, index) => (
-                <React.Fragment key={item.href}>
-                  <BreadcrumbItem>
-                    {item.isCurrent ? (
-                      <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                    ) : (
-                      <BreadcrumbLink asChild>
-                        <Link href={item.href}>{item.label}</Link>
-                      </BreadcrumbLink>
-                    )}
-                  </BreadcrumbItem>
-                  {index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
-                </React.Fragment>
-              ))}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
+        <AppHeader breadcrumbItems={breadcrumbItems} isScrolled={isScrolled} />
         <div className="flex min-h-screen flex-col bg-gray-50">
           <div className="flex-1">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function AppHeader({
+  breadcrumbItems,
+  isScrolled,
+}: {
+  breadcrumbItems: {
+    href: string;
+    label: string;
+    isCurrent: boolean;
+  }[];
+  isScrolled: boolean;
+}) {
+  const { state } = useSidebar();
+  const showNavbarLogo = state === 'collapsed';
+
+  return (
+    <div
+      className={`flex h-14 items-center gap-2 bg-white px-4 transition-shadow duration-200 ${isScrolled ? 'border-b border-gray-200 shadow-sm' : ''
+        }`}
+    >
+      {showNavbarLogo && (
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/ukg-logo.png"
+            alt="UKG Logo"
+            width={96}
+            height={24}
+            className="h-6 w-auto"
+            priority
+          />
+        </Link>
+      )}
+      <SidebarTrigger />
+      <Breadcrumb>
+        <BreadcrumbList>
+          {breadcrumbItems.map((item, index) => (
+            <React.Fragment key={item.href}>
+              <BreadcrumbItem>
+                {item.isCurrent ? (
+                  <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={item.href}>{item.label}</Link>
+                  </BreadcrumbLink>
+                )}
+              </BreadcrumbItem>
+              {index < breadcrumbItems.length - 1 && <BreadcrumbSeparator />}
+            </React.Fragment>
+          ))}
+        </BreadcrumbList>
+      </Breadcrumb>
+    </div>
   );
 }
