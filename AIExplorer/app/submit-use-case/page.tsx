@@ -1,16 +1,14 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 'use client';
-import * as PopoverPrimitive from "@radix-ui/react-popover"
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useLocation } from '@/lib/router';
-import { useMsal } from '@azure/msal-react';
-import { X, Loader2, CheckSquare, Users, Plus, Edit, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-import { getLoginRequest } from '@/lib/msal';
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useNavigate, useLocation } from "@/lib/router";
+import { useMsal } from "@azure/msal-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { getLoginRequest } from "@/lib/msal";
 import {
     getSubmitUseCaseData,
-    getVendorsFromData,
     getAllVendorsFromAllVendorsData,
     getModelsForVendor,
     getBusinessUnitsFromData,
@@ -21,73 +19,26 @@ import {
     createUseCase,
     createStakeholder,
     createPlan
-} from '@/lib/submit-use-case';
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
-import {
-    Form,
-    FormField,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronDown, Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
+} from "@/lib/submit-use-case";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, useWatch } from "react-hook-form";
+import * as z from "zod";
+import { Form } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    PopoverAnchor,
 } from "@/components/ui/popover"
-import { Combobox } from "@/components/ui/combobox"
-import { VendorCombobox } from "./vendor-combobox"
-import { ModelCombobox } from "./model-combobox"
-import { BusinessUnitCombobox } from "./business-unit-combobox"
-import { TeamCombobox } from "./team-combobox"
-import { SubTeamCombobox } from "./sub-team-combobox"
-import { SubmitUseCaseAIThemeMultiCombobox as AIThemeMultiCombobox } from "./ai-theme-multi-combobox"
-import { SubmitUseCasePersonaMultiCombobox as PersonaMultiCombobox } from "./persona-multi-combobox"
-import { SubmitUseCaseMultiCombobox as MultiCombobox } from "./multi-combobox"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
-import {
-    Field,
-    FieldLabel,
-    FieldContent,
-    FieldError,
-} from "@/components/ui/field"
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import {
     Tabs,
-    TabsContent,
     TabsList,
     TabsTrigger,
 } from "@/components/ui/tabs"
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table"
 import {
     Dialog,
     DialogContent,
@@ -97,17 +48,16 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { SectionCards } from "@/features/dashboard/components/SectionCards"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
-import { ParcsCategorySelect } from "./components/ParcsCategorySelect";
-import { UnitOfMeasurementSelect } from "./components/UnitOfMeasurementSelect";
-import { Empty, EmptyMedia, EmptyTitle, EmptyDescription, EmptyHeader, EmptyContent } from '@/components/ui/empty';
-import { History } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useReactTable, getCoreRowModel, type ColumnDef } from "@tanstack/react-table";
+import { ChecklistSection } from "@/components/submit-use-case/ChecklistSection";
+import { MetricsSection } from "@/components/submit-use-case/MetricsSection";
+import { StakeholdersPlanSection } from "@/components/submit-use-case/StakeholdersPlanSection";
+import { UseCaseInfoSection } from "@/components/submit-use-case/UseCaseInfoSection";
+import { ParcsCategorySelect } from "@/components/submit-use-case/ParcsCategorySelect";
+import { UnitOfMeasurementSelect } from "@/components/submit-use-case/UnitOfMeasurementSelect";
 
 interface Metric {
     id: number;
@@ -134,6 +84,14 @@ const metricColumnSizes = {
     reportedValue: 160,
     reportedDate: 160,
     actions: 60,
+};
+
+type ChecklistQuestion = {
+    id: number | string;
+    question: string;
+    kind: "yesno" | "choice";
+    options: { value: string; label: string }[];
+    isMulti: boolean;
 };
 
 const MetricDatePicker = ({
@@ -251,28 +209,7 @@ const formSchema = z.object({
     selectedSubTeam: z.string().optional(),
     eseResourceValue: z.string().min(1, "Required"),
     infoLink: z.string().optional(),
-    // Checklist fields
-    usingExternalSource: z.string().optional(),
-    dataSource: z.array(z.string()).optional(),
-    hasCustomerData: z.string().optional(),
-    hasEmployeeData: z.string().optional(),
-    hasFinancialData: z.string().optional(),
-    hasProductData: z.string().optional(),
-    isSourceAccessibleAll: z.string().optional(),
-    hasAccessToOriginalSource: z.string().optional(),
-    isCollectingData: z.string().optional(),
-    usesSyntheticData: z.string().optional(),
-    hasPII: z.string().optional(),
-    informsHighRiskDecisions: z.string().optional(),
-    hasHumanInLoop: z.string().optional(),
-    intendedUserLocation: z.array(z.string()).optional(),
-    hasSupportChannel: z.string().optional(),
-    hasDataFlowDiagram: z.string().optional(),
-    hasWritePrivileges: z.string().optional(),
-    processedSensitiveAttributes: z.string().optional(),
-    dataClassificationLevel: z.string().optional(),
-    attestCompliance: z.string().optional(),
-    confirmPolicySharing: z.string().optional(),
+    checklistResponses: z.record(z.union([z.string(), z.array(z.string()), z.undefined()])).optional(),
 })
 
 const SubmitUseCase = () => {
@@ -306,7 +243,6 @@ const SubmitUseCase = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
-    const [isOpportunityGenerating, setIsOpportunityGenerating] = useState(false);
 
     // Raw data from APIs
     const [aiModelsData, setAiModelsData] = useState(null);
@@ -314,8 +250,8 @@ const SubmitUseCase = () => {
     const [businessStructureData, setBusinessStructureData] = useState(null);
     const [rolesData, setRolesData] = useState(null);
     const [dropdownData, setDropdownData] = useState(null);
+    const [aiProductQuestionsData, setAiProductQuestionsData] = useState([]);
     const [championsData, setChampionsData] = useState([]);
-    const [championNames, setChampionNames] = useState([]);
 
     // Form definition
     const form = useForm<z.infer<typeof formSchema>>({
@@ -336,99 +272,31 @@ const SubmitUseCase = () => {
             selectedSubTeam: "",
             eseResourceValue: "No",
             infoLink: "",
-            // Checklist default values
-            usingExternalSource: "",
-            dataSource: [],
-            hasCustomerData: "",
-            hasEmployeeData: "",
-            hasFinancialData: "",
-            hasProductData: "",
-            isSourceAccessibleAll: "",
-            hasAccessToOriginalSource: "",
-            isCollectingData: "",
-            usesSyntheticData: "",
-            hasPII: "",
-            informsHighRiskDecisions: "",
-            hasHumanInLoop: "",
-            intendedUserLocation: [],
-            hasSupportChannel: "",
-            hasDataFlowDiagram: "",
-            hasWritePrivileges: "",
-            processedSensitiveAttributes: "",
-            dataClassificationLevel: "",
-            attestCompliance: "",
-            confirmPolicySharing: "",
+            checklistResponses: {},
         },
         mode: "onChange",
     })
 
-    // Watch values for dependencies
-    const {
-        selectedVendor,
-        selectedBusinessUnit,
-        selectedTeam,
-        eseResourceValue: watchedEseResourceValue
-    } = form.watch()
-
-    // Derived state for existing logic compatibility
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const useCaseTitle = form.watch("useCaseTitle");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const headline = form.watch("headline");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const opportunity = form.watch("opportunity");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const evidence = form.watch("evidence");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const businessValue = form.watch("businessValue");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const selectedAITheme = form.watch("selectedAITheme");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const selectedPersona = form.watch("selectedPersona");
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const selectedModel = form.watch("selectedModel");
+    const selectedVendor = useWatch({
+        control: form.control,
+        name: "selectedVendor",
+    });
+    const selectedBusinessUnit = useWatch({
+        control: form.control,
+        name: "selectedBusinessUnit",
+    });
+    const selectedTeam = useWatch({
+        control: form.control,
+        name: "selectedTeam",
+    });
+    const selectedModel = useWatch({
+        control: form.control,
+        name: "selectedModel",
+    });
 
     const showChecklistTab = true;
 
-    const handleGenerateOpportunity = useCallback(async () => {
-        const draft = (form.getValues("opportunity") || "").trim();
-        if (draft.length < 10) {
-            toast.error("Add a few lines so AI can expand the opportunity.");
-            return;
-        }
 
-        setIsOpportunityGenerating(true);
-        try {
-            const response = await fetch("/api/opportunity-suggest", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ draft }),
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                throw new Error(data?.error || "AI request failed.");
-            }
-            const suggestion = (data?.text || "").trim();
-            if (!suggestion) {
-                throw new Error("AI returned an empty response.");
-            }
-            form.setValue("opportunity", suggestion, {
-                shouldDirty: true,
-                shouldValidate: true,
-            });
-            toast.success("Opportunity updated with AI.");
-        } catch (error) {
-            const message =
-                error instanceof Error ? error.message : "AI request failed.";
-            toast.error(message);
-        } finally {
-            setIsOpportunityGenerating(false);
-        }
-    }, [form]);
-
-    // Stakeholder form values
-    const [selectedRole, setSelectedRole] = useState('');
-    const [selectedStakeholder, setSelectedStakeholder] = useState('');
     const [addedStakeholders, setAddedStakeholders] = useState([]);
 
     // Stakeholder dialog states
@@ -718,7 +586,7 @@ const SubmitUseCase = () => {
             setBusinessStructureData(consolidatedData.business_structure);
             setRolesData(consolidatedData.roles);
             setDropdownData(consolidatedData.dropdown_data);
-            setChampionNames(consolidatedData.champion_names.champions);
+            setAiProductQuestionsData(consolidatedData.ai_product_questions ?? []);
         };
 
         const loadFromCache = () => {
@@ -870,6 +738,46 @@ const SubmitUseCase = () => {
         return subTeamNames.map(name => ({ value: name, label: name }));
     }, [businessStructureData, selectedBusinessUnit, selectedTeam]);
 
+    const checklistQuestions = useMemo<ChecklistQuestion[]>(() => {
+        if (!Array.isArray(aiProductQuestionsData) || aiProductQuestionsData.length === 0) {
+            return [];
+        }
+
+        const parseOptions = (raw?: string) => {
+            if (!raw) return [];
+            return raw
+                .split(",")
+                .map((option) => option.trim())
+                .filter(Boolean)
+                .map((option) => ({ value: option, label: option }));
+        };
+
+        const toOrder = (value: number | string) => {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER;
+        };
+
+        return aiProductQuestionsData
+            .map((question) => {
+                const text = String(question.question || "").trim();
+                if (!text) return null;
+
+                const rawType = String(question.questionType || "").toLowerCase();
+                const isYesNo = rawType.includes("yes") && rawType.includes("no");
+                const isChoice = rawType.includes("choice") || (!!question.responseValue && !isYesNo);
+
+                return {
+                    id: question.id ?? question.ID ?? text,
+                    question: text,
+                    kind: isYesNo ? "yesno" : "choice",
+                    options: isChoice ? parseOptions(question.responseValue) : [],
+                    isMulti: isChoice && text.toLowerCase().includes("select all"),
+                };
+            })
+            .filter(Boolean)
+            .sort((a, b) => toOrder(a.id) - toOrder(b.id));
+    }, [aiProductQuestionsData]);
+
     const primaryContactOptions = useMemo(() => {
         if (!accounts || accounts.length === 0) return [];
         const account = accounts[0];
@@ -1019,24 +927,24 @@ const SubmitUseCase = () => {
                 const createdUseCase = await createUseCase(useCaseData);
                 const useCaseId = createdUseCase.ID;
 
-                // Create stakeholders
-                for (const stakeholder of addedStakeholders) {
-                    await createStakeholder(useCaseId, {
+                const stakeholderRequests = addedStakeholders.map((stakeholder) =>
+                    createStakeholder(useCaseId, {
                         Stakeholder: stakeholder.name,
                         Role: stakeholder.role,
                         UseCasesID: useCaseId,
                         BusinessUnit: values.selectedBusinessUnit,
                         UseCaseTitle: values.useCaseTitle
-                    });
-                }
+                    })
+                );
 
-                // Create plan with dates
-                await createPlan(useCaseId, {
+                const planRequest = createPlan(useCaseId, {
                     StartDate: startDate ? format(startDate, 'dd-MM-yyyy') : '',
                     EndDate: endDate ? format(endDate, 'dd-MM-yyyy') : '',
                     UseCasesID: useCaseId,
                     UseCasePhase: 'Idea'
                 });
+
+                await Promise.all([planRequest, ...stakeholderRequests]);
 
                 // Show success toast
                 toast.success(`Your record has been submitted successfully with ID: ${useCaseId}`);
@@ -1063,38 +971,6 @@ const SubmitUseCase = () => {
         }
     }, [currentStep, showChecklistTab, navigate]);
 
-    // Form input handlers removed in favor of React Hook Form
-    // Step 3 handlers
-    const handleStartDateChange = useCallback((date: Date | undefined) => setStartDate(date), []);
-    const handleEndDateChange = useCallback((date: Date | undefined) => setEndDate(date), []);
-
-    const handleRoleChange = useCallback((e) => {
-        setSelectedRole(e.target.value);
-    }, []);
-
-    const handleStakeholderChange = useCallback((e) => {
-        setSelectedStakeholder(e.target.value);
-    }, []);
-
-    const handleAddStakeholder = useCallback(() => {
-        if (selectedRole && selectedStakeholder) {
-            // Check if stakeholder is already added
-            const isAlreadyAdded = addedStakeholders.some(
-                stakeholder => stakeholder.name === selectedStakeholder && stakeholder.role === selectedRole
-            );
-
-            if (!isAlreadyAdded) {
-                setAddedStakeholders(prev => [...prev, {
-                    name: selectedStakeholder,
-                    role: selectedRole
-                }]);
-            }
-
-            // Reset form
-            setSelectedRole('');
-            setSelectedStakeholder('');
-        }
-    }, [selectedRole, selectedStakeholder, addedStakeholders]);
 
     const handleUpdateStakeholder = useCallback(() => {
         if (stakeholderName && stakeholderRole) {
@@ -1197,845 +1073,57 @@ const SubmitUseCase = () => {
                     <div className="flex justify-center w-full">
                         <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
                             {currentStep === 1 && (
-                                <div className="space-y-6">
-                                    {/* Basic Information Card - Updated with shadcn styling */}
-                                    <Card className="shadow-sm">
-                                        <CardHeader className="border-b">
-                                            <CardTitle>Use Case</CardTitle>
-                                            <CardDescription>Basic information about your use case</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="pt-6 space-y-6">
-                                            <FormField
-                                                control={form.control}
-                                                name="useCaseTitle"
-                                                render={({ field, fieldState }) => (
-                                                    <Field>
-                                                        <FieldLabel>Use Case Title</FieldLabel>
-                                                        <FieldContent>
-                                                            <Input placeholder="Use Case Title" {...field} className="form-input" />
-                                                            <FieldError errors={[fieldState.error]} />
-                                                        </FieldContent>
-                                                    </Field>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="headline"
-                                                render={({ field, fieldState }) => (
-                                                    <Field>
-                                                        <FieldLabel>Headline</FieldLabel>
-                                                        <FieldContent>
-                                                            <Input placeholder="One Line Executive Headline" {...field} className="form-input" />
-                                                            <FieldError errors={[fieldState.error]} />
-                                                        </FieldContent>
-                                                    </Field>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="opportunity"
-                                                render={({ field, fieldState }) => (
-                                                    <Field>
-                                                        <FieldLabel>Opportunity</FieldLabel>
-                                                        <FieldContent>
-                                                            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                                                <span className="text-xs text-muted-foreground">
-                                                                    Write a short draft, then let AI complete it.
-                                                                </span>
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={handleGenerateOpportunity}
-                                                                    disabled={isOpportunityGenerating || !opportunity?.trim()}
-                                                                >
-                                                                    {isOpportunityGenerating ? (
-                                                                        <>
-                                                                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                                                            Writing...
-                                                                        </>
-                                                                    ) : (
-                                                                        "Write this with AI"
-                                                                    )}
-                                                                </Button>
-                                                            </div>
-                                                            <Textarea rows={3} placeholder="What is AI being used for?" {...field} className="form-textarea" />
-                                                            <FieldError errors={[fieldState.error]} />
-                                                        </FieldContent>
-                                                    </Field>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="evidence"
-                                                render={({ field, fieldState }) => (
-                                                    <Field>
-                                                        <FieldLabel>Evidence</FieldLabel>
-                                                        <FieldContent>
-                                                            <Textarea rows={3} placeholder="Why it is needed?" {...field} className="form-textarea" />
-                                                            <FieldError errors={[fieldState.error]} />
-                                                        </FieldContent>
-                                                    </Field>
-                                                )}
-                                            />
-
-                                            <FormField
-                                                control={form.control}
-                                                name="businessValue"
-                                                render={({ field, fieldState }) => (
-                                                    <Field>
-                                                        <FieldLabel>Business Value</FieldLabel>
-                                                        <FieldContent>
-                                                            <Textarea rows={3} placeholder="What are the anticipated benefits to UKG?" {...field} className="form-textarea" />
-                                                            <FieldError errors={[fieldState.error]} />
-                                                        </FieldContent>
-                                                    </Field>
-                                                )}
-                                            />
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* AI Configuration Card */}
-                                    <Card ref={aiCardRef} className="shadow-sm">
-                                        <CardHeader className="border-b">
-                                            <CardTitle>AI Configuration</CardTitle>
-                                            <CardDescription>Select AI themes, personas, vendor and model</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="pt-6 space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedAITheme"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>AI Theme</FieldLabel>
-                                                            <FieldContent>
-                                                                <AIThemeMultiCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={aiThemes}
-                                                                    placeholder="Select AI Themes"
-                                                                    searchPlaceholder="Search themes..."
-                                                                    container={aiCardRef.current}
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedPersona"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>Target Personas</FieldLabel>
-                                                            <FieldContent>
-                                                                <PersonaMultiCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={personas}
-                                                                    placeholder="Select Target Personas"
-                                                                    searchPlaceholder="Search personas..."
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedVendor"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>Vendor Name</FieldLabel>
-                                                            <FieldContent>
-                                                                <VendorCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={vendors}
-                                                                    placeholder="No Vendor Identified"
-                                                                    searchPlaceholder="Search vendors..."
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedModel"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>Model Name</FieldLabel>
-                                                            <FieldContent>
-                                                                <ModelCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={models}
-                                                                    disabled={!selectedVendor || models.length === 0}
-                                                                    placeholder="No Model Identified"
-                                                                    searchPlaceholder="Search models..."
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Team Information Card */}
-                                    <Card className="shadow-sm">
-                                        <CardHeader className="border-b">
-                                            <CardTitle>Team Information</CardTitle>
-                                            <CardDescription>Business unit, team details and resources</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="pt-6 space-y-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedBusinessUnit"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>Business Unit</FieldLabel>
-                                                            <FieldContent>
-                                                                <BusinessUnitCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={businessUnits}
-                                                                    placeholder="Select a Business Unit"
-                                                                    searchPlaceholder="Search business units..."
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedTeam"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>Team Name</FieldLabel>
-                                                            <FieldContent>
-                                                                <TeamCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={teams}
-                                                                    disabled={!selectedBusinessUnit}
-                                                                    placeholder="Select Team Name"
-                                                                    searchPlaceholder="Search teams..."
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <FormField
-                                                    control={form.control}
-                                                    name="selectedSubTeam"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>Sub Team Name</FieldLabel>
-                                                            <FieldContent>
-                                                                <SubTeamCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={subTeams}
-                                                                    disabled={!selectedTeam}
-                                                                    placeholder="Select Sub Team Name"
-                                                                />
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-
-                                                <FormField
-                                                    control={form.control}
-                                                    name="eseResourceValue"
-                                                    render={({ field, fieldState }) => (
-                                                        <Field>
-                                                            <FieldLabel>ESE Resources Needed</FieldLabel>
-                                                            <FieldContent>
-                                                                <DropdownMenu>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            role="combobox"
-                                                                            className="w-full justify-between form-select min-w-0 h-auto py-1.5"
-                                                                        >
-                                                                            <span className="truncate mr-2">
-                                                                                {field.value || "No"}
-                                                                            </span>
-                                                                            <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-                                                                        </Button>
-                                                                    </DropdownMenuTrigger>
-                                                                    <DropdownMenuContent className="w-full p-0" sideOffset={144}>
-                                                                        <DropdownMenuItem onSelect={() => field.onChange("No")}>No</DropdownMenuItem>
-                                                                        <DropdownMenuItem onSelect={() => field.onChange("Yes")}>Yes</DropdownMenuItem>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                                <FieldError errors={[fieldState.error]} />
-                                                            </FieldContent>
-                                                        </Field>
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <FormField
-                                                control={form.control}
-                                                name="infoLink"
-                                                render={({ field, fieldState }) => (
-                                                    <Field>
-                                                        <FieldLabel>Info Link</FieldLabel>
-                                                        <FieldContent>
-                                                            <Input placeholder="Additional Info Link about Use Case" {...field} className="form-input" />
-                                                            <FieldError errors={[fieldState.error]} />
-                                                        </FieldContent>
-                                                    </Field>
-                                                )}
-                                            />
-                                        </CardContent>
-                                    </Card>
-                                </div>
+                                <UseCaseInfoSection
+                                    form={form}
+                                    aiThemes={aiThemes}
+                                    personas={personas}
+                                    vendors={vendors}
+                                    models={models}
+                                    businessUnits={businessUnits}
+                                    teams={teams}
+                                    subTeams={subTeams}
+                                    selectedVendor={selectedVendor}
+                                    selectedBusinessUnit={selectedBusinessUnit}
+                                    selectedTeam={selectedTeam}
+                                    aiCardRef={aiCardRef}
+                                />
                             )}
 
                             {currentStep === 2 && showChecklistTab && (
-                                <div className="space-y-6 animate-in fade-in duration-500 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-                                    <div className="p-6 rounded-lg border border-dashed">
-                                        <div className="flex items-center gap-3 mb-6 bg-background/80 backdrop-blur-sm py-2">
-                                            <div className="p-2 bg-primary/10 rounded-full text-primary">
-                                                <CheckSquare className="h-5 w-5" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg font-semibold">AI Product Checklist</h3>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Please provide accurate responses for your {selectedModel || "AI product"} implementation.
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-6">
-                                            {/* Question 1 */}
-                                            <div className="space-y-4">
-                                                <div className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                    <span className="text-sm font-medium">1. Are you using an external file or system as a data source for your custom Agent?</span>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name="usingExternalSource"
-                                                        render={({ field }) => (
-                                                            <div className="flex flex-col gap-2 ml-4">
-                                                                {["Yes", "No"].map((option) => (
-                                                                    <label key={option} className="flex items-center gap-2 cursor-pointer group">
-                                                                        <div className={cn(
-                                                                            "h-4 w-4 rounded-full border border-primary flex items-center justify-center transition-all",
-                                                                            field.value === option ? "bg-primary" : "bg-transparent group-hover:border-primary/50"
-                                                                        )}>
-                                                                            {field.value === option && <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
-                                                                        </div>
-                                                                        <input type="radio" className="hidden" checked={field.value === option} onChange={() => field.onChange(option)} />
-                                                                        <span className="text-sm">{option}</span>
-                                                                    </label>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    />
-                                                </div>
-
-                                                {/* Question 2 */}
-                                                <div className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                    <span className="text-sm font-medium">2. What is the original source of the data? Select all that apply</span>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name="dataSource"
-                                                        render={({ field }) => (
-                                                            <div className="max-w-72 ml-4">
-                                                                <MultiCombobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={[
-                                                                        { value: "Salesforce", label: "Salesforce" },
-                                                                        { value: "UKG Data Warehouse", label: "UKG Data Warehouse" },
-                                                                        { value: "ServiceNow", label: "ServiceNow" },
-                                                                        { value: "Jira", label: "Jira" },
-                                                                        { value: "Sharepoint", label: "Sharepoint" },
-                                                                        { value: "D365", label: "D365" },
-                                                                        { value: "UKG Products Data", label: "UKG Products Data" },
-                                                                    ]}
-                                                                    placeholder="Select data sources"
-                                                                    align="end"
-                                                                    containerRef={formContainerRef}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    />
-                                                </div>
-
-                                                {/* Yes/No block 1 */}
-                                                {[
-                                                    { name: "hasCustomerData", label: "3. Does this custom Agent contain any Customer-related data?" },
-                                                    { name: "hasEmployeeData", label: "4. Does this custom Agent contain any Employee-related data?" },
-                                                    { name: "hasFinancialData", label: "5. Does this custom Agent contain any Financial-related data?" },
-                                                    { name: "hasProductData", label: "6. Does this custom Agent contain any Product-related data?" },
-                                                    { name: "isSourceAccessibleAll", label: "7. Is the current data source accessible to all UKG employees?" },
-                                                    { name: "hasAccessToOriginalSource", label: "8. Do team members who has access to your custom Agent also have access to the original data source?" },
-                                                    { name: "isCollectingData", label: "9. Is the Agent collecting any data during use? If yes, please describe in Opportunity field." },
-                                                    { name: "usesSyntheticData", label: "10. Does this custom Agent use synthetic data?" },
-                                                    { name: "hasPII", label: "11. Does this custom Agent have any Personally Identifiable Information data?" },
-                                                    { name: "informsHighRiskDecisions", label: "12. Will outputs from the custom Agent inform or make employment or other high-risk decisions?" },
-                                                    { name: "hasHumanInLoop", label: "13. Is there a \"Human In the Loop\" for this custom Agent?" },
-                                                ].map((q, idx) => (
-                                                    <div key={idx} className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                        <span className="text-sm font-medium">{q.label}</span>
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={q.name}
-                                                            render={({ field }) => (
-                                                                <div className="flex flex-col gap-2 ml-4">
-                                                                    {["Yes", "No"].map((option) => (
-                                                                        <label key={option} className="flex items-center gap-2 cursor-pointer group">
-                                                                            <div className={cn(
-                                                                                "h-4 w-4 rounded-full border border-primary flex items-center justify-center transition-all",
-                                                                                field.value === option ? "bg-primary" : "bg-transparent group-hover:border-primary/50"
-                                                                            )}>
-                                                                                {field.value === option && <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
-                                                                            </div>
-                                                                            <input type="radio" className="hidden" checked={field.value === option} onChange={() => field.onChange(option)} />
-                                                                            <span className="text-sm">{option}</span>
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        />
-                                                    </div>
-                                                ))}
-
-                                                {/* Question 14 */}
-                                                <div className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                    <span className="text-sm font-medium">14. Where are the Intended users of this custom Agent located?</span>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name="intendedUserLocation"
-                                                        render={({ field }) => (
-                                                            <div className="max-w-72 ml-4">
-                                                                <MultiCombobox
-                                                                    value={field.value ?? []}
-                                                                    onChange={field.onChange}
-                                                                    options={[
-                                                                        { value: "AMER", label: "AMER" },
-                                                                        { value: "APAC", label: "APAC" },
-                                                                        { value: "EMEA", label: "EMEA" },
-                                                                        { value: "ANZ", label: "ANZ" },
-                                                                        { value: "All Regions", label: "All Regions" },
-                                                                    ]}
-                                                                    placeholder="Select locations"
-                                                                    align="end"
-                                                                    containerRef={formContainerRef}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    />
-                                                </div>
-
-                                                {/* Yes/No block 2 */}
-                                                {[
-                                                    { name: "hasSupportChannel", label: "15. Does this custom Agent have Support channel & escalation path & target SLA established?" },
-                                                    { name: "hasDataFlowDiagram", label: "16. Does this custom Agent have a documented Data flow diagram?" },
-                                                    { name: "hasWritePrivileges", label: "17. Does this custom Agent have a Tools/actions with write privileges?" },
-                                                    { name: "processedSensitiveAttributes", label: "18. Done Sensitive attributes (e.g., race, health, unions) processed?" },
-                                                ].map((q, idx) => (
-                                                    <div key={idx} className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                        <span className="text-sm font-medium">{q.label}</span>
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={q.name}
-                                                            render={({ field }) => (
-                                                                <div className="flex flex-col gap-2 ml-4">
-                                                                    {["Yes", "No"].map((option) => (
-                                                                        <label key={option} className="flex items-center gap-2 cursor-pointer group">
-                                                                            <div className={cn(
-                                                                                "h-4 w-4 rounded-full border border-primary flex items-center justify-center transition-all",
-                                                                                field.value === option ? "bg-primary" : "bg-transparent group-hover:border-primary/50"
-                                                                            )}>
-                                                                                {field.value === option && <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
-                                                                            </div>
-                                                                            <input type="radio" className="hidden" checked={field.value === option} onChange={() => field.onChange(option)} />
-                                                                            <span className="text-sm">{option}</span>
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        />
-                                                    </div>
-                                                ))}
-
-                                                {/* Question 19 */}
-                                                <div className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                    <span className="text-sm font-medium">19. What Data classification level would you assign to this custom agent?</span>
-                                                    <FormField
-                                                        control={form.control}
-                                                        name="dataClassificationLevel"
-                                                        render={({ field }) => (
-                                                            <div className="max-w-72 ml-4">
-                                                                <Combobox
-                                                                    value={field.value}
-                                                                    onChange={field.onChange}
-                                                                    options={[
-                                                                        { value: "Public", label: "Public" },
-                                                                        { value: "Internal", label: "Internal" },
-                                                                        { value: "Confidential", label: "Confidential" },
-                                                                        { value: "Restricted", label: "Restricted" },
-                                                                    ]}
-                                                                    placeholder="Select classification level"
-                                                                    align="end"
-                                                                    contentClassName="translate-x-4"
-                                                                    containerRef={formContainerRef}
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    />
-                                                </div>
-
-                                                {/* Yes/No block 3 (Policy) */}
-                                                {[
-                                                    { name: "attestCompliance", label: "20. Do you attest that this custom agent would comply with UKG AI policy?" },
-                                                    { name: "confirmPolicySharing", label: "21. Would you confirm that sharing this Agent would not violate the UKG AI policy?" },
-                                                ].map((q, idx) => (
-                                                    <div key={idx} className="flex flex-col gap-2 p-4 bg-card rounded-md">
-                                                        <span className="text-sm font-medium">{q.label}</span>
-                                                        <FormField
-                                                            control={form.control}
-                                                            name={q.name}
-                                                            render={({ field }) => (
-                                                                <div className="flex flex-col gap-2 ml-4">
-                                                                    {["Yes", "No"].map((option) => (
-                                                                        <label key={option} className="flex items-center gap-2 cursor-pointer group">
-                                                                            <div className={cn(
-                                                                                "h-4 w-4 rounded-full border border-primary flex items-center justify-center transition-all",
-                                                                                field.value === option ? "bg-primary" : "bg-transparent group-hover:border-primary/50"
-                                                                            )}>
-                                                                                {field.value === option && <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />}
-                                                                            </div>
-                                                                            <input type="radio" className="hidden" checked={field.value === option} onChange={() => field.onChange(option)} />
-                                                                            <span className="text-sm">{option}</span>
-                                                                        </label>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <ChecklistSection
+                                    form={form}
+                                    questions={checklistQuestions}
+                                    selectedModel={selectedModel}
+                                    containerRef={formContainerRef}
+                                />
                             )}
 
                             {currentStep === 3 && (
-                                <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-                                    {/* Left column: Stakeholders Card - 40% width */}
-                                    <div className="lg:col-span-4">
-                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[560px]">
-                                            <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                                    <Users className="w-4 h-4 text-teal-600" />
-                                                    Stakeholders
-                                                </CardTitle>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-teal-600 hover:bg-teal-50"
-                                                    onClick={() => setIsDialogOpen(true)}
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                </Button>
-                                            </CardHeader>
-                                            <CardContent className="pt-2 flex-1">
-                                                <ScrollArea className="h-[470px]">
-                                                    <div className="space-y-3 pr-3">
-                                                        {championsData.map((champion, idx) => (
-                                                            <div key={`champion-${idx}`} className="flex items-center justify-between gap-3 group">
-                                                                <div className="flex items-center gap-3">
-                                                                    <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
-                                                                        <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
-                                                                            {champion.UKrewer.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-                                                                    <div>
-                                                                        <p className="text-sm font-semibold text-gray-900 leading-none">{champion.UKrewer}</p>
-                                                                        <p className="text-xs text-gray-500 mt-1">Champion</p>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                        {addedStakeholders.map((stakeholder, idx) => (
-                                                            <div key={`added-${idx}`} className="flex items-center justify-between gap-3 group">
-                                                                <div className="flex items-center gap-3">
-                                                                    <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
-                                                                        <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
-                                                                            {stakeholder.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-                                                                    <div>
-                                                                        <p className="text-sm font-semibold text-gray-900 leading-none">{stakeholder.name}</p>
-                                                                        <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center gap-1">
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-6 w-6 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
-                                                                        onClick={() => handleEditStakeholder(idx)}
-                                                                    >
-                                                                        <Edit className="w-3 h-3" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-6 w-6 text-gray-400 hover:text-destructive hover:bg-destructive/10"
-                                                                        onClick={() => handleRemoveStakeholder(idx)}
-                                                                    >
-                                                                        <Trash2 className="w-3 h-3" />
-                                                                    </Button>
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </ScrollArea>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-
-                                    {/* Second column: Timeline Card - 60% width */}
-                                    <div className="lg:col-span-6">
-                                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 min-h-[560px]">
-                                            <CardHeader className="pb-3">
-                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                                    <CalendarIcon className="w-4 h-4 text-teal-600" />
-                                                    Timeline
-                                                </CardTitle>
-                                            </CardHeader>
-                                            <CardContent className="px-6 py-4">
-                                                <div className="metrics-table-container">
-                                                    <table className="reporting-table" style={{ fontSize: '14px', tableLayout: 'fixed', width: '100%' }}>
-                                                        <thead>
-                                                            <tr>
-                                                                <th style={{ width: '25%', padding: '12px 8px', fontWeight: '600', color: '#374151', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Phase</th>
-                                                                <th style={{ width: '37.5%', padding: '12px 8px', fontWeight: '600', color: '#374151', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Start Date</th>
-                                                                <th style={{ width: '37.5%', padding: '12px 8px', fontWeight: '600', color: '#374151', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>End Date</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <tr className="hover:bg-gray-50">
-                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
-                                                                    Idea
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Idea')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {startDate ? format(startDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Idea')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {endDate ? format(endDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                            </tr>
-                                                            <tr className="hover:bg-gray-50">
-                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
-                                                                    Diagnose
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Diagnose')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {diagnoseStartDate ? format(diagnoseStartDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Diagnose')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {diagnoseEndDate ? format(diagnoseEndDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                            </tr>
-                                                            <tr className="hover:bg-gray-50">
-                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
-                                                                    Design
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Design')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {designStartDate ? format(designStartDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Design')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-2" />
-                                                                        {designEndDate ? format(designEndDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                            </tr>
-                                                            <tr className="hover:bg-gray-50">
-                                                                <td style={{ padding: '16px 8px', fontWeight: '500', textAlign: 'left', fontSize: '14px', color: '#111827' }}>
-                                                                    Implemented
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Implemented')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {implementedStartDate ? format(implementedStartDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                                <td style={{ padding: '16px 8px' }}>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                                                        onClick={() => handleOpenDateDialog('Implemented')}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        {implementedEndDate ? format(implementedEndDate, "dd-MM-yyyy") : "Pick date"}
-                                                                    </Button>
-                                                                </td>
-                                                            </tr>
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    </div>
-                                </div>
+                                <StakeholdersPlanSection
+                                    championsData={championsData}
+                                    addedStakeholders={addedStakeholders}
+                                    onAddStakeholder={() => setIsDialogOpen(true)}
+                                    onEditStakeholder={handleEditStakeholder}
+                                    onRemoveStakeholder={handleRemoveStakeholder}
+                                    startDate={startDate}
+                                    endDate={endDate}
+                                    diagnoseStartDate={diagnoseStartDate}
+                                    diagnoseEndDate={diagnoseEndDate}
+                                    designStartDate={designStartDate}
+                                    designEndDate={designEndDate}
+                                    implementedStartDate={implementedStartDate}
+                                    implementedEndDate={implementedEndDate}
+                                    onOpenDateDialog={handleOpenDateDialog}
+                                />
                             )}
                             {currentStep === 4 && (
-                                <div className="space-y-6">
-                                    <div className="mb-8 p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Add Metrics</h3>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleAddMetric}
-                                                    type="button"
-                                                    className="text-teal-600 border-teal-600 hover:bg-teal-50 h-8"
-                                                >
-                                                    <Plus size={14} className="mr-1" />
-                                                    Add New Metric
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    onClick={handleSubmitMetrics}
-                                                    type="button"
-                                                    className="bg-teal-600 hover:bg-teal-700 text-white h-8"
-                                                    disabled={!isMetricsFormValid}
-                                                >
-                                                    Save
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        {metrics.length > 0 ? (
-                                            <div className="rounded-md border">
-                                                <ScrollArea className="h-[250px]">
-                                                    <Table className="table-fixed">
-                                                        <TableHeader>
-                                                            {addMetricsTable.getHeaderGroups().map((headerGroup) => (
-                                                                <TableRow key={headerGroup.id}>
-                                                                    {headerGroup.headers.map((header) => (
-                                                                        <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                                            {header.isPlaceholder
-                                                                                ? null
-                                                                                : flexRender(
-                                                                                    header.column.columnDef.header,
-                                                                                    header.getContext()
-                                                                                )}
-                                                                        </TableHead>
-                                                                    ))}
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {addMetricsTable.getRowModel().rows?.length ? (
-                                                                addMetricsTable.getRowModel().rows.map((row) => (
-                                                                    <TableRow
-                                                                        key={row.id}
-                                                                        data-state={row.getIsSelected() && "selected"}
-                                                                    >
-                                                                        {row.getVisibleCells().map((cell) => (
-                                                                            <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                            </TableCell>
-                                                                        ))}
-                                                                    </TableRow>
-                                                                ))
-                                                            ) : null}
-                                                        </TableBody>
-                                                    </Table>
-                                                </ScrollArea>
-                                            </div>
-                                        ) : (
-                                            <Empty className="border border-dashed border-gray-200 bg-white/70">
-                                                <EmptyHeader>
-                                                    <EmptyMedia variant="icon">
-                                                        <Plus className="size-5 text-gray-600" />
-                                                    </EmptyMedia>
-                                                    <EmptyTitle>No metrics added yet</EmptyTitle>
-                                                    <EmptyDescription>
-                                                        Start by adding a new metric to track your progress.
-                                                    </EmptyDescription>
-                                                </EmptyHeader>
-                                                <EmptyContent>
-                                                    <Button onClick={handleAddMetric} type="button">
-                                                        Add New Metric
-                                                    </Button>
-                                                </EmptyContent>
-                                            </Empty>
-                                        )}
-                                    </div>
-                                </div>
+                                <MetricsSection
+                                    metrics={metrics}
+                                    table={addMetricsTable}
+                                    onAddMetric={handleAddMetric}
+                                    onSaveMetrics={handleSubmitMetrics}
+                                    canSave={isMetricsFormValid}
+                                />
                             )}
                         </div>
                     </div>
@@ -2136,7 +1224,11 @@ const SubmitUseCase = () => {
                                     placeholder="Search for a user"
                                 />
                                 {stakeholderName.trim().length >= 2 && !stakeholderEmail && (
-                                    <div className="rounded-md border bg-white shadow-sm max-h-40 overflow-y-auto">
+                                    <div
+                                        className="rounded-md border bg-white shadow-sm max-h-40 overflow-y-auto"
+                                        role="listbox"
+                                        aria-label="Stakeholder search results"
+                                    >
                                         {isStakeholderSearching && (
                                             <div className="px-3 py-2 text-xs text-muted-foreground">
                                                 Searching...
@@ -2160,6 +1252,8 @@ const SubmitUseCase = () => {
                                                         setStakeholderEmail(email);
                                                         setStakeholderSearchResults([]);
                                                     }}
+                                                    role="option"
+                                                    aria-selected={stakeholderEmail === email}
                                                 >
                                                     <div className="font-medium text-gray-900">{label}</div>
                                                     {email && <div className="text-xs text-gray-500">{email}</div>}
@@ -2171,11 +1265,11 @@ const SubmitUseCase = () => {
                             </div>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <label htmlFor="role" className="text-right text-sm font-medium">
+                            <label htmlFor="stakeholder-role" className="text-right text-sm font-medium">
                                 Role
                             </label>
                             <Select value={stakeholderRole} onValueChange={setStakeholderRole}>
-                                <SelectTrigger className="col-span-3">
+                                <SelectTrigger id="stakeholder-role" className="col-span-3">
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
                                 <SelectContent position="popper" side="bottom" align="start" alignOffset={180} sideOffset={-120}>

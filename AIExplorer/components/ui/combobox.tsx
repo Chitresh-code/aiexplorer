@@ -16,7 +16,6 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    PopoverAnchor,
 } from "@/components/ui/popover"
 
 interface ComboboxProps {
@@ -34,6 +33,7 @@ interface ComboboxProps {
     icon?: React.ReactNode
     sideOffset?: number
     alignOffset?: number
+    container?: Element | null
 }
 
 export function Combobox({
@@ -47,10 +47,11 @@ export function Combobox({
     className,
     contentClassName,
     listClassName,
-    align = "end",
+    align = "start",
     icon,
-    sideOffset = 90,
-    alignOffset = -140,
+    sideOffset = 4,
+    alignOffset = 0,
+    container,
 }: ComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
@@ -61,6 +62,7 @@ export function Combobox({
                     <Button
                         variant="outline"
                         role="combobox"
+                        aria-expanded={open}
                         className={cn(
                             "w-full justify-between h-10 px-3",
                             !value && "text-muted-foreground",
@@ -85,12 +87,12 @@ export function Combobox({
                     align={align}
                     alignOffset={alignOffset}
                     sideOffset={sideOffset}
-                    avoidCollisions={false}
-                    collisionPadding={0}
+                    avoidCollisions
                     className={cn(
-                        "p-0 border shadow-lg w-[calc(var(--radix-popper-anchor-width)-16px)] min-w-[350px] max-w-[280px]",
+                        "p-0 border shadow-lg w-[var(--radix-popper-anchor-width)] min-w-[220px]",
                         contentClassName
                     )}
+                    container={container ?? undefined}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />

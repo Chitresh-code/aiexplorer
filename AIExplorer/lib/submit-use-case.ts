@@ -1,28 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import axios from 'axios';
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
 
-const getBaseUrl = () => {
-    const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-    if (envUrl && envUrl.startsWith("http")) return envUrl;
-
-    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-        return "http://localhost:8000";
+const resolveUrl = (path: string): string => {
+    if (!API_URL) {
+        return path.startsWith("/") ? path : `/${path}`;
     }
-    return "https://eai-aihub-backend-dev.happywave-248a4bd8.eastus2.azurecontainerapps.io";
+    if (!path.startsWith("/")) {
+        return `${API_URL.replace(/\/$/, "")}/${path}`;
+    }
+    return `${API_URL.replace(/\/$/, "")}${path}`;
 };
 
-const API_URL = getBaseUrl();
-console.log('API_URL (submit-use-case) resolved to:', API_URL);
+const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
+    const response = await fetch(resolveUrl(path), {
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        ...init,
+    });
 
-// Create axios instance
-const apiClient = axios.create({
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-    },
-});
+    if (!response.ok) {
+        const details = await response.text().catch(() => "");
+        throw new Error(details || `Request failed with status ${response.status}`);
+    }
+
+    return response.json() as Promise<T>;
+};
 
 // ==================== CONSOLIDATED DATA FUNCTIONS ====================
 
@@ -32,8 +37,7 @@ const apiClient = axios.create({
  */
 export const getAIModels = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/aimodels');
-        return response.data;
+        return await requestJson('/api/aimodels');
     } catch (error) {
         console.error('Error fetching AI models:', error);
         throw error;
@@ -46,8 +50,7 @@ export const getAIModels = async (): Promise<any> => {
  */
 export const getBusinessStructure = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/business-structure');
-        return response.data;
+        return await requestJson('/api/business-structure');
     } catch (error) {
         console.error('Error fetching business structure:', error);
         throw error;
@@ -60,8 +63,7 @@ export const getBusinessStructure = async (): Promise<any> => {
  */
 export const getRoles = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/roles');
-        return response.data;
+        return await requestJson('/api/roles');
     } catch (error) {
         console.error('Error fetching roles:', error);
         throw error;
@@ -74,8 +76,7 @@ export const getRoles = async (): Promise<any> => {
  */
 export const getDropdownData = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/dropdown-data');
-        return response.data;
+        return await requestJson('/api/dropdown-data');
     } catch (error) {
         console.error('Error fetching dropdown data:', error);
         throw error;
@@ -88,8 +89,7 @@ export const getDropdownData = async (): Promise<any> => {
  */
 export const getAllVendors = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/vendors');
-        return response.data;
+        return await requestJson('/api/vendors');
     } catch (error) {
         console.error('Error fetching all vendors:', error);
         throw error;
@@ -204,8 +204,7 @@ export const getRolesFromData = (rolesData: any): string[] => {
  */
 export const getChampionsForBusinessUnit = async (businessUnit: string): Promise<any> => {
     try {
-        const response = await apiClient.get(`/api/business-units/stakeholder/${encodeURIComponent(businessUnit)}`);
-        return response.data;
+        return await requestJson(`/api/business-units/stakeholder/${encodeURIComponent(businessUnit)}`);
     } catch (error) {
         console.error('Error fetching champions for business unit:', error);
         throw error;
@@ -218,8 +217,8 @@ export const getChampionsForBusinessUnit = async (businessUnit: string): Promise
  */
 export const getAllChampionNames = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/champions');
-        return response.data.champions || [];
+        const response = await requestJson<{ champions?: any[] }>('/api/champions');
+        return response.champions || [];
     } catch (error) {
         console.error('Error fetching champion names:', error);
         throw error;
@@ -232,8 +231,7 @@ export const getAllChampionNames = async (): Promise<any> => {
  */
 export const getSubmitUseCaseData = async (): Promise<any> => {
     try {
-        const response = await apiClient.get('/api/submit-usecase-data');
-        return response.data;
+        return await requestJson('/api/submit-usecase-data');
     } catch (error) {
         console.error('Error fetching submit use case data:', error);
         throw error;
@@ -247,8 +245,10 @@ export const getSubmitUseCaseData = async (): Promise<any> => {
  */
 export const createUseCase = async (useCaseData: any): Promise<any> => {
     try {
-        const response = await apiClient.post('/api/usecases', useCaseData);
-        return response.data;
+        return await requestJson('/api/usecases', {
+            method: 'POST',
+            body: JSON.stringify(useCaseData),
+        });
     } catch (error) {
         console.error('Error creating use case:', error);
         throw error;
@@ -263,8 +263,10 @@ export const createUseCase = async (useCaseData: any): Promise<any> => {
  */
 export const createStakeholder = async (useCaseId: number, stakeholderData: any): Promise<any> => {
     try {
-        const response = await apiClient.post(`/api/usecases/${useCaseId}/stakeholders`, stakeholderData);
-        return response.data;
+        return await requestJson(`/api/usecases/${useCaseId}/stakeholders`, {
+            method: 'POST',
+            body: JSON.stringify(stakeholderData),
+        });
     } catch (error) {
         console.error('Error creating stakeholder:', error);
         throw error;
@@ -279,12 +281,12 @@ export const createStakeholder = async (useCaseId: number, stakeholderData: any)
  */
 export const createPlan = async (useCaseId: number, planData: any): Promise<any> => {
     try {
-        const response = await apiClient.post(`/api/usecases/${useCaseId}/plan`, planData);
-        return response.data;
+        return await requestJson(`/api/usecases/${useCaseId}/plan`, {
+            method: 'POST',
+            body: JSON.stringify(planData),
+        });
     } catch (error) {
         console.error('Error creating plan:', error);
         throw error;
     }
 };
-
-export default apiClient;

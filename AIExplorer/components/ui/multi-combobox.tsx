@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,7 +17,6 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-    PopoverAnchor,
 } from "@/components/ui/popover"
 
 interface MultiComboboxProps {
@@ -32,6 +31,13 @@ interface MultiComboboxProps {
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
     hideBadges?: boolean
+    contentClassName?: string
+    listClassName?: string
+    badgeClassName?: string
+    sideOffset?: number
+    alignOffset?: number
+    container?: Element | null
+    containerRef?: React.RefObject<Element | null>
 }
 
 export function MultiCombobox({
@@ -46,8 +52,16 @@ export function MultiCombobox({
     align = "start",
     icon,
     hideBadges = false,
+    contentClassName,
+    listClassName,
+    badgeClassName,
+    sideOffset = 4,
+    alignOffset = 0,
+    container,
+    containerRef,
 }: MultiComboboxProps) {
     const [open, setOpen] = React.useState(false)
+    const popoverContainer = container ?? containerRef?.current ?? undefined
 
     const toggle = (val: string) => {
         onChange(
@@ -64,8 +78,24 @@ export function MultiCombobox({
                     {value.map((val) => {
                         const opt = options.find((o) => o.value === val)
                         return (
-                            <Badge key={val} variant="secondary">
-                                {opt?.label}
+                            <Badge
+                                key={val}
+                                variant="secondary"
+                                className={cn("flex items-center gap-1", badgeClassName)}
+                            >
+                                <span>{opt?.label ?? val}</span>
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        onChange(value.filter((v) => v !== val))
+                                    }}
+                                    className="rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+                                    aria-label={`Remove ${opt?.label ?? val}`}
+                                >
+                                    <X className="h-3 w-3" />
+                                </button>
                             </Badge>
                         )
                     })}
@@ -76,6 +106,7 @@ export function MultiCombobox({
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
+                        aria-expanded={open}
                         className={cn(
                             "w-full justify-between h-10 px-3",
                             !value.length && "text-muted-foreground",
@@ -95,14 +126,19 @@ export function MultiCombobox({
 
                 <PopoverContent
                     side="bottom"
-                    align="center"
-                    alignOffset={80}
-                    sideOffset={60}
-                    className="p-0 border shadow-lg w-[280px]"
+                    align={align}
+                    alignOffset={alignOffset}
+                    sideOffset={sideOffset}
+                    avoidCollisions
+                    className={cn(
+                        "p-0 border shadow-lg w-[var(--radix-popper-anchor-width)] min-w-[220px]",
+                        contentClassName
+                    )}
+                    container={popoverContainer}
                 >
                     <Command>
                         <CommandInput placeholder={searchPlaceholder} />
-                        <CommandList className="max-h-40 overflow-y-auto">
+                        <CommandList className={cn("max-h-40 overflow-y-auto", listClassName)}>
                             <CommandEmpty>{emptyText}</CommandEmpty>
                             <CommandGroup>
                                 {options.map((option) => (

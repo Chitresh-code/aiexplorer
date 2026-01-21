@@ -35,8 +35,8 @@ const options = [
 export function UnitOfMeasurementSelect({
     value,
     onSelect,
-    sideOffset = 70, // Optimized for Submit Use Case screen
-    alignOffset = 160, // Optimized for Submit Use Case screen
+    sideOffset = 4,
+    alignOffset = 0,
     placeholder = "Select",
     width = "w-[180px]",
     className,
@@ -55,7 +55,7 @@ export function UnitOfMeasurementSelect({
             >
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>
-            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset} avoidCollisions={false}>
+            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset}>
                 <SelectItem value=" " className="text-muted-foreground">{placeholder}</SelectItem>
                 {options.map((option) => (
                     <SelectItem key={option} value={option}>
