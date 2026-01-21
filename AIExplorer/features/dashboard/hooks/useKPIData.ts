@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { apiClient } from '@/lib/api';
 
 interface KPIData {
   totalUseCases: number;
@@ -39,18 +38,21 @@ export const useKPIData = () => {
   useEffect(() => {
     const fetchKPIData = async () => {
       try {
-        // Call the KPI dashboard endpoint
-        const response = await apiClient.get('/api/kpi/dashboard');
+        const response = await fetch('/api/kpi/dashboard');
+        if (!response.ok) {
+          throw new Error('Failed to fetch KPI data');
+        }
+        const data = await response.json();
 
         setData({
-          totalUseCases: response.data.kpis?.totalUseCases || 0,
-          implemented: response.data.kpis?.implemented || 0,
-          trending: response.data.kpis?.trending || 0,
-          completionRate: response.data.kpis?.completionRate || 0,
+          totalUseCases: data.kpis?.totalUseCases || 0,
+          implemented: data.kpis?.implemented || 0,
+          trending: data.kpis?.trending || 0,
+          completionRate: data.kpis?.completionRate || 0,
           loading: false,
           error: null,
-          recentSubmissions: response.data.recent_submissions || [],
-          timeline: response.data.timeline || [],
+          recentSubmissions: data.recent_submissions || [],
+          timeline: data.timeline || [],
         });
       } catch (err) {
         setData((prev) => ({

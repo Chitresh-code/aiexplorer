@@ -19,10 +19,10 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface GalleryVendorComboboxProps {
-    value?: string[]
-    onChange: (value: string[]) => void
-    options: { label: string; value: string }[]
+type Option = { label: string; value: string }
+
+type BaseProps = {
+    options: Option[]
     placeholder?: string
     searchPlaceholder?: string
     emptyText?: string
@@ -31,13 +31,27 @@ interface GalleryVendorComboboxProps {
     contentClassName?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
-    hideBadges?: boolean
+    showBadges?: boolean
     sideOffset?: number
     alignOffset?: number
 }
 
-export function GalleryVendorCombobox({
-    value = [],
+type SingleProps = BaseProps & {
+    multiple?: false
+    value?: string
+    onChange: (value: string) => void
+}
+
+type MultiProps = BaseProps & {
+    multiple: true
+    value?: string[]
+    onChange: (value: string[]) => void
+}
+
+export type FilterComboboxProps = SingleProps | MultiProps
+
+export function FilterCombobox({
+    value,
     onChange,
     options,
     placeholder = "Select options",
@@ -48,35 +62,65 @@ export function GalleryVendorCombobox({
     contentClassName,
     align = "start",
     icon,
-    hideBadges = false,
-    sideOffset = 100,
-    alignOffset = 120,
-}: GalleryVendorComboboxProps) {
+    showBadges = true,
+    sideOffset = 6,
+    alignOffset = 0,
+    multiple = false,
+}: FilterComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
-    const toggle = (val: string) => {
-        onChange(
-            value.includes(val)
-                ? value.filter((v) => v !== val)
-                : [...value, val]
-        )
+    const selectedValues = multiple
+        ? (value ?? [])
+        : value
+            ? [value]
+            : []
+
+    const handleToggle = (val: string) => {
+        if (multiple) {
+            const current = Array.isArray(value) ? value : []
+            const next = current.includes(val)
+                ? current.filter((entry) => entry !== val)
+                : [...current, val]
+            onChange(next)
+            return
+        }
+
+        const current = typeof value === "string" ? value : ""
+        onChange(current === val ? "" : val)
+        setOpen(false)
     }
+
+    const handleRemove = (val: string) => {
+        if (multiple) {
+            const current = Array.isArray(value) ? value : []
+            onChange(current.filter((entry) => entry !== val))
+            return
+        }
+        onChange("")
+    }
+
+    const selectedLabel = options.find((option) => option.value === selectedValues[0])?.label
+    const buttonLabel = multiple
+        ? selectedValues.length
+            ? `${selectedValues.length} selected`
+            : placeholder
+        : selectedLabel ?? placeholder
 
     return (
         <div className={cn("flex flex-col gap-2", className?.includes("w-") ? "w-fit" : "w-full")}>
-            {!hideBadges && value.length > 0 && (
+            {showBadges && selectedValues.length > 0 && (
                 <div className="flex flex-wrap gap-1">
-                    {value.map((val) => {
-                        const opt = options.find((o) => o.value === val)
+                    {selectedValues.map((val) => {
+                        const opt = options.find((option) => option.value === val)
                         return (
                             <Badge key={val} variant="secondary" className="flex items-center gap-1 pr-1">
-                                {opt?.label}
+                                {opt?.label ?? val}
                                 <button
                                     type="button"
                                     className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
                                     onClick={(event) => {
                                         event.stopPropagation()
-                                        onChange(value.filter((v) => v !== val))
+                                        handleRemove(val)
                                     }}
                                     aria-label={`Remove ${opt?.label ?? "selection"}`}
                                 >
@@ -95,17 +139,15 @@ export function GalleryVendorCombobox({
                         role="combobox"
                         aria-expanded={open}
                         className={cn(
-                            "w-full justify-between h-10 px-3",
-                            !value.length && "text-muted-foreground",
+                            "w-full justify-between",
+                            !selectedValues.length && "text-muted-foreground",
                             className
                         )}
                         disabled={disabled}
                     >
                         <div className="flex items-center gap-2 truncate">
                             {icon}
-                            <span className="truncate">
-                                {value.length ? `${value.length} selected` : placeholder}
-                            </span>
+                            <span className="truncate">{buttonLabel}</span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -116,10 +158,8 @@ export function GalleryVendorCombobox({
                     align={align}
                     alignOffset={alignOffset}
                     sideOffset={sideOffset}
-                    avoidCollisions={false}
-                    collisionPadding={0}
                     className={cn(
-                        "p-0 border shadow-lg w-[360] min-w-[240]",
+                        "p-0 border shadow-lg w-[var(--radix-popper-anchor-width)] min-w-[220px]",
                         contentClassName
                     )}
                 >
@@ -132,12 +172,14 @@ export function GalleryVendorCombobox({
                                     <CommandItem
                                         key={option.value}
                                         value={option.label}
-                                        onSelect={() => toggle(option.value)}
+                                        onSelect={() => handleToggle(option.value)}
                                     >
                                         <Check
                                             className={cn(
                                                 "mr-2 h-4 w-4",
-                                                value.includes(option.value) ? "opacity-100" : "opacity-0"
+                                                selectedValues.includes(option.value)
+                                                    ? "opacity-100"
+                                                    : "opacity-0"
                                             )}
                                         />
                                         {option.label}
