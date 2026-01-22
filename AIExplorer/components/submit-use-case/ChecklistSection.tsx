@@ -8,6 +8,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type ChecklistQuestion = {
     id: number | string;
@@ -15,6 +16,7 @@ type ChecklistQuestion = {
     kind: "yesno" | "choice";
     options: { value: string; label: string }[];
     isMulti: boolean;
+    responseKey: string;
 };
 
 type ChecklistSectionProps = {
@@ -22,6 +24,7 @@ type ChecklistSectionProps = {
     questions: ChecklistQuestion[];
     selectedModel?: string;
     containerRef?: React.RefObject<HTMLDivElement>;
+    isLoading?: boolean;
 };
 
 const yesNoOptions = ["Yes", "No"];
@@ -31,6 +34,7 @@ export const ChecklistSection = ({
     questions,
     selectedModel,
     containerRef,
+    isLoading = false,
 }: ChecklistSectionProps) => (
     <div className="space-y-6 animate-in fade-in duration-500 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
         <div className="p-6 rounded-lg border border-dashed">
@@ -47,19 +51,26 @@ export const ChecklistSection = ({
             </div>
 
             <div className="grid gap-6">
-                {questions.length === 0 ? (
+                {isLoading ? (
+                    Array.from({ length: 4 }).map((_, index) => (
+                        <div key={`checklist-skeleton-${index}`} className="flex flex-col gap-3 p-4 bg-card rounded-md">
+                            <Skeleton className="h-4 w-3/4" />
+                            <Skeleton className="h-10 w-48 ml-4" />
+                        </div>
+                    ))
+                ) : questions.length === 0 ? (
                     <div className="rounded-md border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground">
                         Checklist questions are not available yet.
                     </div>
                 ) : (
                     questions.map((question, index) => (
-                        <div key={`${question.id}-${index}`} className="flex flex-col gap-2 p-4 bg-card rounded-md">
+                        <div key={`${question.responseKey}-${index}`} className="flex flex-col gap-2 p-4 bg-card rounded-md">
                             <span className="text-sm font-medium">
                                 {index + 1}. {question.question}
                             </span>
                             <FormField
                                 control={form.control}
-                                name={`checklistResponses.${question.id}`}
+                                name={`checklistResponses.${question.responseKey}`}
                                 render={({ field }) => {
                                     if (question.kind === "yesno") {
                                         return (

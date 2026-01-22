@@ -11,9 +11,9 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "UKG AI Hub",
+  title: "UKG | AI Explorer",
   description:
-    "AI Hub platform for submitting use cases, tracking metrics, and managing AI initiatives.",
+    "AI Explorer platform for submitting use cases, tracking metrics, and managing AI initiatives.",
 };
 
 export default function RootLayout({

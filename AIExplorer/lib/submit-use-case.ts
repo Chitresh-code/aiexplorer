@@ -167,8 +167,11 @@ export const getBusinessUnitsFromData = (businessData: any): string[] => {
  * @returns {Array} Array of team names for the business unit
  */
 export const getTeamsForBusinessUnit = (businessData: any, businessUnitName: string): string[] => {
-    if (!businessData?.business_units?.[businessUnitName]) return [];
-    return Object.keys(businessData.business_units[businessUnitName]);
+    const unitData = businessData?.business_units?.[businessUnitName];
+    if (!unitData) return [];
+    if (Array.isArray(unitData)) return unitData;
+    if (typeof unitData === "object") return Object.keys(unitData);
+    return [];
 };
 
 /**
@@ -183,8 +186,11 @@ export const getSubTeamsForTeam = (
     businessUnitName: string,
     teamName: string
 ): string[] => {
-    if (!businessData?.business_units?.[businessUnitName]?.[teamName]) return [];
-    return businessData.business_units[businessUnitName][teamName];
+    const unitData = businessData?.business_units?.[businessUnitName];
+    if (!unitData || Array.isArray(unitData)) return [];
+    const teamData = unitData?.[teamName];
+    if (!teamData) return [];
+    return Array.isArray(teamData) ? teamData : [];
 };
 
 /**
@@ -198,42 +204,96 @@ export const getRolesFromData = (rolesData: any): string[] => {
 };
 
 /**
- * Get AI Champions for a specific business unit
- * @param {string} businessUnit - Name of the business unit
- * @returns {Promise<Array>} Array of champion objects
+ * Get stakeholders (champions + delegates) for a business unit id
+ * @param {number} businessUnitId - Business unit id from businessunitmapping
+ * @returns {Promise<Array>} Array of stakeholder objects
  */
-export const getChampionsForBusinessUnit = async (businessUnit: string): Promise<any> => {
+export const getStakeholdersForBusinessUnitId = async (businessUnitId: number): Promise<any> => {
     try {
-        return await requestJson(`/api/business-units/stakeholder/${encodeURIComponent(businessUnit)}`);
+        return await requestJson(`/api/stakeholders?businessUnitId=${encodeURIComponent(String(businessUnitId))}`);
     } catch (error) {
-        console.error('Error fetching champions for business unit:', error);
+        console.error('Error fetching stakeholders for business unit:', error);
         throw error;
     }
 };
 
-/**
- * Get all unique AI Champion names for stakeholder dropdown
- * @returns {Promise<Array>} Array of champion names
- */
-export const getAllChampionNames = async (): Promise<any> => {
+export const getMappingThemes = async (): Promise<any> => {
     try {
-        const response = await requestJson<{ champions?: any[] }>('/api/champions');
-        return response.champions || [];
+        return await requestJson('/api/mappings/themes');
     } catch (error) {
-        console.error('Error fetching champion names:', error);
+        console.error('Error fetching theme mappings:', error);
         throw error;
     }
 };
 
-/**
- * Get all data needed for submit use case screen in one API call
- * @returns {Promise<Object>} Object containing all submit use case data
- */
-export const getSubmitUseCaseData = async (): Promise<any> => {
+export const getMappingPersonas = async (): Promise<any> => {
     try {
-        return await requestJson('/api/submit-usecase-data');
+        return await requestJson('/api/mappings/personas');
     } catch (error) {
-        console.error('Error fetching submit use case data:', error);
+        console.error('Error fetching persona mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingVendorModels = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/vendor-models');
+    } catch (error) {
+        console.error('Error fetching vendor model mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingBusinessUnits = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/business-units');
+    } catch (error) {
+        console.error('Error fetching business unit mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingRoles = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/roles');
+    } catch (error) {
+        console.error('Error fetching role mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingAiProductQuestions = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/ai-product-questions');
+    } catch (error) {
+        console.error('Error fetching AI product questions:', error);
+        throw error;
+    }
+};
+
+export const getMappingPhases = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/phases');
+    } catch (error) {
+        console.error('Error fetching phase mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingMetricCategories = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/metric-categories');
+    } catch (error) {
+        console.error('Error fetching metric category mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingUnitOfMeasure = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/unit-of-measure');
+    } catch (error) {
+        console.error('Error fetching unit of measure mappings:', error);
         throw error;
     }
 };

@@ -48,7 +48,7 @@ export type GalleryFiltersResponse = {
   vendors: { name: string; models: string[] }[];
   businessUnits: {
     name: string;
-    teams: { name: string; subTeams: string[] }[];
+    teams: string[];
   }[];
 };
 

@@ -2,27 +2,79 @@
 // @ts-nocheck
 "use client";
 
-import { flexRender } from "@tanstack/react-table";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { MetricDatePicker } from "@/components/submit-use-case/MetricDatePicker";
+import { ParcsCategorySelect } from "@/components/submit-use-case/ParcsCategorySelect";
+import { UnitOfMeasurementSelect } from "@/components/submit-use-case/UnitOfMeasurementSelect";
+
+type Metric = {
+    id: number;
+    primarySuccessValue: string;
+    parcsCategory: string;
+    unitOfMeasurement: string;
+    baselineValue: string;
+    baselineDate: string;
+    targetValue: string;
+    targetDate: string;
+    isSubmitted?: boolean;
+};
+
+const metricColumnSizes = {
+    primarySuccessValue: 160,
+    parcsCategory: 160,
+    unitOfMeasurement: 160,
+    baselineValue: 160,
+    baselineDate: 160,
+    targetValue: 160,
+    targetDate: 160,
+    actions: 60,
+};
+
+const addMetricColumns = [
+    { key: "primarySuccessValue", label: "Primary Success Value", width: metricColumnSizes.primarySuccessValue },
+    { key: "parcsCategory", label: "PARCS Category", width: metricColumnSizes.parcsCategory },
+    { key: "unitOfMeasurement", label: "Unit of Measurement", width: metricColumnSizes.unitOfMeasurement },
+    { key: "baselineValue", label: "Baseline Value", width: metricColumnSizes.baselineValue },
+    { key: "baselineDate", label: "Baseline Date", width: metricColumnSizes.baselineDate },
+    { key: "targetValue", label: "Target Value", width: metricColumnSizes.targetValue },
+    { key: "targetDate", label: "Target Date", width: metricColumnSizes.targetDate },
+    { key: "actions", label: "", width: metricColumnSizes.actions },
+];
 
 type MetricsSectionProps = {
-    metrics: unknown[];
-    table: any;
+    metrics: Metric[];
+    metricCategories: string[];
+    unitOfMeasurementOptions: string[];
+    isSuggestionsLoading?: boolean;
+    suggestionsAvailable?: boolean;
+    aiGeneratedMetricIds?: Record<number, boolean>;
     onAddMetric: () => void;
-    onSaveMetrics: () => void;
-    canSave: boolean;
+    onDeleteMetric: (id: number | string) => void;
+    onChangeMetric: (id: number | string, field: keyof Metric, value: string) => void;
+    onOpenMetricDateDialog: (metric: Metric) => void;
+    onAcceptSuggestions?: () => void;
+    onRejectSuggestions?: () => void;
 };
 
 export const MetricsSection = ({
     metrics,
-    table,
+    metricCategories,
+    unitOfMeasurementOptions,
+    isSuggestionsLoading = false,
+    suggestionsAvailable = false,
+    aiGeneratedMetricIds = {},
     onAddMetric,
-    onSaveMetrics,
-    canSave,
+    onDeleteMetric,
+    onChangeMetric,
+    onOpenMetricDateDialog,
+    onAcceptSuggestions = () => {},
+    onRejectSuggestions = () => {},
 }: MetricsSectionProps) => (
     <div className="space-y-6">
         <div className="mb-8 p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
@@ -39,53 +91,162 @@ export const MetricsSection = ({
                         <Plus size={14} className="mr-1" />
                         Add New Metric
                     </Button>
-                    <Button
-                        size="sm"
-                        onClick={onSaveMetrics}
-                        type="button"
-                        className="bg-teal-600 hover:bg-teal-700 text-white h-8"
-                        disabled={!canSave}
-                    >
-                        Save
-                    </Button>
                 </div>
             </div>
+            {isSuggestionsLoading && (
+                <div className="mb-4 text-xs text-sky-600">Generating AI suggestions...</div>
+            )}
+            {suggestionsAvailable && (
+                <div className="mb-4 flex items-center justify-between text-xs text-sky-600">
+                    <span>Use AI suggestion for all metrics?</span>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-sky-600 hover:text-sky-700"
+                            onClick={onAcceptSuggestions}
+                        >
+                            Yes
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-sky-600 hover:text-sky-700"
+                            onClick={onRejectSuggestions}
+                        >
+                            No
+                        </Button>
+                    </div>
+                </div>
+            )}
 
             {metrics.length > 0 ? (
                 <div className="rounded-md border">
                     <ScrollArea className="h-[250px]">
                         <Table className="table-fixed">
                             <TableHeader>
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <TableRow key={headerGroup.id}>
-                                        {headerGroup.headers.map((header) => (
-                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(
-                                                        header.column.columnDef.header,
-                                                        header.getContext()
-                                                    )}
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                ))}
+                                <TableRow>
+                                    {addMetricColumns.map((column) => (
+                                        <TableHead key={column.key} style={{ width: column.width }}>
+                                            {column.label}
+                                        </TableHead>
+                                    ))}
+                                </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {table.getRowModel().rows?.length ? (
-                                    table.getRowModel().rows.map((row) => (
-                                        <TableRow
-                                            key={row.id}
-                                            data-state={row.getIsSelected() && "selected"}
-                                        >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    ))
-                                ) : null}
+                                {metrics.map((metric) => (
+                                    <TableRow key={metric.id}>
+                                        <TableCell style={{ width: metricColumnSizes.primarySuccessValue }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2 text-nowrap">{metric.primarySuccessValue}</span>
+                                            ) : (
+                                                <Input
+                                                    type="text"
+                                                    value={metric.primarySuccessValue ?? ""}
+                                                    onChange={(e) =>
+                                                        onChangeMetric(metric.id, "primarySuccessValue", e.target.value)
+                                                    }
+                                                    className="h-9"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.parcsCategory }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2">{metric.parcsCategory}</span>
+                                            ) : (
+                                                <ParcsCategorySelect
+                                                    value={metric.parcsCategory || ""}
+                                                    onSelect={(val) => onChangeMetric(metric.id, "parcsCategory", val)}
+                                                    options={metricCategories}
+                                                    className="metric-select"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.unitOfMeasurement }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2">{metric.unitOfMeasurement}</span>
+                                            ) : (
+                                                <UnitOfMeasurementSelect
+                                                    value={metric.unitOfMeasurement || ""}
+                                                    onSelect={(val) =>
+                                                        onChangeMetric(metric.id, "unitOfMeasurement", val)
+                                                    }
+                                                    options={unitOfMeasurementOptions}
+                                                    className="metric-select"
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.baselineValue }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2">{metric.baselineValue}</span>
+                                            ) : (
+                                                <Input
+                                                    type="number"
+                                                    className="number-input-no-spinner h-9"
+                                                    value={metric.baselineValue ?? ""}
+                                                    onChange={(e) =>
+                                                        onChangeMetric(metric.id, "baselineValue", e.target.value)
+                                                    }
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.baselineDate }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2 text-nowrap">{metric.baselineDate}</span>
+                                            ) : (
+                                                <MetricDatePicker
+                                                    value={metric.baselineDate}
+                                                    onChange={(date) => onChangeMetric(metric.id, "baselineDate", date)}
+                                                    onOpenDialog={() => onOpenMetricDateDialog(metric)}
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.targetValue }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2">{metric.targetValue}</span>
+                                            ) : (
+                                                <Input
+                                                    type="number"
+                                                    className="number-input-no-spinner h-9"
+                                                    value={metric.targetValue ?? ""}
+                                                    onChange={(e) =>
+                                                        onChangeMetric(metric.id, "targetValue", e.target.value)
+                                                    }
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.targetDate }}>
+                                            {metric.isSubmitted ? (
+                                                <span className="text-sm px-2 text-nowrap">{metric.targetDate}</span>
+                                            ) : (
+                                                <MetricDatePicker
+                                                    value={metric.targetDate}
+                                                    onChange={(date) => onChangeMetric(metric.id, "targetDate", date)}
+                                                    onOpenDialog={() => onOpenMetricDateDialog(metric)}
+                                                />
+                                            )}
+                                        </TableCell>
+                                        <TableCell style={{ width: metricColumnSizes.actions }} className="overflow-visible">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                                    onClick={() => onDeleteMetric(metric.id)}
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                {aiGeneratedMetricIds[metric.id] && (
+                                                    <Badge variant="secondary" className="text-[10px]">
+                                                        AI generated
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                             </TableBody>
                         </Table>
                     </ScrollArea>

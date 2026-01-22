@@ -144,7 +144,7 @@ export const getUseCaseFilters = (): GalleryFiltersResponse => {
   const aiThemes = uniqueSorted(galleryUseCases.flatMap((item) => item.aiThemes));
 
   const vendorsMap = new Map<string, Set<string>>();
-  const businessUnitMap = new Map<string, Map<string, Set<string>>>();
+  const businessUnitMap = new Map<string, Set<string>>();
 
   galleryUseCases.forEach((item) => {
     if (!vendorsMap.has(item.vendorName)) {
@@ -153,13 +153,9 @@ export const getUseCaseFilters = (): GalleryFiltersResponse => {
     vendorsMap.get(item.vendorName)?.add(item.aiModel);
 
     if (!businessUnitMap.has(item.businessUnit)) {
-      businessUnitMap.set(item.businessUnit, new Map());
+      businessUnitMap.set(item.businessUnit, new Set());
     }
-    const teams = businessUnitMap.get(item.businessUnit);
-    if (!teams?.has(item.team)) {
-      teams?.set(item.team, new Set());
-    }
-    teams?.get(item.team)?.add(item.subTeam);
+    businessUnitMap.get(item.businessUnit)?.add(item.team);
   });
 
   return {
@@ -174,10 +170,7 @@ export const getUseCaseFilters = (): GalleryFiltersResponse => {
     businessUnits: Array.from(businessUnitMap.entries()).map(
       ([name, teams]) => ({
         name,
-        teams: Array.from(teams.entries()).map(([teamName, subTeams]) => ({
-          name: teamName,
-          subTeams: uniqueSorted(Array.from(subTeams)),
-        })),
+        teams: uniqueSorted(Array.from(teams)),
       }),
     ),
   };

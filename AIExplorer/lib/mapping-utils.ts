@@ -32,7 +32,9 @@ export const isRowActive = (row: SqlRow): boolean => {
   if (raw === undefined) return true;
   if (typeof raw === "boolean") return raw;
   const normalized = String(raw).trim().toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes";
+  if (["1", "true", "yes", "y", "active"].includes(normalized)) return true;
+  if (["0", "false", "no", "n", "inactive"].includes(normalized)) return false;
+  return false;
 };
 
 export const toStringValue = (value: unknown): string => {

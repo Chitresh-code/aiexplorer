@@ -7,6 +7,8 @@ import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Stakeholder = {
@@ -14,12 +16,18 @@ type Stakeholder = {
     role: string;
 };
 
-type Champion = {
-    UKrewer: string;
+type StakeholderSuggestion = {
+    email: string;
+    role: string;
+    roleId?: number | null;
+    businessUnitId?: number | null;
+    businessUnitName?: string;
 };
 
 type StakeholdersPlanSectionProps = {
-    championsData: Champion[];
+    stakeholders: StakeholderSuggestion[];
+    isLoading: boolean;
+    phases: Array<{ id?: number | null; name?: string | null; stage?: string | null }>;
     addedStakeholders: Stakeholder[];
     onAddStakeholder: () => void;
     onEditStakeholder: (index: number) => void;
@@ -33,10 +41,27 @@ type StakeholdersPlanSectionProps = {
     implementedStartDate?: Date;
     implementedEndDate?: Date;
     onOpenDateDialog: (phase: string) => void;
+    isPhasesLoading?: boolean;
+    isTimelineGenerating?: boolean;
+    aiGeneratedPhases?: Record<string, boolean>;
+    timelineSuggestions?: Record<string, { startDate: Date; endDate: Date }>;
+    onAcceptTimelineSuggestions?: () => void;
+    onRejectTimelineSuggestions?: () => void;
+};
+
+const formatDisplayName = (email: string) => {
+    if (!email) return "Unknown";
+    const localPart = email.split("@")[0] ?? email;
+    return localPart
+        .split(".")
+        .map((chunk) => (chunk ? chunk[0].toUpperCase() + chunk.slice(1) : ""))
+        .join(" ");
 };
 
 export const StakeholdersPlanSection = ({
-    championsData,
+    stakeholders,
+    isLoading,
+    phases,
     addedStakeholders,
     onAddStakeholder,
     onEditStakeholder,
@@ -50,6 +75,12 @@ export const StakeholdersPlanSection = ({
     implementedStartDate,
     implementedEndDate,
     onOpenDateDialog,
+    isPhasesLoading = false,
+    isTimelineGenerating = false,
+    aiGeneratedPhases = {},
+    timelineSuggestions = {},
+    onAcceptTimelineSuggestions = () => {},
+    onRejectTimelineSuggestions = () => {},
 }: StakeholdersPlanSectionProps) => (
     <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
         <div className="lg:col-span-4">
@@ -71,21 +102,45 @@ export const StakeholdersPlanSection = ({
                 <CardContent className="pt-2 flex-1">
                     <ScrollArea className="h-[470px]">
                         <div className="space-y-3 pr-3">
-                            {championsData.map((champion, idx) => (
-                                <div key={`champion-${idx}`} className="flex items-center justify-between gap-3 group">
-                                    <div className="flex items-center gap-3">
-                                        <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
-                                            <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
-                                                {champion.UKrewer.split(" ").map((n) => n[0]).join("").toUpperCase()}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div>
-                                            <p className="text-sm font-semibold text-gray-900 leading-none">{champion.UKrewer}</p>
-                                            <p className="text-xs text-gray-500 mt-1">Champion</p>
+                            {isLoading ? (
+                                Array.from({ length: 4 }).map((_, idx) => (
+                                    <div key={`stakeholder-skeleton-${idx}`} className="flex items-center gap-3">
+                                        <Skeleton className="h-8 w-8 rounded-full" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-3 w-32" />
+                                            <Skeleton className="h-3 w-24" />
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                stakeholders.map((stakeholder, idx) => {
+                                    const displayName = formatDisplayName(stakeholder.email);
+                                    const initials = displayName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase();
+                                    return (
+                                        <div key={`stakeholder-${idx}`} className="flex items-center justify-between gap-3 group">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-8 w-8 border-none ring-1 ring-gray-100 shadow-sm">
+                                                    <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
+                                                        {initials || "UK"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-gray-900 leading-none">
+                                                        {displayName}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        {stakeholder.role || "Champion"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                             {addedStakeholders.map((stakeholder, idx) => (
                                 <div key={`added-${idx}`} className="flex items-center justify-between gap-3 group">
                                     <div className="flex items-center gap-3">
@@ -132,6 +187,31 @@ export const StakeholdersPlanSection = ({
                         <CalendarIcon className="w-4 h-4 text-teal-600" />
                         Timeline
                     </CardTitle>
+                    {Object.keys(timelineSuggestions).length > 0 && (
+                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                            <span>Use AI suggestion for all phases?</span>
+                            <div className="flex items-center gap-2">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-sky-600 hover:text-sky-700"
+                                    onClick={onAcceptTimelineSuggestions}
+                                >
+                                    Yes
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-sky-600 hover:text-sky-700"
+                                    onClick={onRejectTimelineSuggestions}
+                                >
+                                    No
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="px-6 py-4">
                     <div className="metrics-table-container">
@@ -139,103 +219,96 @@ export const StakeholdersPlanSection = ({
                             <thead>
                                 <tr>
                                     <th style={{ width: "25%", padding: "12px 8px", fontWeight: "600", color: "#374151", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Phase</th>
-                                    <th style={{ width: "37.5%", padding: "12px 8px", fontWeight: "600", color: "#374151", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>Start Date</th>
-                                    <th style={{ width: "37.5%", padding: "12px 8px", fontWeight: "600", color: "#374151", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>End Date</th>
+                                    <th style={{ width: "37.5%", padding: "12px 8px", fontWeight: "600", color: "#374151", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                                        Start Date
+                                        {isTimelineGenerating && (
+                                            <div className="text-xs font-normal text-sky-600">Generating...</div>
+                                        )}
+                                    </th>
+                                    <th style={{ width: "37.5%", padding: "12px 8px", fontWeight: "600", color: "#374151", textAlign: "left", borderBottom: "1px solid #e5e7eb" }}>
+                                        End Date
+                                        {isTimelineGenerating && (
+                                            <div className="text-xs font-normal text-sky-600">Generating...</div>
+                                        )}
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr className="hover:bg-gray-50">
-                                    <td style={{ padding: "16px 8px", fontWeight: "500", textAlign: "left", fontSize: "14px", color: "#111827" }}>Idea</td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Idea")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {startDate ? format(startDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Idea")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {endDate ? format(endDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-gray-50">
-                                    <td style={{ padding: "16px 8px", fontWeight: "500", textAlign: "left", fontSize: "14px", color: "#111827" }}>Diagnose</td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Diagnose")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {diagnoseStartDate ? format(diagnoseStartDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Diagnose")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {diagnoseEndDate ? format(diagnoseEndDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-gray-50">
-                                    <td style={{ padding: "16px 8px", fontWeight: "500", textAlign: "left", fontSize: "14px", color: "#111827" }}>Design</td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Design")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {designStartDate ? format(designStartDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Design")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-2" />
-                                            {designEndDate ? format(designEndDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                </tr>
-                                <tr className="hover:bg-gray-50">
-                                    <td style={{ padding: "16px 8px", fontWeight: "500", textAlign: "left", fontSize: "14px", color: "#111827" }}>Implemented</td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Implemented")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {implementedStartDate ? format(implementedStartDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Button
-                                            variant="outline"
-                                            className="h-9 w-full justify-start text-left font-normal text-sm px-3"
-                                            onClick={() => onOpenDateDialog("Implemented")}
-                                        >
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {implementedEndDate ? format(implementedEndDate, "dd-MM-yyyy") : "Pick date"}
-                                        </Button>
-                                    </td>
-                                </tr>
+                                {isPhasesLoading ? (
+                                    Array.from({ length: 4 }).map((_, idx) => (
+                                        <tr key={`phase-skeleton-${idx}`} className="hover:bg-gray-50">
+                                            <td style={{ padding: "16px 8px" }}>
+                                                <Skeleton className="h-4 w-24" />
+                                            </td>
+                                            <td style={{ padding: "16px 8px" }}>
+                                                <Skeleton className="h-9 w-full" />
+                                            </td>
+                                            <td style={{ padding: "16px 8px" }}>
+                                                <Skeleton className="h-9 w-full" />
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    (phases ?? []).map((phase) => {
+                                    const phaseName = String(phase.name ?? "").trim();
+                                    if (!phaseName) return null;
+                                    const normalized = phaseName.toLowerCase();
+                                    const start =
+                                        normalized === "idea"
+                                            ? startDate
+                                            : normalized === "diagnose"
+                                            ? diagnoseStartDate
+                                            : normalized === "design"
+                                            ? designStartDate
+                                            : normalized === "implemented"
+                                            ? implementedStartDate
+                                            : undefined;
+                                    const end =
+                                        normalized === "idea"
+                                            ? endDate
+                                            : normalized === "diagnose"
+                                            ? diagnoseEndDate
+                                            : normalized === "design"
+                                            ? designEndDate
+                                            : normalized === "implemented"
+                                            ? implementedEndDate
+                                            : undefined;
+
+                                    return (
+                                        <tr key={phaseName} className="hover:bg-gray-50">
+                                            <td style={{ padding: "16px 8px", fontWeight: "500", textAlign: "left", fontSize: "14px", color: "#111827" }}>
+                                                {phaseName}
+                                            </td>
+                                            <td style={{ padding: "16px 8px" }}>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                    onClick={() => onOpenDateDialog(phaseName)}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {start ? format(start, "dd-MM-yyyy") : "Pick date"}
+                                                </Button>
+                                                {aiGeneratedPhases[phaseName.toLowerCase()] && (
+                                                    <Badge variant="secondary" className="mt-2">AI generated</Badge>
+                                                )}
+                                            </td>
+                                            <td style={{ padding: "16px 8px" }}>
+                                                <Button
+                                                    variant="outline"
+                                                    className="h-9 w-full justify-start text-left font-normal text-sm px-3"
+                                                    onClick={() => onOpenDateDialog(phaseName)}
+                                                >
+                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                    {end ? format(end, "dd-MM-yyyy") : "Pick date"}
+                                                </Button>
+                                                {aiGeneratedPhases[phaseName.toLowerCase()] && (
+                                                    <Badge variant="secondary" className="mt-2">AI generated</Badge>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                                )}
                             </tbody>
                         </table>
                     </div>

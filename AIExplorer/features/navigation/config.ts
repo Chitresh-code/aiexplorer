@@ -14,7 +14,6 @@ export type NavItemConfig = {
 };
 
 export const NAV_ITEMS: NavItemConfig[] = [
-  { id: "dashboard", label: "Dashboard", path: "/dashboard", icon: "dashboard" },
   { id: "gallery", label: "AI Gallery", path: "/gallery", icon: "gallery" },
   {
     id: "submit-use-case",

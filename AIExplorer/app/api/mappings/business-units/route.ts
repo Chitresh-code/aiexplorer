@@ -6,69 +6,77 @@ import { isRowActive, pickValue, toNumberValue, toStringValue } from "@/lib/mapp
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type SubteamRow = Record<string, unknown>;
+type MappingRow = Record<string, unknown>;
 
 export const GET = async (): Promise<NextResponse> => {
   try {
     const pool = await getSqlPool();
-    const result = await pool.request().query("SELECT * FROM subteammapping");
-    const rows = (result.recordset ?? []).filter(isRowActive) as SubteamRow[];
+    const businessUnitResult = await pool
+      .request()
+      .query("SELECT * FROM businessunitmapping");
 
+    const rawBusinessUnitRows = (businessUnitResult.recordset ??
+      []) as MappingRow[];
+    const activeBusinessUnitRows = rawBusinessUnitRows.filter(isRowActive);
+    const businessUnitRows =
+      activeBusinessUnitRows.length > 0 ? activeBusinessUnitRows : rawBusinessUnitRows;
     const businessUnitMap = new Map<
       string,
       {
+        businessUnitId: number | null;
         businessUnitName: string;
-        teams: Map<
-          string,
-          {
-            teamName: string;
-            subteams: { subTeamId: number | null; subTeamName: string }[];
-          }
-        >;
+        teams: Set<string>;
       }
     >();
 
-    rows.forEach((row) => {
+    businessUnitRows.forEach((row) => {
       const businessUnitName = toStringValue(
-        pickValue(row, ["Business Unit Name", "BusinessUnitName", "BusinessUnit"]),
+        pickValue(row, [
+          "Business Unit Name",
+          "BusinessUnitName",
+          "BusinessUnit",
+          "businessunitname",
+          "business_unit_name",
+        ]),
       ).trim();
-      const teamName = toStringValue(pickValue(row, ["Team Name", "TeamName"])).trim();
-      const subTeamId = toNumberValue(
-        pickValue(row, ["Id", "ID", "SubTeamId", "SubTeamID"]),
+      const teamName = toStringValue(
+        pickValue(row, ["Team Name", "TeamName", "teamname", "team_name"]),
+      ).trim();
+      const businessUnitId = toNumberValue(
+        pickValue(row, [
+          "Businesssunitid",
+          "BusinessUnitId",
+          "BusinessUnitID",
+          "businessunitid",
+          "business_unit_id",
+          "id",
+          "ID",
+        ]),
       );
-      const subTeamName = toStringValue(
-        pickValue(row, ["Sub Team Name", "SubTeamName", "SubteamName"]),
-      ).trim();
 
-      if (!businessUnitName || subTeamId === null) return;
-
+      if (!businessUnitName || !teamName) return;
       if (!businessUnitMap.has(businessUnitName)) {
         businessUnitMap.set(businessUnitName, {
+          businessUnitId,
           businessUnitName,
-          teams: new Map(),
+          teams: new Set(),
         });
       }
 
       const unitEntry = businessUnitMap.get(businessUnitName);
       if (!unitEntry) return;
-
-      const teamKey = teamName || "Unassigned";
-      if (!unitEntry.teams.has(teamKey)) {
-        unitEntry.teams.set(teamKey, {
-          teamName: teamKey,
-          subteams: [],
-        });
+      if (businessUnitId !== null) {
+        if (unitEntry.businessUnitId === null) {
+          unitEntry.businessUnitId = businessUnitId;
+        } else if (businessUnitId < unitEntry.businessUnitId) {
+          unitEntry.businessUnitId = businessUnitId;
+        }
       }
-
-      if (subTeamName) {
-        unitEntry.teams.get(teamKey)?.subteams.push({
-          subTeamId,
-          subTeamName,
-        });
-      }
+      unitEntry.teams.add(teamName);
     });
 
     const items = Array.from(businessUnitMap.values()).map((unit) => ({
+      businessUnitId: unit.businessUnitId,
       businessUnitName: unit.businessUnitName,
       teams: Array.from(unit.teams.values()),
     }));

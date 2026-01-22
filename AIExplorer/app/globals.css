@@ -757,10 +757,6 @@ body {
 
 /* Large Screen Adjustments */
 @media (min-width: 1600px) {
-  html {
-    zoom: 120%;
-  }
-
   .hero-title {
     font-size: 3rem;
   }
@@ -859,10 +855,6 @@ body {
 
 /* Laptop / Medium Screen Adjustments */
 @media (max-width: 1500px) {
-  html {
-    zoom: 110%;
-  }
-
   .main-content {
     padding: 2vh 3vw;
     max-width: 950px;
@@ -3197,38 +3189,6 @@ body {
 
 .number-input-no-spinner {
   -moz-appearance: textfield;
-}
-
-/* Fix for Radix UI Dropdown/Popover positioning with CSS zoom */
-@media (min-width: 1600px) {
-
-  /* Apply inverse zoom to the popper wrapper to fix positioning calculations */
-  [data-radix-popper-content-wrapper] {
-    zoom: 0.8333 !important;
-    /* 1 / 1.2 = 0.8333 */
-  }
-
-  /* Scale the actual content back up to match page zoom */
-  [data-radix-dropdown-menu-content],
-  [data-radix-select-content],
-  [data-radix-popover-content],
-  [data-radix-context-menu-content] {
-    zoom: 1.44 !important;
-    /* 1.2 * 1.2 = 1.44 to compensate for wrapper zoom */
-  }
-
-  /* Ensure dropdowns are not clipped and have proper stacking */
-  [data-radix-popper-content-wrapper],
-  [data-radix-dropdown-menu-content],
-  [data-radix-select-content],
-  [data-radix-popover-content] {
-    z-index: 9999 !important;
-  }
-
-  /* Prevent any parent from clipping the dropdown */
-  body {
-    overflow: visible !important;
-  }
 }
 
 /* =====================================================

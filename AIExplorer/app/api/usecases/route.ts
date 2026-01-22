@@ -21,17 +21,26 @@ const readNumber = (params: URLSearchParams, key: string) => {
   return Number.isFinite(value) ? value : undefined;
 };
 
-const readSortBy = (params: URLSearchParams) => {
+const readSortBy = (params: URLSearchParams): UseCaseQuery["sortBy"] => {
   const sortBy = params.get("sortBy");
-  const allowed = [
+  const allowed = new Set<UseCaseQuery["sortBy"]>([
+    "id",
     "title",
     "phase",
     "status",
     "businessUnit",
     "team",
+    "subTeam",
     "vendorName",
-  ];
-  return sortBy && allowed.includes(sortBy) ? sortBy : undefined;
+    "aiModel",
+    "aiThemes",
+    "personas",
+    "bgColor",
+  ]);
+  if (!sortBy) return undefined;
+  return allowed.has(sortBy as UseCaseQuery["sortBy"])
+    ? (sortBy as UseCaseQuery["sortBy"])
+    : undefined;
 };
 
 export const GET = async (request: Request) => {

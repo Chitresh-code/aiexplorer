@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 interface UnitOfMeasurementSelectProps {
     value: string;
     onSelect: (value: string) => void;
+    options: string[];
+    dataField?: string;
     placeholder?: string;
     width?: string;
     className?: string;
@@ -19,22 +21,11 @@ interface UnitOfMeasurementSelectProps {
     align?: "start" | "center" | "end";
 }
 
-const options = [
-    'HoursPerDay',
-    'HoursPerMonth',
-    'HoursPerYear',
-    'HoursPerCase',
-    'HoursPerTransaction',
-    'USDPerMonth',
-    'USDPerYear',
-    'USD',
-    'Users',
-    'Audited Risks'
-];
-
 export function UnitOfMeasurementSelect({
     value,
     onSelect,
+    options = [],
+    dataField,
     sideOffset = 4,
     alignOffset = 0,
     placeholder = "Select",
@@ -52,6 +43,7 @@ export function UnitOfMeasurementSelect({
         <Select value={displayValue} onValueChange={handleValueChange}>
             <SelectTrigger
                 className={cn("w-full h-9 px-2 text-xs", className)}
+                data-metric-field={dataField}
             >
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>

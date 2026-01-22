@@ -12,7 +12,7 @@ export const GET = async (): Promise<NextResponse> => {
     const result = await pool.request().query("SELECT * FROM statusmapping");
     const items = (result.recordset ?? [])
       .filter(isRowActive)
-      .map((row) => ({
+      .map((row: Record<string, unknown>) => ({
         id: toNumberValue(pickValue(row, ["Id", "ID"])),
         name: toStringValue(pickValue(row, ["StatusName", "Status Name"])).trim(),
         color: toStringValue(pickValue(row, ["StatusColor", "Status Color"])).trim(),

@@ -4,18 +4,20 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "@/lib/router";
 import { useMsal } from "@azure/msal-react";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getLoginRequest } from "@/lib/msal";
 import {
-    getSubmitUseCaseData,
-    getAllVendorsFromAllVendorsData,
-    getModelsForVendor,
     getBusinessUnitsFromData,
     getTeamsForBusinessUnit,
     getSubTeamsForTeam,
-    getRolesFromData,
-    getChampionsForBusinessUnit,
+    getStakeholdersForBusinessUnitId,
+    getMappingBusinessUnits,
+    getMappingRoles,
+    getMappingAiProductQuestions,
+    getMappingPhases,
+    getMappingMetricCategories,
+    getMappingUnitOfMeasure,
     createUseCase,
     createStakeholder,
     createPlan
@@ -27,11 +29,6 @@ import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -48,16 +45,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useReactTable, getCoreRowModel, type ColumnDef } from "@tanstack/react-table";
 import { ChecklistSection } from "@/components/submit-use-case/ChecklistSection";
 import { MetricsSection } from "@/components/submit-use-case/MetricsSection";
 import { StakeholdersPlanSection } from "@/components/submit-use-case/StakeholdersPlanSection";
 import { UseCaseInfoSection } from "@/components/submit-use-case/UseCaseInfoSection";
-import { ParcsCategorySelect } from "@/components/submit-use-case/ParcsCategorySelect";
-import { UnitOfMeasurementSelect } from "@/components/submit-use-case/UnitOfMeasurementSelect";
 
 interface Metric {
     id: number;
@@ -73,18 +65,6 @@ interface Metric {
     isSubmitted?: boolean;
 }
 
-const metricColumnSizes = {
-    primarySuccessValue: 160,
-    parcsCategory: 160,
-    unitOfMeasurement: 160,
-    baselineValue: 160,
-    baselineDate: 160,
-    targetValue: 160,
-    targetDate: 160,
-    reportedValue: 160,
-    reportedDate: 160,
-    actions: 60,
-};
 
 type ChecklistQuestion = {
     id: number | string;
@@ -92,124 +72,21 @@ type ChecklistQuestion = {
     kind: "yesno" | "choice";
     options: { value: string; label: string }[];
     isMulti: boolean;
+    responseKey: string;
 };
-
-const MetricDatePicker = ({
-    value,
-    onChange,
-    onOpenDialog
-}: {
-    value: string,
-    onChange: (date: string) => void,
-    onOpenDialog?: () => void
-}) => {
-    const [open, setOpen] = useState(false);
-
-    // Parse the date string "YYYY-MM-DD" safely
-    const dateValue = useMemo(() => {
-        if (!value) return undefined;
-        // Append time to avoid timezone issues with plain date strings if parsed directly by Date()
-        // Or just use split
-        const parts = value.split('-');
-        if (parts.length === 3) {
-            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-        }
-        return undefined;
-    }, [value]);
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant={"outline"}
-                    className={cn(
-                        "w-full justify-start text-left font-normal h-9 px-2 text-xs",
-                        !value && "text-muted-foreground"
-                    )}
-                    onClick={() => {
-                        if (onOpenDialog) {
-                            onOpenDialog();
-                        } else {
-                            setOpen(true);
-                        }
-                    }}
-                >
-                    <CalendarIcon className="mr-2 h-3 w-3" />
-                    {dateValue ? format(dateValue, "dd-MM-yyyy") : <span>Pick date</span>}
-                </Button>
-            </PopoverTrigger>
-            {!onOpenDialog && (
-                <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode="single"
-                        selected={dateValue}
-                        onSelect={(date) => {
-                            if (date) {
-                                onChange(format(date, "yyyy-MM-dd"));
-                                setOpen(false);
-                            }
-                        }}
-                        initialFocus
-                    />
-                </PopoverContent>
-            )}
-        </Popover>
-    );
-};
-
-const FormSkeleton = () => (
-    <div className="space-y-6">
-        <Card className="shadow-sm border-none ring-1 ring-gray-200">
-            <CardHeader className="border-b bg-gray-50/50">
-                <Skeleton className="h-6 w-32 mb-2" />
-                <Skeleton className="h-4 w-64" />
-            </CardHeader>
-            <CardContent className="pt-6 space-y-8">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="space-y-3">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-10 w-full rounded-md" />
-                    </div>
-                ))}
-            </CardContent>
-        </Card>
-        <Card className="shadow-sm border-none ring-1 ring-gray-200">
-            <CardHeader className="border-b bg-gray-50/50">
-                <Skeleton className="h-6 w-40 mb-2" />
-                <Skeleton className="h-4 w-72" />
-            </CardHeader>
-            <CardContent className="pt-6 space-y-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="space-y-3">
-                            <Skeleton className="h-4 w-20" />
-                            <Skeleton className="h-10 w-full rounded-md" />
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    </div>
-);
-
 
 const formSchema = z.object({
     useCaseTitle: z.string().min(1, "Use Case Title is required"),
     headline: z.string().min(1, "Headline is required"),
     opportunity: z.string().min(1, "Opportunity is required"),
-    evidence: z.string().min(1, "Evidence is required"),
     businessValue: z.string().min(1, "Business Value is required"),
-    selectedAITheme: z.array(z.string()).min(1, "AI Theme is required"),
-    selectedPersona: z.array(z.string()).min(1, "Target Persona is required"),
-    selectedVendor: z.string().min(1, "Vendor Name is required"),
-    selectedModel: z.string().optional(),
     selectedBusinessUnit: z.string().min(1, "Business Unit is required"),
     selectedTeam: z.string().min(1, "Team Name is required"),
     primaryContact: z.string().optional(),
     selectedSubTeam: z.string().optional(),
     eseResourceValue: z.string().min(1, "Required"),
     infoLink: z.string().optional(),
-    checklistResponses: z.record(z.union([z.string(), z.array(z.string()), z.undefined()])).optional(),
+    checklistResponses: z.record(z.any()).optional(),
 })
 
 const SubmitUseCase = () => {
@@ -218,7 +95,6 @@ const SubmitUseCase = () => {
     const { accounts, instance } = useMsal();
     const [currentStep, setCurrentStep] = useState(location.state?.initialStep || 1);
     const formContainerRef = useRef(null);
-    const aiCardRef = useRef(null);
     // Removed manual eseResourceValue state, using form watch instead
 
     // Initialize addedStakeholders with the logged-in user
@@ -243,15 +119,26 @@ const SubmitUseCase = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
+    const [aiStatus, setAiStatus] = useState<"idle" | "loading">("idle");
+    const [aiGeneratedValues, setAiGeneratedValues] = useState<Record<string, string>>({});
+    const [aiSuggestions, setAiSuggestions] = useState<Record<string, string>>({});
+    const [checklistNeedsAttention, setChecklistNeedsAttention] = useState(false);
 
     // Raw data from APIs
-    const [aiModelsData, setAiModelsData] = useState(null);
-    const [allVendorsData, setAllVendorsData] = useState(null);
     const [businessStructureData, setBusinessStructureData] = useState(null);
-    const [rolesData, setRolesData] = useState(null);
-    const [dropdownData, setDropdownData] = useState(null);
+    const [rolesData, setRolesData] = useState([]);
     const [aiProductQuestionsData, setAiProductQuestionsData] = useState([]);
-    const [championsData, setChampionsData] = useState([]);
+    const [stakeholdersData, setStakeholdersData] = useState([]);
+    const [isStakeholdersLoading, setIsStakeholdersLoading] = useState(false);
+    const [phasesData, setPhasesData] = useState([]);
+    const [isPhasesLoading, setIsPhasesLoading] = useState(false);
+    const [isTimelineGenerating, setIsTimelineGenerating] = useState(false);
+    const [aiGeneratedPhases, setAiGeneratedPhases] = useState<Record<string, boolean>>({});
+    const [timelineSuggestions, setTimelineSuggestions] = useState<
+        Record<string, { startDate: Date; endDate: Date }>
+    >({});
+    const [metricCategoriesData, setMetricCategoriesData] = useState([]);
+    const [unitOfMeasureData, setUnitOfMeasureData] = useState([]);
 
     // Form definition
     const form = useForm<z.infer<typeof formSchema>>({
@@ -260,12 +147,7 @@ const SubmitUseCase = () => {
             useCaseTitle: "",
             headline: "",
             opportunity: "",
-            evidence: "",
             businessValue: "",
-            selectedAITheme: [],
-            selectedPersona: [],
-            selectedVendor: "",
-            selectedModel: "",
             selectedBusinessUnit: "",
             selectedTeam: "",
             primaryContact: "",
@@ -277,10 +159,6 @@ const SubmitUseCase = () => {
         mode: "onChange",
     })
 
-    const selectedVendor = useWatch({
-        control: form.control,
-        name: "selectedVendor",
-    });
     const selectedBusinessUnit = useWatch({
         control: form.control,
         name: "selectedBusinessUnit",
@@ -289,13 +167,32 @@ const SubmitUseCase = () => {
         control: form.control,
         name: "selectedTeam",
     });
-    const selectedModel = useWatch({
+    const generatedWatchedValues = useWatch({
         control: form.control,
-        name: "selectedModel",
+        name: ["useCaseTitle", "headline", "opportunity", "businessValue"],
+    });
+    const step1RequiredValues = useWatch({
+        control: form.control,
+        name: [
+            "useCaseTitle",
+            "headline",
+            "opportunity",
+            "businessValue",
+            "selectedBusinessUnit",
+            "selectedTeam",
+            "eseResourceValue",
+        ],
+    });
+    const checklistResponses = useWatch({
+        control: form.control,
+        name: "checklistResponses",
     });
 
     const showChecklistTab = true;
 
+    const aiRequestInFlightRef = useRef(false);
+    const timelineRequestInFlightRef = useRef(false);
+    const previousFieldValuesRef = useRef<string[]>([]);
 
     const [addedStakeholders, setAddedStakeholders] = useState([]);
 
@@ -324,20 +221,23 @@ const SubmitUseCase = () => {
     const [tempStartDate, setTempStartDate] = useState<Date | undefined>(undefined);
     const [tempEndDate, setTempEndDate] = useState<Date | undefined>(undefined);
 
+    const phaseKey = (phase: string) => phase.trim().toLowerCase();
+    const phaseDateState: Record<string, { start?: Date; end?: Date; setStart: (date?: Date) => void; setEnd: (date?: Date) => void }> = {
+        idea: { start: startDate, end: endDate, setStart: setStartDate, setEnd: setEndDate },
+        diagnose: { start: diagnoseStartDate, end: diagnoseEndDate, setStart: setDiagnoseStartDate, setEnd: setDiagnoseEndDate },
+        design: { start: designStartDate, end: designEndDate, setStart: setDesignStartDate, setEnd: setDesignEndDate },
+        implemented: { start: implementedStartDate, end: implementedEndDate, setStart: setImplementedStartDate, setEnd: setImplementedEndDate },
+    };
+
     const handleOpenDateDialog = (phase) => {
         setEditingPhase(phase);
-        if (phase === 'Idea') {
-            setTempStartDate(startDate);
-            setTempEndDate(endDate);
-        } else if (phase === 'Diagnose') {
-            setTempStartDate(diagnoseStartDate);
-            setTempEndDate(diagnoseEndDate);
-        } else if (phase === 'Design') {
-            setTempStartDate(designStartDate);
-            setTempEndDate(designEndDate);
-        } else if (phase === 'Implemented') {
-            setTempStartDate(implementedStartDate);
-            setTempEndDate(implementedEndDate);
+        const state = phaseDateState[phaseKey(phase)];
+        if (state) {
+            setTempStartDate(state.start);
+            setTempEndDate(state.end);
+        } else {
+            setTempStartDate(undefined);
+            setTempEndDate(undefined);
         }
         setIsDateDialogOpen(true);
     };
@@ -350,27 +250,71 @@ const SubmitUseCase = () => {
     };
 
     const handleSubmitDates = () => {
-        if (editingPhase === 'Idea') {
-            setStartDate(tempStartDate);
-            setEndDate(tempEndDate);
-        } else if (editingPhase === 'Diagnose') {
-            setDiagnoseStartDate(tempStartDate);
-            setDiagnoseEndDate(tempEndDate);
-        } else if (editingPhase === 'Design') {
-            setDesignStartDate(tempStartDate);
-            setDesignEndDate(tempEndDate);
-        } else if (editingPhase === 'Implemented') {
-            setImplementedStartDate(tempStartDate);
-            setImplementedEndDate(tempEndDate);
+        if (!editingPhase) return;
+        const state = phaseDateState[phaseKey(editingPhase)];
+        if (!state) return;
+
+        if (tempStartDate && tempEndDate && tempEndDate <= tempStartDate) {
+            toast.error("End date must be after the start date.");
+            return;
         }
-        toast.success('Dates updated successfully');
+
+        const fallbackOrder = ["Idea", "Diagnose", "Design", "Implemented"];
+        const phaseOrder = phasesData.length
+            ? phasesData
+                .slice()
+                .sort((a, b) => {
+                    const aId = Number(a.id);
+                    const bId = Number(b.id);
+                    if (Number.isFinite(aId) && Number.isFinite(bId) && aId !== bId) {
+                        return aId - bId;
+                    }
+                    return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+                })
+                .map((phase) => String(phase.name ?? "").trim())
+                .filter(Boolean)
+            : fallbackOrder;
+
+        const currentIndex = phaseOrder.findIndex(
+            (name) => phaseKey(name) === phaseKey(editingPhase),
+        );
+        if (currentIndex > 0 && tempStartDate) {
+            const prevPhaseName = phaseOrder[currentIndex - 1];
+            const prevState = phaseDateState[phaseKey(prevPhaseName)];
+            const prevEndDate = prevState?.end;
+            if (prevEndDate && tempStartDate < prevEndDate) {
+                toast.error(
+                    `Start date must be on or after the previous phase end date (${format(prevEndDate, "dd-MM-yyyy")}).`,
+                );
+                return;
+            }
+        }
+
+        state.setStart(tempStartDate);
+        state.setEnd(tempEndDate);
+        const phaseKeyName = phaseKey(editingPhase);
+        setAiGeneratedPhases((prev) => {
+            if (!prev[phaseKeyName]) return prev;
+            const next = { ...prev };
+            delete next[phaseKeyName];
+            return next;
+        });
+        setTimelineSuggestions((prev) => {
+            if (!prev[phaseKeyName]) return prev;
+            const next = { ...prev };
+            delete next[phaseKeyName];
+            return next;
+        });
+        toast.success("Dates updated successfully");
         handleDateDialogClose();
     };
 
     // Metrics State & Logic
     const [metrics, setMetrics] = useState<Metric[]>([]);
-    const [inputValues, setInputValues] = useState({});
-    const [metricsSubmitted, setMetricsSubmitted] = useState(false);
+    const [metricSuggestions, setMetricSuggestions] = useState<Omit<Metric, "id">[]>([]);
+    const [isMetricSuggestionsLoading, setIsMetricSuggestionsLoading] = useState(false);
+    const [aiGeneratedMetricIds, setAiGeneratedMetricIds] = useState<Record<number, boolean>>({});
+    const metricSuggestionsInFlightRef = useRef(false);
     const [editingMetricId, setEditingMetricId] = useState<number | null>(null);
     const [tempBaselineDate, setTempBaselineDate] = useState<Date | undefined>(undefined);
     const [tempTargetDate, setTempTargetDate] = useState<Date | undefined>(undefined);
@@ -391,39 +335,66 @@ const SubmitUseCase = () => {
         setMetrics(prev => [...prev, newMetric]);
     }, []);
 
-    const handleDeleteMetric = useCallback((id: number) => {
-        setMetrics(prev => prev.filter(metric => metric.id !== id));
+    const handleDeleteMetric = useCallback((id: number | string) => {
+        setMetrics(prev => prev.filter(metric => String(metric.id) !== String(id)));
+        setAiGeneratedMetricIds((prev) => {
+            const next = { ...prev };
+            const numericId = Number(id);
+            if (Number.isFinite(numericId)) {
+                delete next[numericId];
+            }
+            return next;
+        });
         toast.success('Metric deleted successfully');
     }, []);
 
-    const handleInputChange = useCallback((id: number, field: string, value: string) => {
-        const inputKey = `${id}-${field}`;
-        setInputValues(prev => ({ ...prev, [inputKey]: value }));
-        setMetrics(prev => prev.map(metric =>
-            metric.id === id ? { ...metric, [field]: value } : metric
-        ));
+    const handleInputChange = useCallback((id: number | string, field: string, value: string) => {
+        setMetrics((prev) => {
+            const next = prev.map((metric) => {
+                if (String(metric.id) === String(id)) {
+                    return { ...metric, [field]: value };
+                }
+                return metric;
+            });
+            return next;
+        });
     }, []);
 
-    const isMetricsFormValid = metrics.length > 0 && metrics.filter(m => !m.isSubmitted).every(metric =>
-        metric.primarySuccessValue &&
-        metric.parcsCategory &&
-        metric.unitOfMeasurement &&
-        metric.baselineValue &&
-        metric.baselineDate &&
-        metric.targetValue &&
-        metric.targetDate
-    );
+    const hasMetricValue = (value: unknown) => String(value ?? "").trim().length > 0;
 
-    const handleSubmitMetrics = () => {
-        const unsubmittedMetrics = metrics.filter(m => !m.isSubmitted);
-        if (unsubmittedMetrics.length > 0) {
-            setMetrics(prev => prev.map(m => m.isSubmitted ? m : { ...m, isSubmitted: true }));
-            toast.success('Metrics saved successfully');
+    const isMetricsFormValid = metrics.length > 0 && metrics.every((metric) => {
+        if (
+            !hasMetricValue(metric.primarySuccessValue) ||
+            !hasMetricValue(metric.parcsCategory) ||
+            !hasMetricValue(metric.unitOfMeasurement) ||
+            !hasMetricValue(metric.baselineValue) ||
+            !hasMetricValue(metric.baselineDate) ||
+            !hasMetricValue(metric.targetValue) ||
+            !hasMetricValue(metric.targetDate)
+        ) {
+            return false;
         }
-    };
+        const baseline = new Date(`${metric.baselineDate}T00:00:00`);
+        const target = new Date(`${metric.targetDate}T00:00:00`);
+        if (Number.isNaN(baseline.getTime()) || Number.isNaN(target.getTime())) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return target > baseline && target > today;
+    });
+
 
     const handleSubmitMetricDates = () => {
         if (editingMetricId !== null && tempBaselineDate && tempTargetDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (tempTargetDate <= tempBaselineDate) {
+                toast.error('Target date must be after the baseline date.');
+                return;
+            }
+            if (tempTargetDate <= today) {
+                toast.error('Target date must be after today.');
+                return;
+            }
             handleInputChange(editingMetricId, 'baselineDate', format(tempBaselineDate, "yyyy-MM-dd"));
             handleInputChange(editingMetricId, 'targetDate', format(tempTargetDate, "yyyy-MM-dd"));
             toast.success('Dates Submitted Successfully');
@@ -434,159 +405,167 @@ const SubmitUseCase = () => {
         }
     };
 
-    const addMetricsColumns = useMemo<ColumnDef<Metric>[]>(() => [
-        {
-            accessorKey: 'primarySuccessValue',
-            header: 'Primary Success Value',
-            cell: ({ row }) => {
-                if (row.original.isSubmitted) return <span className="text-sm px-2 text-nowrap">{row.original.primarySuccessValue}</span>;
-                return (
-                    <Input
-                        type="text"
-                        value={row.original.primarySuccessValue}
-                        onChange={(e) => handleInputChange(row.original.id, 'primarySuccessValue', e.target.value)}
-                        className="h-9"
-                    />
-                );
-            },
-            size: metricColumnSizes.primarySuccessValue,
-        },
-        {
-            accessorKey: 'parcsCategory',
-            header: 'PARCS Category',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2">{row.original.parcsCategory}</span>
-            ) : (
-                <ParcsCategorySelect
-                    value={row.original.parcsCategory}
-                    onSelect={(val) => handleInputChange(row.original.id, 'parcsCategory', val)}
-                    className="metric-select"
-                />
-            ),
-            size: metricColumnSizes.parcsCategory,
-        },
-        {
-            accessorKey: 'unitOfMeasurement',
-            header: 'Unit of Measurement',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2">{row.original.unitOfMeasurement}</span>
-            ) : (
-                <UnitOfMeasurementSelect
-                    value={row.original.unitOfMeasurement}
-                    onSelect={(val) => handleInputChange(row.original.id, 'unitOfMeasurement', val)}
-                    className="metric-select"
-                />
-            ),
-            size: metricColumnSizes.unitOfMeasurement,
-        },
-        {
-            accessorKey: 'baselineValue',
-            header: 'Baseline Value',
-            cell: ({ row }) => {
-                if (row.original.isSubmitted) return <span className="text-sm px-2">{row.original.baselineValue}</span>;
-                return (
-                    <Input
-                        type="number"
-                        className="number-input-no-spinner h-9"
-                        value={row.original.baselineValue}
-                        onChange={(e) => handleInputChange(row.original.id, 'baselineValue', e.target.value)}
-                    />
-                );
-            },
-            size: metricColumnSizes.baselineValue,
-        },
-        {
-            accessorKey: 'baselineDate',
-            header: 'Baseline Date',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 text-nowrap">{row.original.baselineDate}</span>
-            ) : (
-                <MetricDatePicker
-                    value={row.original.baselineDate}
-                    onChange={(date) => handleInputChange(row.original.id, 'baselineDate', date)}
-                    onOpenDialog={() => {
-                        setEditingMetricId(row.original.id);
-                        setTempBaselineDate(row.original.baselineDate ? new Date(row.original.baselineDate + 'T00:00:00') : undefined);
-                        setTempTargetDate(row.original.targetDate ? new Date(row.original.targetDate + 'T00:00:00') : undefined);
-                        setIsMetricDateDialogOpen(true);
-                    }}
-                />
-            ),
-            size: metricColumnSizes.baselineDate,
-        },
-        {
-            accessorKey: 'targetValue',
-            header: 'Target Value',
-            cell: ({ row }) => {
-                if (row.original.isSubmitted) return <span className="text-sm px-2">{row.original.targetValue}</span>;
-                return (
-                    <Input
-                        type="number"
-                        className="number-input-no-spinner h-9"
-                        value={row.original.targetValue}
-                        onChange={(e) => handleInputChange(row.original.id, 'targetValue', e.target.value)}
-                    />
-                );
-            },
-            size: metricColumnSizes.targetValue,
-        },
-        {
-            accessorKey: 'targetDate',
-            header: 'Target Date',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 text-nowrap">{row.original.targetDate}</span>
-            ) : (
-                <MetricDatePicker
-                    value={row.original.targetDate}
-                    onChange={(date) => handleInputChange(row.original.id, 'targetDate', date)}
-                    onOpenDialog={() => {
-                        setEditingMetricId(row.original.id);
-                        setTempBaselineDate(row.original.baselineDate ? new Date(row.original.baselineDate + 'T00:00:00') : undefined);
-                        setTempTargetDate(row.original.targetDate ? new Date(row.original.targetDate + 'T00:00:00') : undefined);
-                        setIsMetricDateDialogOpen(true);
-                    }}
-                />
-            ),
-            size: metricColumnSizes.targetDate,
-        },
-        {
-            id: 'actions',
-            header: '',
-            cell: ({ row }) => (
-                <div className="flex justify-center">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteMetric(row.original.id)}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-            ),
-            size: metricColumnSizes.actions,
-        },
-    ], [handleInputChange, handleDeleteMetric]);
+    const handleAcceptMetricSuggestions = useCallback(() => {
+        if (metricSuggestions.length === 0) return;
+        const baseId = Date.now();
+        const nextMetrics = metricSuggestions.map((item, index) => ({
+            id: baseId + index,
+            ...item,
+            isSubmitted: false,
+        }));
+        setMetrics((prev) => (prev.length > 0 ? [...prev, ...nextMetrics] : nextMetrics));
+        setAiGeneratedMetricIds((prev) => {
+            const next = { ...prev };
+            nextMetrics.forEach((metric) => {
+                next[metric.id] = true;
+            });
+            return next;
+        });
+        setMetricSuggestions([]);
+    }, [metricSuggestions]);
 
-    const addMetricsTable = useReactTable({
-        data: metrics,
-        columns: addMetricsColumns,
-        getCoreRowModel: getCoreRowModel(),
-    });
+    const handleRejectMetricSuggestions = useCallback(() => {
+        setMetricSuggestions([]);
+    }, []);
+
+    const handleOpenMetricDateDialog = useCallback((metric: Metric) => {
+        setEditingMetricId(metric.id);
+        setTempBaselineDate(
+            metric.baselineDate ? new Date(`${metric.baselineDate}T00:00:00`) : undefined,
+        );
+        setTempTargetDate(
+            metric.targetDate ? new Date(`${metric.targetDate}T00:00:00`) : undefined,
+        );
+        setIsMetricDateDialogOpen(true);
+    }, []);
+
+    const metricCategories = useMemo(() => {
+        if (!Array.isArray(metricCategoriesData)) return [];
+        const names = metricCategoriesData
+            .map((item) => String(item.category ?? item.name ?? "").trim())
+            .filter(Boolean);
+        return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
+    }, [metricCategoriesData]);
+
+    const unitOfMeasurementOptions = useMemo(() => {
+        if (!Array.isArray(unitOfMeasureData)) return [];
+        const names = unitOfMeasureData
+            .map((item) => String(item.name ?? item.unitOfMeasure ?? "").trim())
+            .filter(Boolean);
+        return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
+    }, [unitOfMeasureData]);
+
+    useEffect(() => {
+        let isMounted = true;
+        const generateMetricSuggestions = async () => {
+            if (currentStep !== 4) return;
+            if (metricSuggestionsInFlightRef.current) return;
+            if (metricSuggestions.length > 0) return;
+            if (metrics.length > 0) return;
+            if (metricCategories.length === 0 || unitOfMeasurementOptions.length === 0) return;
+
+            const businessValue = form.getValues("businessValue");
+            if (!businessValue || !businessValue.trim()) return;
+
+            metricSuggestionsInFlightRef.current = true;
+            setIsMetricSuggestionsLoading(true);
+
+            try {
+                const now = new Date();
+                const response = await fetch("/api/ai/suggestions/metric", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        currentDate: now.toISOString().slice(0, 10),
+                        businessValue,
+                        fields: [
+                            "primarySuccessValue",
+                            "parcsCategory",
+                            "unitOfMeasurement",
+                            "baselineValue",
+                            "baselineDate",
+                            "targetValue",
+                            "targetDate",
+                        ],
+                        options: {
+                            parcsCategories: metricCategories,
+                            unitOfMeasurement: unitOfMeasurementOptions,
+                        },
+                    }),
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok) {
+                    throw new Error(data?.message || "Metric suggestions failed");
+                }
+
+                const normalizeNumber = (value: string) => {
+                    const cleaned = value.replace(/,/g, "");
+                    const match = cleaned.match(/-?\d+(\.\d+)?/);
+                    return match ? match[0] : "";
+                };
+
+                const nextSuggestions = (Array.isArray(data?.items) ? data.items : [])
+                    .map((item: any) => {
+                        const baselineValue = normalizeNumber(String(item?.baselineValue ?? "").trim());
+                        const targetValue = normalizeNumber(String(item?.targetValue ?? "").trim());
+                        return {
+                            primarySuccessValue: String(item?.primarySuccessValue ?? "").trim(),
+                            parcsCategory: String(item?.parcsCategory ?? "").trim(),
+                            unitOfMeasurement: String(item?.unitOfMeasurement ?? "").trim(),
+                            baselineValue,
+                            baselineDate: String(item?.baselineDate ?? "").trim(),
+                            targetValue,
+                            targetDate: String(item?.targetDate ?? "").trim(),
+                        };
+                    })
+                    .filter((item: any) =>
+                        item.primarySuccessValue &&
+                        item.parcsCategory &&
+                        item.unitOfMeasurement &&
+                        item.baselineValue &&
+                        item.baselineDate &&
+                        item.targetValue &&
+                        item.targetDate
+                    );
+
+                if (isMounted) {
+                    setMetricSuggestions(nextSuggestions);
+                }
+            } catch (error) {
+                console.error("Metric suggestions failed", error);
+                if (isMounted) {
+                    setMetricSuggestions([]);
+                }
+            } finally {
+                metricSuggestionsInFlightRef.current = false;
+                if (isMounted) {
+                    setIsMetricSuggestionsLoading(false);
+                }
+            }
+        };
+
+        generateMetricSuggestions();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentStep, form, metricCategories, unitOfMeasurementOptions, metricSuggestions.length, metrics.length]);
+
 
     // Fetch all data on mount with stale-while-revalidate cache
     useEffect(() => {
         let isMounted = true;
-        const cacheKey = "submit-use-case-data-v1";
+        const cacheKey = "submit-use-case-data-v2";
         const cacheTtlMs = 10 * 60 * 1000;
+        const uniqueSorted = (values: string[]) =>
+            Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
         const applySubmitUseCaseData = (consolidatedData) => {
-            setAiModelsData(consolidatedData.ai_models);
-            setAllVendorsData(consolidatedData.vendors);
             setBusinessStructureData(consolidatedData.business_structure);
-            setRolesData(consolidatedData.roles);
-            setDropdownData(consolidatedData.dropdown_data);
+            setRolesData(consolidatedData.roles ?? []);
             setAiProductQuestionsData(consolidatedData.ai_product_questions ?? []);
+            setMetricCategoriesData(consolidatedData.metric_categories ?? []);
+            setUnitOfMeasureData(consolidatedData.unit_of_measure ?? []);
         };
 
         const loadFromCache = () => {
@@ -610,7 +589,60 @@ const SubmitUseCase = () => {
                 if (!hasCache) {
                     setIsLoading(true);
                 }
-                const consolidatedData = await getSubmitUseCaseData();
+                const [
+                    businessUnitsResponse,
+                    rolesResponse,
+                    aiQuestionsResponse,
+                    metricCategoriesResponse,
+                    unitOfMeasureResponse,
+                ] = await Promise.all([
+                    getMappingBusinessUnits(),
+                    getMappingRoles(),
+                    getMappingAiProductQuestions(),
+                    getMappingMetricCategories(),
+                    getMappingUnitOfMeasure(),
+                ]);
+
+                const businessUnitItems = businessUnitsResponse?.items ?? [];
+                const roleItems = rolesResponse?.items ?? [];
+                const aiQuestionItems = aiQuestionsResponse?.items ?? [];
+                const metricCategoryItems = metricCategoriesResponse?.items ?? [];
+                const unitOfMeasureItems = unitOfMeasureResponse?.items ?? [];
+
+                const business_units: Record<string, Record<string, string[]>> = {};
+                const business_unit_ids: Record<string, number> = {};
+                businessUnitItems.forEach((unit) => {
+                    const unitName = String(unit.businessUnitName ?? "").trim();
+                    if (!unitName) return;
+                    const teamMap: Record<string, string[]> = {};
+                    const unitId = Number(unit.businessUnitId);
+                    if (Number.isFinite(unitId)) {
+                        business_unit_ids[unitName] = unitId;
+                    }
+                    const rawTeams = Array.isArray(unit.teams) ? unit.teams : [];
+                    rawTeams.forEach((team) => {
+                        const teamName = String(team).trim();
+                        if (!teamName) return;
+                        teamMap[teamName] = [];
+                    });
+                    business_units[unitName] = teamMap;
+                });
+
+                const roles = roleItems
+                    .map((item) => ({
+                        id: item.id,
+                        name: String(item.name ?? "").trim(),
+                        roleType: String(item.roleType ?? "").trim(),
+                    }))
+                    .filter((role) => role.name.length > 0);
+
+                const consolidatedData = {
+                    business_structure: { business_units, business_unit_ids },
+                    roles,
+                    ai_product_questions: aiQuestionItems,
+                    metric_categories: metricCategoryItems,
+                    unit_of_measure: unitOfMeasureItems,
+                };
                 if (!isMounted) return;
 
                 applySubmitUseCaseData(consolidatedData);
@@ -640,91 +672,91 @@ const SubmitUseCase = () => {
         };
     }, []);
 
-    // Fetch champions when business unit changes
+    const selectedBusinessUnitId = useMemo(() => {
+        if (!selectedBusinessUnit) return null;
+        const id = businessStructureData?.business_unit_ids?.[selectedBusinessUnit];
+        return Number.isFinite(id) ? id : null;
+    }, [businessStructureData, selectedBusinessUnit]);
+
     useEffect(() => {
-        const fetchChampions = async () => {
-            if (selectedBusinessUnit) {
-                try {
-                    const champions = await getChampionsForBusinessUnit(selectedBusinessUnit);
-                    setChampionsData(champions);
-                } catch (error) {
-                    console.error('Error fetching champions:', error);
-                    setChampionsData([]);
+        let isMounted = true;
+        const fetchStakeholders = async () => {
+            if (currentStep !== 3) return;
+            if (!selectedBusinessUnitId) {
+                setStakeholdersData([]);
+                return;
+            }
+            setIsStakeholdersLoading(true);
+            try {
+                const response = await getStakeholdersForBusinessUnitId(selectedBusinessUnitId);
+                if (!isMounted) return;
+                const seen = new Set<string>();
+                const normalized = (response?.items ?? [])
+                    .map((item: any) => {
+                        const email = String(item?.email ?? "").trim();
+                        const role = String(item?.role ?? "").trim();
+                        const roleId = Number(item?.roleId);
+                        const businessUnitId = Number(item?.businessUnitId);
+                        return {
+                            id: Number(item?.id),
+                            email,
+                            role,
+                            roleId: Number.isFinite(roleId) ? roleId : null,
+                            businessUnitId: Number.isFinite(businessUnitId) ? businessUnitId : null,
+                            businessUnitName: String(item?.businessUnitName ?? "").trim(),
+                        };
+                    })
+                    .filter((item) => item.email)
+                    .filter((item) => {
+                        const key = `${item.email.toLowerCase()}|${item.roleId ?? item.role}`;
+                        if (seen.has(key)) return false;
+                        seen.add(key);
+                        return true;
+                    })
+                    .sort((a, b) => {
+                        const roleCompare = a.role.localeCompare(b.role);
+                        if (roleCompare !== 0) return roleCompare;
+                        return a.email.localeCompare(b.email);
+                    });
+                setStakeholdersData(normalized);
+            } catch (error) {
+                console.error('Error fetching stakeholders:', error);
+                if (isMounted) {
+                    setStakeholdersData([]);
                 }
-            } else {
-                setChampionsData([]);
+            } finally {
+                if (isMounted) {
+                    setIsStakeholdersLoading(false);
+                }
             }
         };
 
-        fetchChampions();
-    }, [selectedBusinessUnit]);
+        fetchStakeholders();
 
-    // Computed dropdown options using frontend filtering
-    const aiThemes = useMemo(() => {
-        if (!dropdownData?.ai_themes) return [];
-        const seen = new Set();
-        return dropdownData.ai_themes.filter(item => {
-            const label = item.label.trim().toLowerCase();
-            if (seen.has(label)) return false;
-            seen.add(label);
-            return true;
-        });
-    }, [dropdownData]);
-
-    const personas = useMemo(() => {
-        if (!dropdownData?.personas) return [];
-        const seen = new Set();
-        return dropdownData.personas.filter(item => {
-            const label = item.label.trim().toLowerCase();
-            if (seen.has(label)) return false;
-            seen.add(label);
-            return true;
-        });
-    }, [dropdownData]);
+        return () => {
+            isMounted = false;
+        };
+    }, [currentStep, selectedBusinessUnitId]);
 
     const roles = useMemo(() => {
-        const roleNames = getRolesFromData(rolesData);
+        if (!Array.isArray(rolesData)) return [];
         const seen = new Set();
-        const normalized = roleNames
-            .filter(name => {
-                const label = name.trim().toLowerCase();
-                if (seen.has(label)) return false;
-                seen.add(label);
+        return rolesData
+            .filter((role) => String(role.roleType ?? "").trim() === "2")
+            .map((role) => String(role.name ?? "").trim())
+            .filter((name) => {
+                const key = name.toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
                 return true;
             })
-            .map(name => ({ value: name, label: name }));
-        if (!normalized.some((role) => role.value === 'Primary Contact')) {
-            normalized.unshift({ value: 'Primary Contact', label: 'Primary Contact' });
-        }
-        return normalized;
+            .map((name) => ({ value: name, label: name }));
     }, [rolesData]);
-
-    const vendors = useMemo(() => {
-        const vendorNames = getAllVendorsFromAllVendorsData(allVendorsData);
-        return vendorNames.map(name => ({ value: name, label: name }));
-    }, [allVendorsData]);
-
-    const models = useMemo(() => {
-        if (!selectedVendor || !aiModelsData) return [];
-        const modelNames = getModelsForVendor(aiModelsData, selectedVendor);
-        return modelNames.map(name => ({ value: name, label: name }));
-    }, [aiModelsData, selectedVendor]);
 
     const businessUnits = useMemo(() => {
         const buNames = getBusinessUnitsFromData(businessStructureData);
         return buNames.map(name => ({ value: name, label: name }));
     }, [businessStructureData]);
-
-    useEffect(() => {
-        if (!selectedVendor) {
-            form.setValue("selectedModel", "", { shouldDirty: true, shouldValidate: true });
-            return;
-        }
-        const hasSelected = models.some(model => model.value === selectedModel);
-        if (!hasSelected) {
-            form.setValue("selectedModel", "", { shouldDirty: true, shouldValidate: true });
-        }
-    }, [form, models, selectedModel, selectedVendor]);
 
     const teams = useMemo(() => {
         if (!selectedBusinessUnit || !businessStructureData) return [];
@@ -737,6 +769,123 @@ const SubmitUseCase = () => {
         const subTeamNames = getSubTeamsForTeam(businessStructureData, selectedBusinessUnit, selectedTeam);
         return subTeamNames.map(name => ({ value: name, label: name }));
     }, [businessStructureData, selectedBusinessUnit, selectedTeam]);
+
+    const aiGeneratedFields = useMemo(() => ({
+        useCaseTitle: Boolean(aiGeneratedValues.useCaseTitle),
+        headline: Boolean(aiGeneratedValues.headline),
+        opportunity: Boolean(aiGeneratedValues.opportunity),
+        businessValue: Boolean(aiGeneratedValues.businessValue),
+    }), [aiGeneratedValues]);
+
+    const buildAiPayload = useCallback(() => {
+        const values = form.getValues();
+        const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+        const now = new Date();
+        const earliestTarget = new Date(now);
+        earliestTarget.setMonth(earliestTarget.getMonth() + 3);
+        const latestTarget = new Date(now);
+        latestTarget.setMonth(latestTarget.getMonth() + 6);
+        return {
+            context: {
+                organization: "UKG",
+                currentDate: formatDate(now),
+                targetDateEarliest: formatDate(earliestTarget),
+                targetDateLatest: formatDate(latestTarget),
+            },
+            form: {
+                useCaseTitle: values.useCaseTitle || "",
+                headline: values.headline || "",
+                opportunity: values.opportunity || "",
+                businessValue: values.businessValue || "",
+            },
+        };
+    }, [form]);
+
+    const handleGenerateAi = useCallback(async () => {
+        const opportunity = form.getValues("opportunity")?.trim();
+        if (!opportunity) {
+            form.setError("opportunity", {
+                type: "manual",
+                message: "Please add an Opportunity description before using Write with AI.",
+            });
+            toast.error("Please add an Opportunity description before using Write with AI.");
+            return;
+        }
+        if (aiRequestInFlightRef.current) return;
+
+        aiRequestInFlightRef.current = true;
+        setAiStatus("loading");
+
+        try {
+            const payload = buildAiPayload();
+            const response = await fetch("/api/ai/suggestions/usecase", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.suggestions) {
+                throw new Error(data?.message || "AI suggestions failed");
+            }
+
+            const suggestions = data.suggestions ?? {};
+
+            const applyOrSuggest = (
+                fieldName: "useCaseTitle" | "headline" | "opportunity" | "businessValue",
+                value?: string,
+                alwaysSuggest?: boolean,
+            ) => {
+                if (!value) return;
+                const trimmed = value.trim();
+                if (!trimmed) return;
+                const currentValue = String(form.getValues(fieldName) ?? "").trim();
+                if (alwaysSuggest || currentValue.length > 0) {
+                    setAiSuggestions((prev) => ({ ...prev, [fieldName]: trimmed }));
+                    return;
+                }
+                form.setValue(fieldName, trimmed, { shouldDirty: true, shouldValidate: true });
+                setAiGeneratedValues((prev) => ({ ...prev, [fieldName]: trimmed }));
+                setAiSuggestions((prev) => {
+                    if (!prev[fieldName]) return prev;
+                    const next = { ...prev };
+                    delete next[fieldName];
+                    return next;
+                });
+            };
+
+            applyOrSuggest("useCaseTitle", suggestions.useCaseTitle?.value);
+            applyOrSuggest("headline", suggestions.headline?.value);
+            applyOrSuggest("opportunity", suggestions.opportunity?.value);
+            applyOrSuggest("businessValue", suggestions.businessValue?.value);
+        } catch (error) {
+            console.error("AI suggestions failed", error);
+            toast.error("AI suggestions are unavailable right now.");
+        } finally {
+            aiRequestInFlightRef.current = false;
+            setAiStatus("idle");
+        }
+    }, [form, buildAiPayload]);
+
+    const handleAcceptSuggestion = useCallback((fieldName: string) => {
+        const suggestion = aiSuggestions[fieldName];
+        if (!suggestion) return;
+        form.setValue(fieldName as any, suggestion, { shouldDirty: true, shouldValidate: true });
+        setAiGeneratedValues((prev) => ({ ...prev, [fieldName]: suggestion }));
+        setAiSuggestions((prev) => {
+            const next = { ...prev };
+            delete next[fieldName];
+            return next;
+        });
+    }, [aiSuggestions, form]);
+
+    const handleRejectSuggestion = useCallback((fieldName: string) => {
+        setAiSuggestions((prev) => {
+            if (!prev[fieldName]) return prev;
+            const next = { ...prev };
+            delete next[fieldName];
+            return next;
+        });
+    }, []);
 
     const checklistQuestions = useMemo<ChecklistQuestion[]>(() => {
         if (!Array.isArray(aiProductQuestionsData) || aiProductQuestionsData.length === 0) {
@@ -772,6 +921,9 @@ const SubmitUseCase = () => {
                     kind: isYesNo ? "yesno" : "choice",
                     options: isChoice ? parseOptions(question.responseValue) : [],
                     isMulti: isChoice && text.toLowerCase().includes("select all"),
+                    responseKey: String(question.id ?? question.ID ?? index)
+                        .replace(/[^\w-]/g, "_")
+                        .toLowerCase(),
                 };
             })
             .filter(Boolean)
@@ -790,17 +942,205 @@ const SubmitUseCase = () => {
     }, [accounts]);
 
     // Validation for Next button
-    const isStep1Valid = form.formState.isValid;
+    const isStep1Valid =
+        Array.isArray(step1RequiredValues) &&
+        step1RequiredValues.every(
+            (value) => typeof value === "string" && value.trim().length > 0,
+        );
 
     const isStep2Valid = useMemo(() => {
         return addedStakeholders.length > 0 && startDate !== undefined && endDate !== undefined;
     }, [addedStakeholders, startDate, endDate]);
+
+    const hasChecklistAnswers = useMemo(() => {
+        if (!checklistResponses || typeof checklistResponses !== "object") return false;
+        return Object.values(checklistResponses).some((value) => {
+            if (Array.isArray(value)) return value.length > 0;
+            if (typeof value === "string") return value.trim().length > 0;
+            return value !== null && value !== undefined && value !== "";
+        });
+    }, [checklistResponses]);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchPhases = async () => {
+            if (currentStep !== 3) return;
+            if (phasesData.length > 0) return;
+            setIsPhasesLoading(true);
+            try {
+                const response = await getMappingPhases();
+                if (!isMounted) return;
+                setPhasesData(response?.items ?? []);
+            } catch (error) {
+                console.error("Error fetching phase mappings:", error);
+                if (isMounted) {
+                    setPhasesData([]);
+                }
+            } finally {
+                if (isMounted) {
+                    setIsPhasesLoading(false);
+                }
+            }
+        };
+
+        fetchPhases();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentStep, phasesData.length]);
+
+    useEffect(() => {
+        let isMounted = true;
+        const generateTimeline = async () => {
+            if (currentStep !== 3) return;
+            if (phasesData.length === 0) return;
+            if (timelineRequestInFlightRef.current) return;
+            if (Object.keys(aiGeneratedPhases).length > 0) return;
+            if (Object.keys(timelineSuggestions).length > 0) return;
+
+            const [useCaseTitle, headline, opportunity, businessValue] = form.getValues([
+                "useCaseTitle",
+                "headline",
+                "opportunity",
+                "businessValue",
+            ]);
+            if (!useCaseTitle || !headline || !opportunity || !businessValue) return;
+
+            const now = new Date();
+            const earliestTarget = new Date(now);
+            earliestTarget.setMonth(earliestTarget.getMonth() + 3);
+            const latestTarget = new Date(now);
+            latestTarget.setMonth(latestTarget.getMonth() + 6);
+
+            const formatDate = (date: Date) => date.toISOString().slice(0, 10);
+            const phasesPayload = phasesData
+                .slice()
+                .sort((a, b) => {
+                    const aId = Number(a.id);
+                    const bId = Number(b.id);
+                    if (Number.isFinite(aId) && Number.isFinite(bId) && aId !== bId) {
+                        return aId - bId;
+                    }
+                    return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+                })
+                .map((phase) => ({
+                    name: String(phase.name ?? "").trim(),
+                    stage: String(phase.stage ?? "").trim(),
+                }))
+                .filter((phase) => phase.name.length > 0);
+
+            if (phasesPayload.length === 0) return;
+
+            timelineRequestInFlightRef.current = true;
+            setIsTimelineGenerating(true);
+
+            try {
+                const response = await fetch("/api/ai/suggestions/phase", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        context: {
+                            currentDate: formatDate(now),
+                            targetDateEarliest: formatDate(earliestTarget),
+                            targetDateLatest: formatDate(latestTarget),
+                        },
+                        useCase: { useCaseTitle, headline, opportunity, businessValue },
+                        phases: phasesPayload,
+                    }),
+                });
+                const data = await response.json().catch(() => null);
+                if (!response.ok || !Array.isArray(data?.items)) {
+                    throw new Error(data?.message || "Timeline generation failed");
+                }
+
+                const parseDate = (value: string | undefined) => {
+                    if (!value) return undefined;
+                    const [year, month, day] = value.split("-").map(Number);
+                    if (!year || !month || !day) return undefined;
+                    return new Date(year, month - 1, day);
+                };
+
+                const nextSuggestions: Record<string, { startDate: Date; endDate: Date }> = {};
+                data.items.forEach((item: { name?: string; startDate?: string; endDate?: string }) => {
+                    const name = String(item.name ?? "").trim();
+                    if (!name) return;
+                    const key = name.toLowerCase();
+                    const start = parseDate(item.startDate);
+                    const end = parseDate(item.endDate);
+                    if (!start || !end) return;
+                    nextSuggestions[key] = { startDate: start, endDate: end };
+                });
+
+                if (isMounted) {
+                    setTimelineSuggestions(nextSuggestions);
+                }
+            } catch (error) {
+                console.error("Timeline generation failed", error);
+                toast.error("Timeline generation is unavailable right now.");
+            } finally {
+                timelineRequestInFlightRef.current = false;
+                if (isMounted) {
+                    setIsTimelineGenerating(false);
+                }
+            }
+        };
+
+        generateTimeline();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [currentStep, phasesData, form, aiGeneratedPhases, timelineSuggestions]);
+
 
     // Reset dependent selections when parent changes
     useEffect(() => {
         form.setValue("selectedTeam", "");
         form.setValue("selectedSubTeam", "");
     }, [selectedBusinessUnit, form]);
+
+    useEffect(() => {
+        if (!Array.isArray(generatedWatchedValues)) return;
+        const trackedFields = ["useCaseTitle", "headline", "opportunity", "businessValue"] as const;
+        const nextValues = generatedWatchedValues.map((value) =>
+            typeof value === "string" ? value : "",
+        );
+        const prevValues = previousFieldValuesRef.current;
+
+        if (prevValues.length > 0) {
+            setAiSuggestions((prev) => {
+                let updated = prev;
+                trackedFields.forEach((field, index) => {
+                    if (prevValues[index] !== nextValues[index] && updated[field]) {
+                        if (updated === prev) updated = { ...prev };
+                        delete updated[field];
+                    }
+                });
+                return updated;
+            });
+        }
+
+        setAiGeneratedValues((prev) => {
+            let changed = false;
+            const next = { ...prev };
+            trackedFields.forEach((field, index) => {
+                const currentValue = nextValues[index] ?? "";
+                if (next[field] && next[field] !== currentValue) {
+                    delete next[field];
+                    changed = true;
+                }
+            });
+            return changed ? next : prev;
+        });
+        previousFieldValuesRef.current = nextValues;
+    }, [generatedWatchedValues]);
+
+    useEffect(() => {
+        if (hasChecklistAnswers) {
+            setChecklistNeedsAttention(false);
+        }
+    }, [hasChecklistAnswers]);
 
     // Set primary contact default
     useEffect(() => {
@@ -879,12 +1219,37 @@ const SubmitUseCase = () => {
 
     const handleNext = useCallback(async () => {
         if (currentStep === 1) {
-            const isValid = await form.trigger();
-            if (!isValid) return;
+            if (!isStep1Valid) {
+                const values = form.getValues();
+                const requiredFields: Array<{ name: keyof typeof values; message: string }> = [
+                    { name: "useCaseTitle", message: "Use Case Title is required" },
+                    { name: "headline", message: "Headline is required" },
+                    { name: "opportunity", message: "Opportunity is required" },
+                    { name: "businessValue", message: "Business Value is required" },
+                    { name: "selectedBusinessUnit", message: "Business Unit is required" },
+                    { name: "selectedTeam", message: "Team Name is required" },
+                    { name: "eseResourceValue", message: "Required" },
+                ];
+
+                requiredFields.forEach(({ name, message }) => {
+                    const value = values[name];
+                    if (typeof value !== "string" || value.trim().length === 0) {
+                        form.setError(name as unknown, { type: "manual", message });
+                    }
+                });
+                return;
+            }
             setCurrentStep(showChecklistTab ? 2 : 3);
         } else if (currentStep === 2) {
+            if (!hasChecklistAnswers) {
+                setChecklistNeedsAttention(true);
+            }
             setCurrentStep(3);
         } else if (currentStep === 3) {
+            if (!startDate || !endDate) {
+                toast.error("Please set the start and end dates for the first phase.");
+                return;
+            }
             setCurrentStep(4);
         } else {
             // Submit action (currentStep === 4)
@@ -903,12 +1268,15 @@ const SubmitUseCase = () => {
                     Title: values.useCaseTitle,
                     Headlines: values.headline,
                     Opportunity: values.opportunity,
-                    Evidence: values.evidence,
                     BusinessValue: values.businessValue,
-                    AITheme: values.selectedAITheme.join(', '),
-                    TargetPersonas: values.selectedPersona.join(', '),
-                    VendorName: values.selectedVendor,
-                    ModelName: values.selectedModel,
+                    AITheme: Array.isArray(values.selectedAITheme)
+                        ? values.selectedAITheme.join(', ')
+                        : '',
+                    TargetPersonas: Array.isArray(values.selectedPersona)
+                        ? values.selectedPersona.join(', ')
+                        : '',
+                    VendorName: values.selectedVendor ?? '',
+                    ModelName: values.selectedModel ?? '',
                     BusinessUnit: values.selectedBusinessUnit,
                     TeamName: values.selectedTeam,
                     PrimaryContact:
@@ -957,7 +1325,7 @@ const SubmitUseCase = () => {
                 setIsSubmitting(false);
             }
         }
-    }, [currentStep, form, primaryContactOptions, addedStakeholders, startDate, endDate, accounts]);
+    }, [currentStep, isStep1Valid, showChecklistTab, form, hasChecklistAnswers, startDate, endDate, addedStakeholders, primaryContactOptions, accounts, navigate]);
 
     const handleBack = useCallback(() => {
         if (currentStep === 4) {
@@ -1006,6 +1374,41 @@ const SubmitUseCase = () => {
         }
     }, [stakeholderName, stakeholderRole, editingIndex, stakeholderEmail, form]);
 
+    const handleAcceptTimelineSuggestions = useCallback(() => {
+        const entries = Object.entries(timelineSuggestions);
+        if (entries.length === 0) return;
+
+        entries.forEach(([key, suggestion]) => {
+            if (!suggestion) return;
+            if (key === "idea") {
+                setStartDate(suggestion.startDate);
+                setEndDate(suggestion.endDate);
+            } else if (key === "diagnose") {
+                setDiagnoseStartDate(suggestion.startDate);
+                setDiagnoseEndDate(suggestion.endDate);
+            } else if (key === "design") {
+                setDesignStartDate(suggestion.startDate);
+                setDesignEndDate(suggestion.endDate);
+            } else if (key === "implemented") {
+                setImplementedStartDate(suggestion.startDate);
+                setImplementedEndDate(suggestion.endDate);
+            }
+        });
+
+        setAiGeneratedPhases((prev) => {
+            const next = { ...prev };
+            entries.forEach(([key]) => {
+                next[key] = true;
+            });
+            return next;
+        });
+        setTimelineSuggestions({});
+    }, [timelineSuggestions]);
+
+    const handleRejectTimelineSuggestions = useCallback(() => {
+        setTimelineSuggestions({});
+    }, []);
+
     const handleEditStakeholder = useCallback((index: number) => {
         const stakeholder = addedStakeholders[index];
         setStakeholderName(stakeholder.name);
@@ -1037,11 +1440,20 @@ const SubmitUseCase = () => {
 
             <div className="flex justify-center w-full bg-gray-50 pb-4 pt-4 border-b border-gray-100">
                 <div className="flex flex-1 flex-col mx-auto max-w-7xl w-full px-4">
-                    <Tabs value={currentStep.toString()} onValueChange={(val) => setCurrentStep(parseInt(val))} className="w-full">
-                        <div className="flex justify-start">
-                            <TabsList className={cn("grid w-full max-w-[800px]", showChecklistTab ? "grid-cols-4" : "grid-cols-3")}>
+                    <Tabs value={currentStep.toString()} className="w-full">
+                        <div className="flex justify-start w-full">
+                            <TabsList className={cn("grid w-full pointer-events-none", showChecklistTab ? "grid-cols-4" : "grid-cols-3")}>
                                 <TabsTrigger value="1">Use Case Information</TabsTrigger>
-                                {showChecklistTab && <TabsTrigger value="2">AI Product Checklist</TabsTrigger>}
+                                {showChecklistTab && (
+                                    <TabsTrigger
+                                        value="2"
+                                        className={cn(
+                                            checklistNeedsAttention && "text-destructive data-[state=active]:text-destructive",
+                                        )}
+                                    >
+                                        AI Product Checklist
+                                    </TabsTrigger>
+                                )}
                                 <TabsTrigger value="3">Stakeholders & Launch Plan</TabsTrigger>
                                 <TabsTrigger value="4">PARCS Metrics</TabsTrigger>
                             </TabsList>
@@ -1051,16 +1463,6 @@ const SubmitUseCase = () => {
             </div>
 
 
-            {isLoading && (
-                <div className="flex flex-1 flex-col gap-6 w-full">
-                    <div className="flex justify-center w-full">
-                        <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
-                            <FormSkeleton />
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Submit error message */}
             {submitError && (
                 <div className="error-message">
@@ -1068,77 +1470,94 @@ const SubmitUseCase = () => {
                 </div>
             )}
 
-            {!isLoading && (
-                <Form {...form}>
-                    <div className="flex justify-center w-full">
-                        <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
-                            {currentStep === 1 && (
-                                <UseCaseInfoSection
-                                    form={form}
-                                    aiThemes={aiThemes}
-                                    personas={personas}
-                                    vendors={vendors}
-                                    models={models}
-                                    businessUnits={businessUnits}
-                                    teams={teams}
-                                    subTeams={subTeams}
-                                    selectedVendor={selectedVendor}
-                                    selectedBusinessUnit={selectedBusinessUnit}
-                                    selectedTeam={selectedTeam}
-                                    aiCardRef={aiCardRef}
-                                />
-                            )}
+            <Form {...form}>
+                <div className="flex justify-center w-full">
+                    <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
+                        {currentStep === 1 && (
+                            <UseCaseInfoSection
+                                form={form}
+                                businessUnits={businessUnits}
+                                teams={teams}
+                                subTeams={subTeams}
+                                selectedBusinessUnit={selectedBusinessUnit}
+                                selectedTeam={selectedTeam}
+                                isMappingsLoading={isLoading}
+                                aiStatus={aiStatus}
+                                aiGeneratedFields={aiGeneratedFields}
+                                aiSuggestions={aiSuggestions}
+                                onGenerateAi={handleGenerateAi}
+                                onAcceptSuggestion={handleAcceptSuggestion}
+                                onRejectSuggestion={handleRejectSuggestion}
+                            />
+                        )}
 
-                            {currentStep === 2 && showChecklistTab && (
-                                <ChecklistSection
-                                    form={form}
-                                    questions={checklistQuestions}
-                                    selectedModel={selectedModel}
-                                    containerRef={formContainerRef}
-                                />
-                            )}
+                        {currentStep === 2 && showChecklistTab && (
+                            <ChecklistSection
+                                form={form}
+                                questions={checklistQuestions}
+                                containerRef={formContainerRef}
+                                isLoading={isLoading}
+                            />
+                        )}
 
-                            {currentStep === 3 && (
-                                <StakeholdersPlanSection
-                                    championsData={championsData}
-                                    addedStakeholders={addedStakeholders}
-                                    onAddStakeholder={() => setIsDialogOpen(true)}
-                                    onEditStakeholder={handleEditStakeholder}
-                                    onRemoveStakeholder={handleRemoveStakeholder}
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                    diagnoseStartDate={diagnoseStartDate}
-                                    diagnoseEndDate={diagnoseEndDate}
-                                    designStartDate={designStartDate}
-                                    designEndDate={designEndDate}
-                                    implementedStartDate={implementedStartDate}
-                                    implementedEndDate={implementedEndDate}
-                                    onOpenDateDialog={handleOpenDateDialog}
-                                />
-                            )}
-                            {currentStep === 4 && (
-                                <MetricsSection
-                                    metrics={metrics}
-                                    table={addMetricsTable}
-                                    onAddMetric={handleAddMetric}
-                                    onSaveMetrics={handleSubmitMetrics}
-                                    canSave={isMetricsFormValid}
-                                />
-                            )}
-                        </div>
+                        {currentStep === 3 && (
+                            <StakeholdersPlanSection
+                                stakeholders={stakeholdersData}
+                                isLoading={isStakeholdersLoading}
+                                phases={phasesData}
+                                isPhasesLoading={isPhasesLoading}
+                                isTimelineGenerating={isTimelineGenerating}
+                                aiGeneratedPhases={aiGeneratedPhases}
+                                timelineSuggestions={timelineSuggestions}
+                                onAcceptTimelineSuggestions={handleAcceptTimelineSuggestions}
+                                onRejectTimelineSuggestions={handleRejectTimelineSuggestions}
+                                addedStakeholders={addedStakeholders}
+                                onAddStakeholder={() => setIsDialogOpen(true)}
+                                onEditStakeholder={handleEditStakeholder}
+                                onRemoveStakeholder={handleRemoveStakeholder}
+                                startDate={startDate}
+                                endDate={endDate}
+                                diagnoseStartDate={diagnoseStartDate}
+                                diagnoseEndDate={diagnoseEndDate}
+                                designStartDate={designStartDate}
+                                designEndDate={designEndDate}
+                                implementedStartDate={implementedStartDate}
+                                implementedEndDate={implementedEndDate}
+                                onOpenDateDialog={handleOpenDateDialog}
+                            />
+                        )}
+                        {currentStep === 4 && (
+                            <MetricsSection
+                                metrics={metrics}
+                                metricCategories={metricCategories}
+                                unitOfMeasurementOptions={unitOfMeasurementOptions}
+                                isSuggestionsLoading={isMetricSuggestionsLoading}
+                                suggestionsAvailable={metricSuggestions.length > 0}
+                                aiGeneratedMetricIds={aiGeneratedMetricIds}
+                                onAddMetric={handleAddMetric}
+                                onDeleteMetric={handleDeleteMetric}
+                                onChangeMetric={handleInputChange}
+                                onOpenMetricDateDialog={handleOpenMetricDateDialog}
+                                onAcceptSuggestions={handleAcceptMetricSuggestions}
+                                onRejectSuggestions={handleRejectMetricSuggestions}
+                            />
+                        )}
                     </div>
-                </Form>
-            )}
+                </div>
+            </Form>
 
             <div className="w-full max-w-7xl mx-auto px-4">
                 <div className="flex justify-end gap-2">
-                    <Button variant="ghost" onClick={handleBack}>Back</Button>
+                    {currentStep !== 1 && (
+                        <Button variant="ghost" onClick={handleBack}>Back</Button>
+                    )}
                     <Button variant="outline" onClick={() => navigate('/')}>Cancel</Button>
                     <Button
                         onClick={handleNext}
                         disabled={
                             (currentStep === 1 && !isStep1Valid) ||
                             (currentStep === 3 && !isStep2Valid) ||
+                            (currentStep === 4 && (!isMetricsFormValid || metrics.length === 0)) ||
                             isSubmitting
                         }
                     >

@@ -15,7 +15,7 @@ import {
   LayoutDashboard,
 } from "lucide-react"
 import { getRouteState } from "@/lib/navigation-state"
-import { type NavItemConfig, type NavIconKey } from "@/features/navigation/config"
+import { NAV_ITEMS, type NavIconKey } from "@/features/navigation/config"
 
 import {
   Sidebar as UISidebar,
@@ -68,7 +68,7 @@ export function AppSidebar() {
   const router = useRouter()
   const { instance, accounts } = useMsal()
   const { state } = useSidebar()
-  const [navItems, setNavItems] = React.useState<NavItemConfig[]>([])
+  const navItems = React.useMemo(() => NAV_ITEMS, [])
 
   const handleLogout = () => {
     instance
@@ -117,37 +117,6 @@ export function AppSidebar() {
   const displayName = accounts[0]?.name || accounts[0]?.username || "User"
   const email = accounts[0]?.username || ""
   const isCollapsed = state === "collapsed"
-
-  React.useEffect(() => {
-    let isMounted = true
-    const controller = new AbortController()
-    const loadNav = async () => {
-      try {
-        const response = await fetch("/api/navigation", {
-          cache: "no-store",
-          signal: controller.signal,
-        })
-        if (!response.ok) {
-          throw new Error("Failed to load navigation")
-        }
-        const data = (await response.json()) as NavItemConfig[]
-        if (isMounted) {
-          setNavItems(Array.isArray(data) ? data : [])
-        }
-      } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return
-        console.error("Navigation load failed", error)
-        if (isMounted) {
-          setNavItems([])
-        }
-      }
-    }
-    loadNav()
-    return () => {
-      isMounted = false
-      controller.abort()
-    }
-  }, [])
 
   return (
     <>

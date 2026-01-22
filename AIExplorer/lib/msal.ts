@@ -53,15 +53,9 @@ const getMsalConfig = (): Configuration => {
       authority: `https://login.microsoftonline.com/${resolvedTenantId}`,
       redirectUri: resolvedRedirectUri,
       postLogoutRedirectUri: resolvedRedirectUri,
-      navigateToLoginRequestUrl: false,
     },
     cache: {
-      // Using localStorage for better UX - users stay logged in across tabs and browser restarts
-      // This is appropriate for an internal enterprise application where users expect persistent sessions
-      // Trade-off: Slightly less secure than sessionStorage (tokens persist until manually cleared)
-      // Security consideration: MSAL handles token expiration and refresh automatically
       cacheLocation: "localStorage",
-      storeAuthStateInCookie: false,
     },
     system: {
       loggerOptions: {

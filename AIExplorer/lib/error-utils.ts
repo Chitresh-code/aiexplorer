@@ -19,9 +19,5 @@ export const getUiErrorMessage = (
 
 export const logErrorTrace = (label: string, error: unknown) => {
   const details = getErrorText(error);
-  if (isProd) {
-    console.error(label);
-    return;
-  }
   console.error(label, details);
 };

@@ -12,7 +12,7 @@ export const GET = async (): Promise<NextResponse> => {
     const result = await pool.request().query("SELECT * FROM aiproductquestions");
     const items = (result.recordset ?? [])
       .filter(isRowActive)
-      .map((row) => ({
+      .map((row: Record<string, unknown>) => ({
         id: toNumberValue(pickValue(row, ["Id", "ID"])),
         question: toStringValue(pickValue(row, ["Question"])).trim(),
         questionType: toStringValue(

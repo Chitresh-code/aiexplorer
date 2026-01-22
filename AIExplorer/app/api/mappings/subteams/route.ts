@@ -12,7 +12,7 @@ export const GET = async (): Promise<NextResponse> => {
     const result = await pool.request().query("SELECT * FROM subteammapping");
     const items = (result.recordset ?? [])
       .filter(isRowActive)
-      .map((row) => ({
+      .map((row: Record<string, unknown>) => ({
         id: toNumberValue(pickValue(row, ["Id", "ID", "SubTeamId", "SubTeamID"])),
         businessUnitId: toNumberValue(
           pickValue(row, ["Businesssunitid", "BusinessUnitId", "BusinessUnitID"]),
@@ -25,7 +25,10 @@ export const GET = async (): Promise<NextResponse> => {
           pickValue(row, ["Sub Team Name", "SubTeamName", "SubteamName"]),
         ).trim(),
       }))
-      .filter((item) => item.id !== null && item.businessUnitId !== null);
+      .filter(
+        (item: { id: number | null; businessUnitId: number | null }) =>
+          item.id !== null && item.businessUnitId !== null,
+      );
 
     return NextResponse.json(
       { items },

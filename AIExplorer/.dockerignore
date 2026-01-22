@@ -11,3 +11,4 @@ Dockerfile
 README.md
 .cursor
 .env
+.env.*

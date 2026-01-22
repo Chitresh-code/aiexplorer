@@ -107,7 +107,7 @@ const AIGallery = () => {
     const teams = new Set<string>();
     selectedUnits.forEach((unitName) => {
       const unit = filtersData.businessUnits.find((entry) => entry.name === unitName);
-      unit?.teams.forEach((team) => teams.add(team.name));
+      unit?.teams.forEach((team) => teams.add(team));
     });
 
     return Array.from(teams)
@@ -115,30 +115,7 @@ const AIGallery = () => {
       .map((team) => ({ label: team, value: team }));
   }, [filtersData, selectedDepartment]);
 
-  const subTeamOptions = useMemo(() => {
-    if (!filtersData) return [];
-    const selectedUnits = selectedDepartment.length
-      ? selectedDepartment
-      : filtersData.businessUnits.map((unit) => unit.name);
-
-    const selectedTeamValues = selectedTeams.length
-      ? selectedTeams
-      : teamOptions.map((team) => team.value);
-
-    const subTeams = new Set<string>();
-    selectedUnits.forEach((unitName) => {
-      const unit = filtersData.businessUnits.find((entry) => entry.name === unitName);
-      unit?.teams
-        .filter((team) => selectedTeamValues.includes(team.name))
-        .forEach((team) => {
-          team.subTeams.forEach((subTeam) => subTeams.add(subTeam));
-        });
-    });
-
-    return Array.from(subTeams)
-      .sort()
-      .map((team) => ({ label: team, value: team }));
-  }, [filtersData, selectedDepartment, selectedTeams, teamOptions]);
+  const subTeamOptions = useMemo(() => [], []);
 
   const phaseOptions = useMemo(
     () =>

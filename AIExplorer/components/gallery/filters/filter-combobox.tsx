@@ -69,11 +69,15 @@ export function FilterCombobox({
 }: FilterComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
-    const selectedValues = multiple
-        ? (value ?? [])
-        : value
-            ? [value]
-            : []
+    const selectedValues = (() => {
+        if (multiple) {
+            return Array.isArray(value) ? value : []
+        }
+        if (typeof value === "string" && value) {
+            return [value]
+        }
+        return []
+    })()
 
     const handleToggle = (val: string) => {
         if (multiple) {
@@ -81,22 +85,22 @@ export function FilterCombobox({
             const next = current.includes(val)
                 ? current.filter((entry) => entry !== val)
                 : [...current, val]
-            onChange(next)
+            ;(onChange as MultiProps["onChange"])(next)
             return
         }
 
         const current = typeof value === "string" ? value : ""
-        onChange(current === val ? "" : val)
+        ;(onChange as SingleProps["onChange"])(current === val ? "" : val)
         setOpen(false)
     }
 
     const handleRemove = (val: string) => {
         if (multiple) {
             const current = Array.isArray(value) ? value : []
-            onChange(current.filter((entry) => entry !== val))
+            ;(onChange as MultiProps["onChange"])(current.filter((entry) => entry !== val))
             return
         }
-        onChange("")
+        ;(onChange as SingleProps["onChange"])("")
     }
 
     const selectedLabel = options.find((option) => option.value === selectedValues[0])?.label

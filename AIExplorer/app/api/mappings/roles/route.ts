@@ -12,7 +12,7 @@ export const GET = async (): Promise<NextResponse> => {
     const result = await pool.request().query("SELECT * FROM rolemapping");
     const items = (result.recordset ?? [])
       .filter(isRowActive)
-      .map((row) => ({
+      .map((row: Record<string, unknown>) => ({
         id: toNumberValue(pickValue(row, ["Id", "ID"])),
         name: toStringValue(pickValue(row, ["RoleName", "Role Name"])).trim(),
         reviewFlag: toStringValue(pickValue(row, ["Reviewflag", "ReviewFlag"])).trim(),

@@ -12,7 +12,7 @@ export const GET = async (): Promise<NextResponse> => {
     const result = await pool.request().query("SELECT * FROM phasemapping");
     const items = (result.recordset ?? [])
       .filter(isRowActive)
-      .map((row) => ({
+      .map((row: Record<string, unknown>) => ({
         id: toNumberValue(pickValue(row, ["Id", "ID"])),
         name: toStringValue(pickValue(row, ["Phase", "PhaseName"])).trim(),
         stage: toStringValue(pickValue(row, ["PhaseStage", "Phase Stage"])).trim(),

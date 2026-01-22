@@ -64,11 +64,9 @@ export const fetchFilters = async (
 ): Promise<GalleryFiltersResponse> => {
   type MappingResponse<T> = { items: T[] };
   type BusinessUnitMapping = {
+    businessUnitId?: number | null;
     businessUnitName: string;
-    teams: {
-      teamName: string;
-      subteams: { subTeamId: number | null; subTeamName: string }[];
-    }[];
+    teams: string[];
   };
   type VendorModelMapping = {
     id: number | null;
@@ -148,15 +146,9 @@ export const fetchFilters = async (
     .map((unit) => ({
       name: unit.businessUnitName?.trim(),
       teams: (unit.teams ?? [])
-        .map((team) => ({
-          name: team.teamName?.trim(),
-          subTeams: (team.subteams ?? [])
-            .map((subteam) => subteam.subTeamName?.trim())
-            .filter(Boolean)
-            .sort() as string[],
-        }))
-        .filter((team) => team.name)
-        .sort((a, b) => a.name!.localeCompare(b.name!)),
+        .map((team) => team?.trim())
+        .filter(Boolean)
+        .sort() as string[],
     }))
     .filter((unit) => unit.name)
     .sort((a, b) => a.name!.localeCompare(b.name!)) as GalleryFiltersResponse["businessUnits"];

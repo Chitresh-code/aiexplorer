@@ -2,16 +2,18 @@
 // @ts-nocheck
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Check, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
 import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { MultiCombobox } from "@/components/ui/multi-combobox";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 type Option = {
     value: string;
@@ -19,128 +21,285 @@ type Option = {
 };
 
 type UseCaseInfoSectionProps = {
-    form: any;
-    aiThemes: Option[];
-    personas: Option[];
-    vendors: Option[];
-    models: Option[];
+    form: unknown;
     businessUnits: Option[];
     teams: Option[];
     subTeams: Option[];
-    selectedVendor: string;
     selectedBusinessUnit: string;
     selectedTeam: string;
-    aiCardRef: React.RefObject<HTMLDivElement>;
+    isMappingsLoading: boolean;
+    aiStatus: "idle" | "loading";
+    aiGeneratedFields: Record<string, boolean>;
+    aiSuggestions: Record<string, string>;
+    onGenerateAi: () => void;
+    onAcceptSuggestion: (field: string) => void;
+    onRejectSuggestion: (field: string) => void;
 };
 
 export const UseCaseInfoSection = ({
     form,
-    aiThemes,
-    personas,
-    vendors,
-    models,
     businessUnits,
     teams,
     subTeams,
-    selectedVendor,
     selectedBusinessUnit,
     selectedTeam,
-    aiCardRef,
+    isMappingsLoading,
+    aiStatus,
+    aiGeneratedFields,
+    aiSuggestions,
+    onGenerateAi,
+    onAcceptSuggestion,
+    onRejectSuggestion,
 }: UseCaseInfoSectionProps) => (
     <div className="space-y-6">
         <Card className="shadow-sm">
-            <CardHeader className="border-b">
-                <CardTitle>Use Case</CardTitle>
-                <CardDescription>Basic information about your use case</CardDescription>
+            <CardHeader className="border-b space-y-0">
+                <div className="space-y-1">
+                    <CardTitle>Use Case</CardTitle>
+                    <CardDescription>Basic information about your use case</CardDescription>
+                </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
                 <FormField
                     control={form.control}
                     name="useCaseTitle"
                     render={({ field, fieldState }) => (
-                        <Field>
-                            <FieldLabel>Use Case Title</FieldLabel>
-                            <FieldContent>
-                                <Input placeholder="Use Case Title" {...field} className="form-input" />
-                                <FieldError errors={[fieldState.error]} />
-                            </FieldContent>
-                        </Field>
-                    )}
-                />
+                            <Field>
+                                <FieldLabel>
+                                    Use Case Title<span className="text-red-500">*</span>
+                                    {aiGeneratedFields.useCaseTitle && (
+                                        <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                    )}
+                                </FieldLabel>
+                                <FieldContent>
+                                    <Input
+                                        placeholder="Use Case Title"
+                                        {...field}
+                                        className="form-input"
+                                    />
+                                    <FieldError errors={[fieldState.error]} />
+                                    {aiSuggestions.useCaseTitle && (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span className="truncate">
+                                                AI Suggestion: {aiSuggestions.useCaseTitle}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("useCaseTitle")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("useCaseTitle")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </FieldContent>
+                            </Field>
+                        )}
+                    />
 
                 <FormField
                     control={form.control}
                     name="headline"
                     render={({ field, fieldState }) => (
-                        <Field>
-                            <FieldLabel>Headline</FieldLabel>
-                            <FieldContent>
-                                <Input placeholder="One Line Executive Headline" {...field} className="form-input" />
-                                <FieldError errors={[fieldState.error]} />
-                            </FieldContent>
-                        </Field>
-                    )}
-                />
+                            <Field>
+                                <FieldLabel>
+                                    Headline<span className="text-red-500">*</span>
+                                    {aiGeneratedFields.headline && (
+                                        <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                    )}
+                                </FieldLabel>
+                                <FieldContent>
+                                    <Input
+                                        placeholder="One Line Executive Headline"
+                                        {...field}
+                                        className="form-input"
+                                    />
+                                    <FieldError errors={[fieldState.error]} />
+                                    {aiSuggestions.headline && (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span className="truncate">
+                                                AI Suggestion: {aiSuggestions.headline}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("headline")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("headline")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </FieldContent>
+                            </Field>
+                        )}
+                    />
 
                 <FormField
                     control={form.control}
                     name="opportunity"
                     render={({ field, fieldState }) => (
-                        <Field>
-                            <FieldLabel>Opportunity</FieldLabel>
-                            <FieldContent>
-                                <Textarea rows={3} placeholder="What is AI being used for?" {...field} className="form-textarea" />
-                                <FieldError errors={[fieldState.error]} />
-                            </FieldContent>
-                        </Field>
-                    )}
-                />
-
-                <FormField
-                    control={form.control}
-                    name="evidence"
-                    render={({ field, fieldState }) => (
-                        <Field>
-                            <FieldLabel>Evidence</FieldLabel>
-                            <FieldContent>
-                                <Textarea rows={3} placeholder="Why it is needed?" {...field} className="form-textarea" />
-                                <FieldError errors={[fieldState.error]} />
-                            </FieldContent>
-                        </Field>
-                    )}
-                />
+                            <Field>
+                                <FieldLabel className="w-full justify-between h-4">
+                                    <span>
+                                        Opportunity<span className="text-red-500">*</span>
+                                        {aiGeneratedFields.opportunity && (
+                                            <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                        )}
+                                    </span>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    className="h-auto px-0 text-xs text-sky-600"
+                                                    onClick={onGenerateAi}
+                                                    disabled={aiStatus === "loading"}
+                                                >
+                                                    {aiStatus === "loading" ? "Generating..." : "Write with AI"}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="left" className="max-w-[260px]">
+                                                Generates a title, headline, rewritten opportunity, and business value from your opportunity.
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </FieldLabel>
+                                <FieldContent>
+                                    <Textarea
+                                        rows={3}
+                                        placeholder="What is AI being used for?"
+                                        {...field}
+                                        className="form-textarea"
+                                    />
+                                    <FieldError errors={[fieldState.error]} />
+                                    {aiSuggestions.opportunity && (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span>Use AI suggestion?</span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("opportunity")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("opportunity")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </FieldContent>
+                            </Field>
+                        )}
+                    />
 
                 <FormField
                     control={form.control}
                     name="businessValue"
                     render={({ field, fieldState }) => (
-                        <Field>
-                            <FieldLabel>Business Value</FieldLabel>
-                            <FieldContent>
-                                <Textarea rows={3} placeholder="What are the anticipated benefits to UKG?" {...field} className="form-textarea" />
-                                <FieldError errors={[fieldState.error]} />
-                            </FieldContent>
-                        </Field>
-                    )}
-                />
+                            <Field>
+                                <FieldLabel>
+                                    Business Value<span className="text-red-500">*</span>
+                                    {aiGeneratedFields.businessValue && (
+                                        <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                    )}
+                                </FieldLabel>
+                                <FieldContent>
+                                    <Textarea
+                                        rows={3}
+                                        placeholder="Supporting Evidence of how this agent benifits UKG? (ie. Productivity, Adoption, Risk Mitigation, Cost Reduction, Sustainability, etc.)"
+                                        {...field}
+                                        className="form-textarea"
+                                    />
+                                    <FieldError errors={[fieldState.error]} />
+                                    {aiSuggestions.businessValue && (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span>Use AI suggestion?</span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("businessValue")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("businessValue")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </FieldContent>
+                            </Field>
+                        )}
+                    />
 
                 <FormField
                     control={form.control}
                     name="infoLink"
                     render={({ field, fieldState }) => (
-                        <Field>
-                            <FieldLabel>Info Link</FieldLabel>
-                            <FieldContent>
-                                <Input placeholder="Additional Info Link about Use Case" {...field} className="form-input" />
-                                <FieldError errors={[fieldState.error]} />
-                            </FieldContent>
-                        </Field>
-                    )}
-                />
+                            <Field>
+                                <FieldLabel>Info Link</FieldLabel>
+                                <FieldContent>
+                                    <Input
+                                        placeholder="Additional Info Link about Use Case"
+                                        {...field}
+                                        className="form-input"
+                                    />
+                                    <FieldError errors={[fieldState.error]} />
+                                </FieldContent>
+                            </Field>
+                        )}
+                    />
             </CardContent>
         </Card>
 
-        <Card ref={aiCardRef} className="shadow-sm">
+        {/* AI Configuration section hidden for now */}
+        {/* <Card ref={aiCardRef} className="shadow-sm">
             <CardHeader className="border-b">
                 <CardTitle>AI Configuration</CardTitle>
                 <CardDescription>Select AI themes, personas, vendor and model</CardDescription>
@@ -156,13 +315,43 @@ export const UseCaseInfoSection = ({
                                 <FieldContent>
                                     <MultiCombobox
                                         value={field.value}
-                                        onChange={field.onChange}
+                                        onChange={(value) => {
+                                            field.onChange(value);
+                                            onFieldBlur();
+                                        }}
                                         options={aiThemes}
                                         placeholder="Select AI Themes"
                                         searchPlaceholder="Search themes..."
                                         container={aiCardRef.current}
                                     />
                                     <FieldError errors={[fieldState.error]} />
+                                    {aiEnabled && aiSuggestions.selectedAITheme?.values?.length ? (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span className="truncate">
+                                                AI Suggestion: {aiSuggestions.selectedAITheme.values.join(", ")}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("selectedAITheme")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("selectedAITheme")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </FieldContent>
                             </Field>
                         )}
@@ -177,12 +366,42 @@ export const UseCaseInfoSection = ({
                                 <FieldContent>
                                     <MultiCombobox
                                         value={field.value}
-                                        onChange={field.onChange}
+                                        onChange={(value) => {
+                                            field.onChange(value);
+                                            onFieldBlur();
+                                        }}
                                         options={personas}
                                         placeholder="Select Target Personas"
                                         searchPlaceholder="Search personas..."
                                     />
                                     <FieldError errors={[fieldState.error]} />
+                                    {aiEnabled && aiSuggestions.selectedPersona?.values?.length ? (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span className="truncate">
+                                                AI Suggestion: {aiSuggestions.selectedPersona.values.join(", ")}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("selectedPersona")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("selectedPersona")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </FieldContent>
                             </Field>
                         )}
@@ -199,12 +418,42 @@ export const UseCaseInfoSection = ({
                                 <FieldContent>
                                     <Combobox
                                         value={field.value}
-                                        onChange={field.onChange}
+                                        onChange={(value) => {
+                                            field.onChange(value);
+                                            onFieldBlur();
+                                        }}
                                         options={vendors}
                                         placeholder="No Vendor Identified"
                                         searchPlaceholder="Search vendors..."
                                     />
                                     <FieldError errors={[fieldState.error]} />
+                                    {aiEnabled && aiSuggestions.selectedVendor?.value ? (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span className="truncate">
+                                                AI Suggestion: {aiSuggestions.selectedVendor.value}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("selectedVendor")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("selectedVendor")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </FieldContent>
                             </Field>
                         )}
@@ -219,20 +468,50 @@ export const UseCaseInfoSection = ({
                                 <FieldContent>
                                     <Combobox
                                         value={field.value}
-                                        onChange={field.onChange}
+                                        onChange={(value) => {
+                                            field.onChange(value);
+                                            onFieldBlur();
+                                        }}
                                         options={models}
                                         disabled={!selectedVendor || models.length === 0}
                                         placeholder="No Model Identified"
                                         searchPlaceholder="Search models..."
                                     />
                                     <FieldError errors={[fieldState.error]} />
+                                    {aiEnabled && aiSuggestions.selectedModel?.value ? (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span className="truncate">
+                                                AI Suggestion: {aiSuggestions.selectedModel.value}
+                                            </span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("selectedModel")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("selectedModel")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ) : null}
                                 </FieldContent>
                             </Field>
                         )}
                     />
                 </div>
             </CardContent>
-        </Card>
+        </Card> */}
 
         <Card className="shadow-sm">
             <CardHeader className="border-b">
@@ -241,94 +520,124 @@ export const UseCaseInfoSection = ({
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="selectedBusinessUnit"
-                        render={({ field, fieldState }) => (
-                            <Field>
-                                <FieldLabel>Business Unit</FieldLabel>
-                                <FieldContent>
-                                    <Combobox
-                                        value={field.value}
-                                        onChange={field.onChange}
-                                        options={businessUnits}
-                                        placeholder="Select a Business Unit"
-                                        searchPlaceholder="Search business units..."
-                                    />
-                                    <FieldError errors={[fieldState.error]} />
-                                </FieldContent>
-                            </Field>
-                        )}
-                    />
+                    {isMappingsLoading ? (
+                        <>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-28" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <FormField
+                                control={form.control}
+                                name="selectedBusinessUnit"
+                                render={({ field, fieldState }) => (
+                                    <Field>
+                                        <FieldLabel>
+                                            Business Unit<span className="text-red-500">*</span>
+                                        </FieldLabel>
+                                        <FieldContent>
+                                            <Combobox
+                                                value={field.value}
+                                                onChange={(value) => {
+                                                    field.onChange(value);
+                                                }}
+                                                options={businessUnits}
+                                                placeholder="Select a Business Unit"
+                                                searchPlaceholder="Search business units..."
+                                            />
+                                            <FieldError errors={[fieldState.error]} />
+                                        </FieldContent>
+                                    </Field>
+                                )}
+                            />
 
-                    <FormField
-                        control={form.control}
-                        name="selectedTeam"
-                        render={({ field, fieldState }) => (
-                            <Field>
-                                <FieldLabel>Team Name</FieldLabel>
-                                <FieldContent>
-                                    <Combobox
-                                        value={field.value}
-                                        onChange={field.onChange}
-                                        options={teams}
-                                        disabled={!selectedBusinessUnit}
-                                        placeholder="Select Team Name"
-                                        searchPlaceholder="Search teams..."
-                                    />
-                                    <FieldError errors={[fieldState.error]} />
-                                </FieldContent>
-                            </Field>
-                        )}
-                    />
+                            <FormField
+                                control={form.control}
+                                name="selectedTeam"
+                                render={({ field, fieldState }) => (
+                                    <Field>
+                                        <FieldLabel>
+                                            Team Name<span className="text-red-500">*</span>
+                                        </FieldLabel>
+                                        <FieldContent>
+                                            <Combobox
+                                                value={field.value}
+                                                onChange={(value) => {
+                                                    field.onChange(value);
+                                                }}
+                                                options={teams}
+                                                disabled={!selectedBusinessUnit}
+                                                placeholder="Select Team Name"
+                                                searchPlaceholder="Search teams..."
+                                            />
+                                            <FieldError errors={[fieldState.error]} />
+                                        </FieldContent>
+                                    </Field>
+                                )}
+                            />
+                        </>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FormField
-                        control={form.control}
-                        name="selectedSubTeam"
-                        render={({ field, fieldState }) => (
-                            <Field>
-                                <FieldLabel>Sub Team Name</FieldLabel>
-                                <FieldContent>
-                                    <Combobox
-                                        value={field.value}
-                                        onChange={field.onChange}
-                                        options={subTeams}
-                                        disabled={!selectedTeam}
-                                        placeholder="Select Sub Team Name"
-                                    />
-                                    <FieldError errors={[fieldState.error]} />
-                                </FieldContent>
-                            </Field>
-                        )}
-                    />
+                    {isMappingsLoading ? (
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-28" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    ) : (
+                        <FormField
+                            control={form.control}
+                            name="selectedSubTeam"
+                            render={({ field, fieldState }) => (
+                                <Field>
+                                    <FieldLabel>Sub Team Name</FieldLabel>
+                                    <FieldContent>
+                                        <Combobox
+                                            value={field.value}
+                                            onChange={(value) => {
+                                                field.onChange(value);
+                                            }}
+                                            options={subTeams}
+                                            disabled={!selectedTeam}
+                                            placeholder="Select Sub Team Name"
+                                        />
+                                        <FieldError errors={[fieldState.error]} />
+                                    </FieldContent>
+                                </Field>
+                            )}
+                        />
+                    )}
 
                     <FormField
                         control={form.control}
                         name="eseResourceValue"
                         render={({ field, fieldState }) => (
                             <Field>
-                                <FieldLabel>ESE Resources Needed</FieldLabel>
+                            <FieldLabel>
+                                ESE Resources Needed<span className="text-red-500">*</span>
+                            </FieldLabel>
                                 <FieldContent>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className="w-full justify-between form-select min-w-0 h-auto py-1.5"
-                                            >
-                                                <span className="truncate mr-2">
-                                                    {field.value || "No"}
-                                                </span>
-                                                <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent className="w-full p-0" sideOffset={144}>
-                                            <DropdownMenuItem onSelect={() => field.onChange("No")}>No</DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => field.onChange("Yes")}>Yes</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <Select
+                                        value={field.value}
+                                        onValueChange={(value) => {
+                                            field.onChange(value);
+                                        }}
+                                    >
+                                        <SelectTrigger className="h-10">
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="No">No</SelectItem>
+                                            <SelectItem value="Yes">Yes</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FieldError errors={[fieldState.error]} />
                                 </FieldContent>
                             </Field>

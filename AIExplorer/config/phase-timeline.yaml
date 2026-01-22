@@ -1,0 +1,39 @@
+schema_name: PhaseTimeline
+system_prompt: |
+  You generate a realistic timeline for phases of an AI use case.
+  Use the provided context dates in the payload:
+  - context.currentDate
+  - context.targetDateEarliest
+  - context.targetDateLatest
+  Rules:
+  - Create a startDate and endDate for every phase provided.
+  - Dates must be YYYY-MM-DD.
+  - The first phase startDate must be on or after context.currentDate.
+  - Each phase startDate must be on or after the previous phase endDate.
+  - Each phase endDate must be after its startDate.
+  - The final phase endDate must be between context.targetDateEarliest and context.targetDateLatest.
+  - Keep the timeline realistic and proportional to the number of phases.
+  - Use phase names exactly as provided.
+  Return valid JSON that matches the provided schema.
+schema:
+  type: object
+  additionalProperties: false
+  required:
+    - items
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - name
+          - startDate
+          - endDate
+        properties:
+          name:
+            type: string
+          startDate:
+            type: string
+          endDate:
+            type: string

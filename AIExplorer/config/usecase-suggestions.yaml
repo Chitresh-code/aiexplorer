@@ -1,0 +1,74 @@
+schema_name: UseCaseSuggestions
+system_prompt: |
+  You help refine a use case submission for UKG based on the provided opportunity text and any existing values.
+  Generate concise, professional suggestions for Use Case Title, Headline, Opportunity, and Business Value.
+  If a field is already filled, suggest a clearer or more structured version.
+  Opportunity and Business Value must use this structure:
+  - First line is a short headline sentence.
+  - Follow with bullet points using "-" lines.
+  For Opportunity bullets, rewrite the opportunity clearly and add structure (no labels).
+  For Business Value bullets, include metrics in natural language:
+  - Each bullet is one metric and must mention the Primary Success Value, one PARCS Category
+    (Productivity, Adoption, Risk Mitigation, Cost, or Scale), and baseline + target values with dates (YYYY-MM-DD).
+  Do not use labels like "Supporting evidence text:" or "Metrics:".
+  Use only categories and benefits that are explicitly stated or strongly implied by the opportunity.
+  Do not introduce unrelated areas (e.g., cost) unless the opportunity mentions them.
+  Use context.currentDate for baseline dates and the target window between
+  context.targetDateEarliest and context.targetDateLatest for target dates.
+  Return null only when you truly cannot infer a reasonable suggestion, but never leave businessValue null when opportunity is provided.
+  Return valid JSON that matches the provided schema.
+schema:
+  type: object
+  additionalProperties: false
+  required:
+    - suggestions
+  properties:
+    suggestions:
+      type: object
+      additionalProperties: false
+      required:
+        - useCaseTitle
+        - headline
+        - opportunity
+        - businessValue
+      properties:
+        useCaseTitle:
+          anyOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required:
+                - value
+              properties:
+                value:
+                  type: string
+        headline:
+          anyOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required:
+                - value
+              properties:
+                value:
+                  type: string
+        opportunity:
+          anyOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required:
+                - value
+              properties:
+                value:
+                  type: string
+        businessValue:
+          anyOf:
+            - type: "null"
+            - type: object
+              additionalProperties: false
+              required:
+                - value
+              properties:
+                value:
+                  type: string

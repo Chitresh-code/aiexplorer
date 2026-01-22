@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 interface ParcsCategorySelectProps {
     value: string;
     onSelect: (value: string) => void;
+    options: string[];
+    dataField?: string;
     placeholder?: string;
     width?: string;
     className?: string;
@@ -19,11 +21,11 @@ interface ParcsCategorySelectProps {
     align?: "start" | "center" | "end";
 }
 
-const options = ['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale'];
-
 export function ParcsCategorySelect({
     value,
     onSelect,
+    options = [],
+    dataField,
     sideOffset = 4,
     alignOffset = 0,
     placeholder = "Select",
@@ -41,6 +43,7 @@ export function ParcsCategorySelect({
         <Select value={displayValue} onValueChange={handleValueChange}>
             <SelectTrigger
                 className={cn("w-full h-9 px-2 text-xs", className)}
+                data-metric-field={dataField}
             >
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>
