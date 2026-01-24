@@ -3,7 +3,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, Sparkles, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Combobox } from "@/components/ui/combobox";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
 
 type Option = {
     value: string;
@@ -68,7 +67,12 @@ export const UseCaseInfoSection = ({
                                 <FieldLabel>
                                     Use Case Title<span className="text-red-500">*</span>
                                     {aiGeneratedFields.useCaseTitle && (
-                                        <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                        <span
+                                            className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                            title="AI generated"
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                        </span>
                                     )}
                                 </FieldLabel>
                                 <FieldContent>
@@ -118,7 +122,12 @@ export const UseCaseInfoSection = ({
                                 <FieldLabel>
                                     Headline<span className="text-red-500">*</span>
                                     {aiGeneratedFields.headline && (
-                                        <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                        <span
+                                            className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                            title="AI generated"
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                        </span>
                                     )}
                                 </FieldLabel>
                                 <FieldContent>
@@ -169,7 +178,12 @@ export const UseCaseInfoSection = ({
                                     <span>
                                         Opportunity<span className="text-red-500">*</span>
                                         {aiGeneratedFields.opportunity && (
-                                            <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                            <span
+                                                className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                                title="AI generated"
+                                            >
+                                                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                            </span>
                                         )}
                                     </span>
                                     <TooltipProvider>
@@ -237,7 +251,12 @@ export const UseCaseInfoSection = ({
                                 <FieldLabel>
                                     Business Value<span className="text-red-500">*</span>
                                     {aiGeneratedFields.businessValue && (
-                                        <Badge variant="secondary" className="ml-2">AI generated</Badge>
+                                        <span
+                                            className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                            title="AI generated"
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                        </span>
                                     )}
                                 </FieldLabel>
                                 <FieldContent>

@@ -18,9 +18,7 @@ import {
     getMappingPhases,
     getMappingMetricCategories,
     getMappingUnitOfMeasure,
-    createUseCase,
-    createStakeholder,
-    createPlan
+    createUseCase
 } from "@/lib/submit-use-case";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
@@ -137,6 +135,8 @@ const SubmitUseCase = () => {
     const [timelineSuggestions, setTimelineSuggestions] = useState<
         Record<string, { startDate: Date; endDate: Date }>
     >({});
+    const [prefetchTimeline, setPrefetchTimeline] = useState(false);
+    const [prefetchMetrics, setPrefetchMetrics] = useState(false);
     const [metricCategoriesData, setMetricCategoriesData] = useState([]);
     const [unitOfMeasureData, setUnitOfMeasureData] = useState([]);
 
@@ -455,10 +455,49 @@ const SubmitUseCase = () => {
         return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
     }, [unitOfMeasureData]);
 
+    const metricCategoryIdByName = useMemo(() => {
+        const map = new Map<string, number>();
+        if (!Array.isArray(metricCategoriesData)) return map;
+        metricCategoriesData.forEach((item) => {
+            const name = String(item.category ?? item.name ?? "").trim();
+            const id = Number(item.id);
+            if (name && Number.isFinite(id)) {
+                map.set(name.toLowerCase(), id);
+            }
+        });
+        return map;
+    }, [metricCategoriesData]);
+
+    const unitOfMeasureIdByName = useMemo(() => {
+        const map = new Map<string, number>();
+        if (!Array.isArray(unitOfMeasureData)) return map;
+        unitOfMeasureData.forEach((item) => {
+            const name = String(item.name ?? item.unitOfMeasure ?? "").trim();
+            const id = Number(item.id);
+            if (name && Number.isFinite(id)) {
+                map.set(name.toLowerCase(), id);
+            }
+        });
+        return map;
+    }, [unitOfMeasureData]);
+
+    const roleIdByName = useMemo(() => {
+        const map = new Map<string, number>();
+        if (!Array.isArray(rolesData)) return map;
+        rolesData.forEach((role) => {
+            const name = String(role.name ?? "").trim();
+            const id = Number(role.id);
+            if (name && Number.isFinite(id)) {
+                map.set(name.toLowerCase(), id);
+            }
+        });
+        return map;
+    }, [rolesData]);
+
     useEffect(() => {
         let isMounted = true;
         const generateMetricSuggestions = async () => {
-            if (currentStep !== 4) return;
+            if (currentStep !== 4 && !prefetchMetrics) return;
             if (metricSuggestionsInFlightRef.current) return;
             if (metricSuggestions.length > 0) return;
             if (metrics.length > 0) return;
@@ -549,7 +588,15 @@ const SubmitUseCase = () => {
         return () => {
             isMounted = false;
         };
-    }, [currentStep, form, metricCategories, unitOfMeasurementOptions, metricSuggestions.length, metrics.length]);
+    }, [
+        currentStep,
+        form,
+        metricCategories,
+        unitOfMeasurementOptions,
+        metricSuggestions.length,
+        metrics.length,
+        prefetchMetrics,
+    ]);
 
 
     // Fetch all data on mount with stale-while-revalidate cache
@@ -746,12 +793,20 @@ const SubmitUseCase = () => {
             .map((role) => String(role.name ?? "").trim())
             .filter((name) => {
                 const key = name.toLowerCase();
+                if (key === "owner") return false;
                 if (!key || seen.has(key)) return false;
                 seen.add(key);
                 return true;
             })
             .map((name) => ({ value: name, label: name }));
     }, [rolesData]);
+
+    const visibleStakeholders = useMemo(() => {
+        return stakeholdersData.filter((stakeholder) => {
+            const role = String(stakeholder?.role ?? "").trim().toLowerCase();
+            return role !== "champion delegate";
+        });
+    }, [stakeholdersData]);
 
     const businessUnits = useMemo(() => {
         const buNames = getBusinessUnitsFromData(businessStructureData);
@@ -964,7 +1019,7 @@ const SubmitUseCase = () => {
     useEffect(() => {
         let isMounted = true;
         const fetchPhases = async () => {
-            if (currentStep !== 3) return;
+            if (currentStep !== 3 && !prefetchTimeline) return;
             if (phasesData.length > 0) return;
             setIsPhasesLoading(true);
             try {
@@ -988,12 +1043,12 @@ const SubmitUseCase = () => {
         return () => {
             isMounted = false;
         };
-    }, [currentStep, phasesData.length]);
+    }, [currentStep, phasesData.length, prefetchTimeline]);
 
     useEffect(() => {
         let isMounted = true;
         const generateTimeline = async () => {
-            if (currentStep !== 3) return;
+            if (currentStep !== 3 && !prefetchTimeline) return;
             if (phasesData.length === 0) return;
             if (timelineRequestInFlightRef.current) return;
             if (Object.keys(aiGeneratedPhases).length > 0) return;
@@ -1091,7 +1146,14 @@ const SubmitUseCase = () => {
         return () => {
             isMounted = false;
         };
-    }, [currentStep, phasesData, form, aiGeneratedPhases, timelineSuggestions]);
+    }, [
+        currentStep,
+        phasesData,
+        form,
+        aiGeneratedPhases,
+        timelineSuggestions,
+        prefetchTimeline,
+    ]);
 
 
     // Reset dependent selections when parent changes
@@ -1239,6 +1301,8 @@ const SubmitUseCase = () => {
                 });
                 return;
             }
+            setPrefetchTimeline(true);
+            setPrefetchMetrics(true);
             setCurrentStep(showChecklistTab ? 2 : 3);
         } else if (currentStep === 2) {
             if (!hasChecklistAnswers) {
@@ -1258,64 +1322,161 @@ const SubmitUseCase = () => {
             setSubmitError(null);
 
             try {
-                const values = form.getValues();
+                if (!isStep1Valid) {
+                    toast.error("Please complete all required fields in Use Case Information.");
+                    return;
+                }
+                if (!startDate || !endDate) {
+                    toast.error("Please set the start and end dates for the first phase.");
+                    return;
+                }
+                if (!isMetricsFormValid || metrics.length === 0) {
+                    toast.error("Please complete at least one metric before submitting.");
+                    return;
+                }
 
-                // Prepare use case data
-                const primaryStakeholder = addedStakeholders.find(
-                    (stakeholder) => stakeholder.role === 'Primary Contact'
-                );
-                const useCaseData = {
-                    Title: values.useCaseTitle,
-                    Headlines: values.headline,
-                    Opportunity: values.opportunity,
-                    BusinessValue: values.businessValue,
-                    AITheme: Array.isArray(values.selectedAITheme)
-                        ? values.selectedAITheme.join(', ')
-                        : '',
-                    TargetPersonas: Array.isArray(values.selectedPersona)
-                        ? values.selectedPersona.join(', ')
-                        : '',
-                    VendorName: values.selectedVendor ?? '',
-                    ModelName: values.selectedModel ?? '',
-                    BusinessUnit: values.selectedBusinessUnit,
-                    TeamName: values.selectedTeam,
-                    PrimaryContact:
-                        values.primaryContact ||
-                        primaryStakeholder?.email ||
-                        primaryStakeholder?.name ||
-                        primaryContactOptions[0]?.value ||
-                        '',
-                    CreatedBy: accounts[0]?.username || accounts[0]?.name || 'Unknown',
-                    ESEResourcesNeeded: values.eseResourceValue === 'Yes',
-                    Phase: 'Idea', // Default phase
-                    Status: 'Draft' // Default status
+                const values = form.getValues();
+                const primaryContact =
+                    values.primaryContact?.trim() ||
+                    accounts[0]?.username ||
+                    accounts[0]?.name ||
+                    primaryContactOptions[0]?.value ||
+                    "";
+
+                if (!primaryContact) {
+                    toast.error("Primary contact is required.");
+                    return;
+                }
+
+                if (!selectedBusinessUnitId) {
+                    toast.error("Business Unit is required.");
+                    return;
+                }
+
+                const normalizeChecklistResponse = (value: unknown) => {
+                    if (Array.isArray(value)) {
+                        return value.map((entry) => String(entry).trim()).filter(Boolean).join(", ");
+                    }
+                    if (value === null || value === undefined) return "";
+                    return String(value).trim();
                 };
 
-                // Create use case
-                const createdUseCase = await createUseCase(useCaseData);
-                const useCaseId = createdUseCase.ID;
-
-                const stakeholderRequests = addedStakeholders.map((stakeholder) =>
-                    createStakeholder(useCaseId, {
-                        Stakeholder: stakeholder.name,
-                        Role: stakeholder.role,
-                        UseCasesID: useCaseId,
-                        BusinessUnit: values.selectedBusinessUnit,
-                        UseCaseTitle: values.useCaseTitle
+                const checklistEntries = checklistQuestions
+                    .map((question) => {
+                        const response = normalizeChecklistResponse(
+                            checklistResponses?.[question.responseKey],
+                        );
+                        const questionId = Number(question.id);
+                        if (!Number.isFinite(questionId) || !response) return null;
+                        return { questionId, response };
                     })
-                );
+                    .filter(Boolean);
 
-                const planRequest = createPlan(useCaseId, {
-                    StartDate: startDate ? format(startDate, 'dd-MM-yyyy') : '',
-                    EndDate: endDate ? format(endDate, 'dd-MM-yyyy') : '',
-                    UseCasesID: useCaseId,
-                    UseCasePhase: 'Idea'
+                const stakeholdersPayload = addedStakeholders
+                    .map((stakeholder) => {
+                        const email = String(stakeholder.email ?? "").trim();
+                        const role = String(stakeholder.role ?? "").trim();
+                        const roleId = roleIdByName.get(role.toLowerCase());
+                        if (!email || !role || !Number.isFinite(roleId)) return null;
+                        return { roleId, role, stakeholderEmail: email };
+                    })
+                    .filter(Boolean);
+
+                const delegatePayload = stakeholdersData
+                    .filter((stakeholder) => {
+                        const role = String(stakeholder?.role ?? "").trim().toLowerCase();
+                        return role === "champion delegate";
+                    })
+                    .map((stakeholder) => {
+                        const email = String(stakeholder?.email ?? "").trim();
+                        const role = String(stakeholder?.role ?? "").trim();
+                        const fallbackRoleId = roleIdByName.get(role.toLowerCase());
+                        const roleId = Number.isFinite(Number(stakeholder?.roleId))
+                            ? Number(stakeholder?.roleId)
+                            : fallbackRoleId;
+                        if (!email || !role || !Number.isFinite(roleId)) return null;
+                        return { roleId, role, stakeholderEmail: email };
+                    })
+                    .filter(Boolean);
+
+                const combinedStakeholders = [...stakeholdersPayload, ...delegatePayload].filter(Boolean);
+                const uniqueStakeholders: Array<{ roleId: number; role: string; stakeholderEmail: string }> = [];
+                const seenStakeholders = new Set<string>();
+                combinedStakeholders.forEach((stakeholder) => {
+                    const key = `${stakeholder.roleId}|${stakeholder.stakeholderEmail.toLowerCase()}`;
+                    if (seenStakeholders.has(key)) return;
+                    seenStakeholders.add(key);
+                    uniqueStakeholders.push(stakeholder);
                 });
 
-                await Promise.all([planRequest, ...stakeholderRequests]);
+                const formatDate = (date?: Date) => (date ? format(date, "yyyy-MM-dd") : "");
 
-                // Show success toast
-                toast.success(`Your record has been submitted successfully with ID: ${useCaseId}`);
+                const planPayload = phasesData
+                    .map((phase) => {
+                        const phaseName = String(phase?.name ?? "").trim();
+                        if (!phaseName) return null;
+                        const state = phaseDateState[phaseKey(phaseName)];
+                        if (!state?.start || !state?.end) return null;
+                        const usecasephaseid = Number(phase?.id);
+                        if (!Number.isFinite(usecasephaseid)) return null;
+                        return {
+                            usecasephaseid,
+                            startdate: formatDate(state.start),
+                            enddate: formatDate(state.end),
+                        };
+                    })
+                    .filter(Boolean);
+
+                const metricsPayload = metrics
+                    .map((metric) => {
+                        const parcsCategory = String(metric.parcsCategory ?? "").trim();
+                        const unitOfMeasurement = String(metric.unitOfMeasurement ?? "").trim();
+                        const metrictypeid = metricCategoryIdByName.get(parcsCategory.toLowerCase());
+                        const unitofmeasureid = unitOfMeasureIdByName.get(
+                            unitOfMeasurement.toLowerCase(),
+                        );
+                        if (!Number.isFinite(metrictypeid) || !Number.isFinite(unitofmeasureid)) {
+                            return null;
+                        }
+                        return {
+                            metrictypeid,
+                            unitofmeasureid,
+                            primarysuccessmetricname: String(metric.primarySuccessValue ?? "").trim(),
+                            baselinevalue: String(metric.baselineValue ?? "").trim(),
+                            baselinedate: String(metric.baselineDate ?? "").trim(),
+                            targetvalue: String(metric.targetValue ?? "").trim(),
+                            targetdate: String(metric.targetDate ?? "").trim(),
+                        };
+                    })
+                    .filter(Boolean);
+
+                const useCaseData = {
+                    businessUnitId: selectedBusinessUnitId,
+                    phaseId: 1,
+                    statusId: 6,
+                    title: values.useCaseTitle?.trim(),
+                    headlines: values.headline?.trim() || null,
+                    opportunity: values.opportunity?.trim() || null,
+                    businessValue: values.businessValue?.trim() || null,
+                    subTeamName: values.selectedSubTeam?.trim() || null,
+                    informationUrl: values.infoLink?.trim() || null,
+                    eseDependency: values.eseResourceValue?.trim() || null,
+                    primaryContact,
+                    editorEmail: accounts[0]?.username || primaryContact,
+                    checklist: checklistEntries.length ? checklistEntries : null,
+                    stakeholders: uniqueStakeholders.length ? uniqueStakeholders : null,
+                    plan: planPayload.length ? planPayload : null,
+                    metrics: metricsPayload.length ? metricsPayload : null,
+                };
+
+                const createdUseCase = await createUseCase(useCaseData);
+                const useCaseId = createdUseCase?.id ?? createdUseCase?.ID ?? null;
+
+                toast.success(
+                    useCaseId
+                        ? `Your record has been submitted successfully with ID: ${useCaseId}`
+                        : "Your record has been submitted successfully.",
+                );
                 navigate('/champion');
 
             } catch (error) {
@@ -1325,7 +1486,30 @@ const SubmitUseCase = () => {
                 setIsSubmitting(false);
             }
         }
-    }, [currentStep, isStep1Valid, showChecklistTab, form, hasChecklistAnswers, startDate, endDate, addedStakeholders, primaryContactOptions, accounts, navigate]);
+    }, [
+        currentStep,
+        isStep1Valid,
+        showChecklistTab,
+        form,
+        hasChecklistAnswers,
+        startDate,
+        endDate,
+        addedStakeholders,
+        primaryContactOptions,
+        accounts,
+        navigate,
+        isMetricsFormValid,
+        metrics,
+        checklistQuestions,
+        checklistResponses,
+        selectedBusinessUnitId,
+        roleIdByName,
+        phasesData,
+        metricCategoryIdByName,
+        unitOfMeasureIdByName,
+        phaseDateState,
+        stakeholdersData,
+    ]);
 
     const handleBack = useCallback(() => {
         if (currentStep === 4) {
@@ -1502,7 +1686,7 @@ const SubmitUseCase = () => {
 
                         {currentStep === 3 && (
                             <StakeholdersPlanSection
-                                stakeholders={stakeholdersData}
+                                stakeholders={visibleStakeholders}
                                 isLoading={isStakeholdersLoading}
                                 phases={phasesData}
                                 isPhasesLoading={isPhasesLoading}
@@ -1691,7 +1875,12 @@ const SubmitUseCase = () => {
                                 <SelectTrigger id="stakeholder-role" className="col-span-3">
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
-                                <SelectContent position="popper" side="bottom" align="start" alignOffset={180} sideOffset={-120}>
+                                <SelectContent
+                                    position="popper"
+                                    side="bottom"
+                                    align="start"
+                                    className="min-w-[var(--radix-select-trigger-width)]"
+                                >
                                     {roles.map((role) => (
                                         <SelectItem key={role.value} value={role.value}>
                                             {role.label}

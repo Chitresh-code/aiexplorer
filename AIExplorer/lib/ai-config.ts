@@ -34,11 +34,12 @@ export const buildResponsesRequest = (
 ): ResponsesRequestConfig => {
   const openAi = getOpenAiConfig();
   const azure = getAzureConfig();
-  const useAzure =
+  const useAzure = Boolean(
     process.env.NODE_ENV === "production" &&
-    azure.endpoint &&
-    azure.deployment &&
-    azure.apiKey;
+      azure.endpoint &&
+      azure.deployment &&
+      azure.apiKey,
+  );
 
   if (!useAzure && !openAi.apiKey) {
     throw new Error("Missing OPENAI_API_KEY.");
@@ -48,51 +49,69 @@ export const buildResponsesRequest = (
     ? azure.model || options.modelOverride
     : options.modelOverride || openAi.model;
 
-  const requestBody: Record<string, unknown> = {
-    model,
-    input: [
-      {
-        role: "system",
-        content: [{ type: "input_text", text: options.systemPrompt }],
-      },
-      {
-        role: "user",
-        content: [
+  const azureBase = azure.endpoint?.replace(/\/+$/, "") ?? "";
+  const url = useAzure
+    ? `${azureBase}/openai/deployments/${azure.deployment}/chat/completions?api-version=${azure.apiVersion}`
+    : OPENAI_API_URL;
+
+  const requestBody: Record<string, unknown> = useAzure
+    ? {
+        messages: [
+          { role: "system", content: options.systemPrompt },
+          { role: "user", content: JSON.stringify(options.payload) },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: options.schemaName,
+            schema: options.schema,
+            strict: true,
+          },
+        },
+      }
+    : {
+        model,
+        input: [
           {
-            type: "input_text",
-            text: JSON.stringify(options.payload),
+            role: "system",
+            content: [{ type: "input_text", text: options.systemPrompt }],
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: JSON.stringify(options.payload),
+              },
+            ],
           },
         ],
-      },
-    ],
-    text: {
-      format: {
-        type: "json_schema",
-        name: options.schemaName,
-        schema: options.schema,
-        strict: true,
-      },
-    },
-  };
+        text: {
+          format: {
+            type: "json_schema",
+            name: options.schemaName,
+            schema: options.schema,
+            strict: true,
+          },
+        },
+        reasoning: {
+          effort: "low",
+        },
+      };
 
-  if (!model) {
+  if (!useAzure && !model) {
     delete requestBody.model;
   }
 
-  const azureBase = azure.endpoint?.replace(/\/+$/, "") ?? "";
-  const url = useAzure
-    ? `${azureBase}/openai/deployments/${azure.deployment}/responses?api-version=${azure.apiVersion}`
-    : OPENAI_API_URL;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
 
-  const headers = useAzure
-    ? {
-        "Content-Type": "application/json",
-        "api-key": azure.apiKey ?? "",
-      }
-    : {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${openAi.apiKey}`,
-      };
+  if (useAzure) {
+    headers["api-key"] = azure.apiKey ?? "";
+  } else {
+    headers.Authorization = `Bearer ${openAi.apiKey ?? ""}`;
+  }
 
   return { url, headers, body: requestBody };
 };

@@ -10,5 +10,4 @@ yarn-error.log*
 Dockerfile
 README.md
 .cursor
-.env
-.env.*
+.env.production

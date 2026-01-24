@@ -2,8 +2,133 @@ import type {
   GalleryFiltersResponse,
   GalleryListResponse,
   GalleryUseCase,
+  GalleryUseCaseListItem,
   UseCaseQuery,
 } from "@/features/gallery/types";
+
+type GalleryDbUseCase = {
+  id: number | null;
+  businessUnitId: number | null;
+  phaseId: number | null;
+  statusId: number | null;
+  title: string;
+  headlines: string;
+  opportunity: string;
+  businessValue: string;
+  informationUrl: string;
+  primaryContact: string;
+  productChecklist: string;
+  eseDependency: string;
+  businessUnitName: string;
+  teamName: string;
+  phase: string;
+  statusName: string;
+  statusColor: string;
+};
+
+const statusColorMap: Record<string, string> = {
+  green: "#E3F4E7",
+  red: "#FCE8E6",
+  orange: "#FFF4E5",
+  gray: "#F3F4F6",
+};
+
+const resolveStatusColor = (value?: string) => {
+  const key = value?.trim().toLowerCase() ?? "";
+  return statusColorMap[key] ?? "#F5F5F5";
+};
+
+const normalize = (value: string) => value.trim().toLowerCase();
+
+const arrayMatches = (haystack: string[], needles: string[]) => {
+  if (needles.length === 0) return true;
+  const hay = haystack.map(normalize);
+  return needles.some((needle) => hay.includes(normalize(needle)));
+};
+
+const stringMatches = (haystack: string, needles: string[]) => {
+  if (needles.length === 0) return true;
+  const hay = normalize(haystack);
+  return needles.some((needle) => hay.includes(normalize(needle)));
+};
+
+const applyFilters = (
+  items: GalleryUseCaseListItem[],
+  query: UseCaseQuery,
+): GalleryUseCaseListItem[] => {
+  const search = query.search?.trim() ?? "";
+  const status = query.status ?? [];
+  const phase = query.phase ?? [];
+  const businessUnit = query.businessUnit ?? [];
+  const team = query.team ?? [];
+  const subTeam = query.subTeam ?? [];
+  const vendor = query.vendor ?? [];
+  const persona = query.persona ?? [];
+  const aiTheme = query.aiTheme ?? [];
+  const aiModel = query.aiModel ?? [];
+
+  return items.filter((item) => {
+    if (search && !stringMatches(item.title, [search])) return false;
+    if (!arrayMatches([item.status], status)) return false;
+    if (!arrayMatches([item.phase], phase)) return false;
+    if (!arrayMatches([item.businessUnit], businessUnit)) return false;
+    if (!arrayMatches([item.team], team)) return false;
+    if (!arrayMatches([item.subTeam], subTeam)) return false;
+    if (!arrayMatches([item.vendorName], vendor)) return false;
+    if (!arrayMatches(item.personas, persona)) return false;
+    if (!arrayMatches(item.aiThemes, aiTheme)) return false;
+    if (!arrayMatches([item.aiModel], aiModel)) return false;
+    return true;
+  });
+};
+
+const sortItems = (
+  items: GalleryUseCaseListItem[],
+  sortBy?: keyof GalleryUseCaseListItem,
+  sortDir: "asc" | "desc" = "asc",
+) => {
+  if (!sortBy) return items;
+  const direction = sortDir === "desc" ? -1 : 1;
+  return [...items].sort((a, b) => {
+    const left = String(a[sortBy] ?? "");
+    const right = String(b[sortBy] ?? "");
+    return left.localeCompare(right) * direction;
+  });
+};
+
+const toListItem = (item: GalleryDbUseCase): GalleryUseCaseListItem => ({
+  id: item.id ?? 0,
+  title: item.title ?? "",
+  phase: item.phase ?? "",
+  status: item.statusName ?? "",
+  businessUnit: item.businessUnitName ?? "",
+  team: item.teamName ?? "",
+  subTeam: "",
+  vendorName: "",
+  aiModel: "",
+  aiThemes: [],
+  personas: [],
+  bgColor: resolveStatusColor(item.statusColor),
+});
+
+const toDetailItem = (item: GalleryDbUseCase): GalleryUseCase => ({
+  id: item.id ?? 0,
+  title: item.title ?? "",
+  phase: item.phase ?? "",
+  status: item.statusName ?? "",
+  businessUnit: item.businessUnitName ?? "",
+  team: item.teamName ?? "",
+  subTeam: "",
+  vendorName: "",
+  aiModel: "",
+  aiThemes: [],
+  personas: [],
+  bgColor: resolveStatusColor(item.statusColor),
+  headline: item.headlines ?? "",
+  opportunity: item.opportunity ?? "",
+  evidence: item.businessValue ?? "",
+  primaryContact: item.primaryContact ?? "",
+});
 
 const buildQuery = (query: UseCaseQuery) => {
   const params = new URLSearchParams();
@@ -39,24 +164,42 @@ export const fetchUseCases = async (
   query: UseCaseQuery,
   signal?: AbortSignal,
 ): Promise<GalleryListResponse> => {
-  const response = await fetch(`/api/usecases${buildQuery(query)}`, {
+  const response = await fetch("/api/usecases/gallery", {
     signal,
   });
   if (!response.ok) {
     throw new Error("Failed to load use cases.");
   }
-  return response.json();
+  const payload = (await response.json()) as { items?: GalleryDbUseCase[] };
+  const rawItems = payload.items ?? [];
+  const mappedItems = rawItems
+    .filter((item) => item.id !== null)
+    .map(toListItem);
+  const filtered = applyFilters(mappedItems, query);
+  const sorted = sortItems(filtered, query.sortBy, query.sortDir);
+  const skip = query.skip ?? 0;
+  const limit = query.limit ?? sorted.length;
+  return {
+    items: sorted.slice(skip, skip + limit),
+    total: filtered.length,
+  };
 };
 
 export const fetchUseCase = async (
   id: number,
   signal?: AbortSignal,
 ): Promise<GalleryUseCase> => {
-  const response = await fetch(`/api/usecases/${id}`, { signal });
+  const response = await fetch("/api/usecases/gallery", { signal });
   if (!response.ok) {
     throw new Error("Failed to load use case.");
   }
-  return response.json();
+  const payload = (await response.json()) as { items?: GalleryDbUseCase[] };
+  const items = payload.items ?? [];
+  const match = items.find((item) => Number(item.id) === id);
+  if (!match) {
+    throw new Error("Failed to load use case.");
+  }
+  return toDetailItem(match);
 };
 
 export const fetchFilters = async (

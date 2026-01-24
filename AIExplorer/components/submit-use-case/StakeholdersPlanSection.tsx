@@ -2,13 +2,12 @@
 // @ts-nocheck
 "use client";
 
-import { CalendarIcon, Edit, Plus, Trash2, Users } from "lucide-react";
+import { CalendarIcon, Edit, Plus, Sparkles, Trash2, Users } from "lucide-react";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type Stakeholder = {
@@ -154,24 +153,28 @@ export const StakeholdersPlanSection = ({
                                             <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
-                                            onClick={() => onEditStakeholder(idx)}
-                                        >
-                                            <Edit className="w-3 h-3" />
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-gray-400 hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() => onRemoveStakeholder(idx)}
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </Button>
-                                    </div>
+                                    {!["owner", "primary contact"].includes(
+                                        stakeholder.role?.trim().toLowerCase(),
+                                    ) && (
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-gray-400 hover:text-teal-600 hover:bg-teal-50"
+                                                onClick={() => onEditStakeholder(idx)}
+                                            >
+                                                <Edit className="w-3 h-3" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-gray-400 hover:text-destructive hover:bg-destructive/10"
+                                                onClick={() => onRemoveStakeholder(idx)}
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </Button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -277,7 +280,17 @@ export const StakeholdersPlanSection = ({
                                     return (
                                         <tr key={phaseName} className="hover:bg-gray-50">
                                             <td style={{ padding: "16px 8px", fontWeight: "500", textAlign: "left", fontSize: "14px", color: "#111827" }}>
-                                                {phaseName}
+                                                <div className="flex items-center gap-2">
+                                                    <span>{phaseName}</span>
+                                                    {aiGeneratedPhases[phaseName.toLowerCase()] && (
+                                                        <span
+                                                            className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                                            title="AI generated"
+                                                        >
+                                                            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td style={{ padding: "16px 8px" }}>
                                                 <Button
@@ -288,9 +301,6 @@ export const StakeholdersPlanSection = ({
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {start ? format(start, "dd-MM-yyyy") : "Pick date"}
                                                 </Button>
-                                                {aiGeneratedPhases[phaseName.toLowerCase()] && (
-                                                    <Badge variant="secondary" className="mt-2">AI generated</Badge>
-                                                )}
                                             </td>
                                             <td style={{ padding: "16px 8px" }}>
                                                 <Button
@@ -301,9 +311,6 @@ export const StakeholdersPlanSection = ({
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
                                                     {end ? format(end, "dd-MM-yyyy") : "Pick date"}
                                                 </Button>
-                                                {aiGeneratedPhases[phaseName.toLowerCase()] && (
-                                                    <Badge variant="secondary" className="mt-2">AI generated</Badge>
-                                                )}
                                             </td>
                                         </tr>
                                     );

@@ -78,21 +78,8 @@ const globalForSql = globalThis as typeof globalThis & {
 };
 
 export const getSqlPool = async (): Promise<sql.ConnectionPool> => {
-  const authMode = getAuthMode();
-  if (authMode === "managed-identity") {
-    const now = Date.now();
-    const expiresAt = globalForSql.__azureSqlTokenExpiresAt ?? 0;
-    const needsRefresh = !globalForSql.__azureSqlPool || expiresAt - now < 2 * 60 * 1000;
-    if (needsRefresh) {
-      const { config, expiresOnTimestamp } = await getManagedIdentityConfig();
-      globalForSql.__azureSqlTokenExpiresAt = expiresOnTimestamp;
-      globalForSql.__azureSqlPool = new sql.ConnectionPool(config).connect();
-    }
-    if (!globalForSql.__azureSqlPool) {
-      throw new Error("Azure SQL pool not initialized for managed identity.");
-    }
-    return await globalForSql.__azureSqlPool;
-  }
+  // Managed identity config intentionally disabled for now.
+  // Keep the implementation above for future production use.
 
   if (!globalForSql.__azureSqlPool) {
     globalForSql.__azureSqlPool = new sql.ConnectionPool(

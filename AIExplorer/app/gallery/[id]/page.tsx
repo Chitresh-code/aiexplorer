@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getRouteState } from "@/lib/navigation-state";
 import { useGalleryDetail } from "@/features/gallery/hooks/useGalleryDetail";
 import type {
@@ -58,7 +59,41 @@ const AIGalleryDetail = () => {
   ): value is GalleryUseCase =>
     "headline" in value && "opportunity" in value && "evidence" in value;
 
-  if (!useCase || isLoading || !hasDetails(useCase)) return null;
+  if (isLoading) {
+    return (
+      <div className="main-content min-h-[calc(100vh-3.5rem)] justify-center overflow-hidden">
+        <div className="w-full">
+          <div className="w-[95%] mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(80vh-150px)]">
+              <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col">
+                <CardContent className="p-8 flex-1 space-y-6">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-6 w-1/2" />
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-6 w-2/3" />
+                </CardContent>
+              </Card>
+              <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col">
+                <CardHeader className="relative" />
+                <CardContent className="pt-6 flex-1 space-y-6">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-4 w-36" />
+                  <Skeleton className="h-12 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!useCase || !hasDetails(useCase)) return null;
 
   return (
     <div className="main-content min-h-[calc(100vh-3.5rem)] justify-center overflow-hidden">
@@ -89,10 +124,10 @@ const AIGalleryDetail = () => {
                           {useCase.phase}
                         </Badge>
                         <Badge
-                          variant="outline"
-                          className="bg-[#13352C] text-white border-none shadow-md px-3 py-1 font-medium flex-shrink-0"
+                          variant="secondary"
+                          className="bg-white/80 text-[#13352C] border-none shadow-sm hover:bg-white font-semibold flex-shrink-0"
                         >
-                          {useCase.aiModel}
+                          {useCase.status}
                         </Badge>
                       </div>
                     </div>

@@ -2,7 +2,7 @@
 // @ts-nocheck
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,7 +33,7 @@ const metricColumnSizes = {
     baselineDate: 160,
     targetValue: 160,
     targetDate: 160,
-    actions: 60,
+    actions: 96,
 };
 
 const addMetricColumns = [
@@ -229,7 +229,15 @@ export const MetricsSection = ({
                                             )}
                                         </TableCell>
                                         <TableCell style={{ width: metricColumnSizes.actions }} className="overflow-visible">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <div className="flex items-center justify-end gap-2 pr-2">
+                                                {aiGeneratedMetricIds[metric.id] && (
+                                                    <span
+                                                        className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                                        title="AI generated"
+                                                    >
+                                                        <Sparkles className="h-4 w-4" aria-hidden="true" />
+                                                    </span>
+                                                )}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -238,11 +246,6 @@ export const MetricsSection = ({
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>
-                                                {aiGeneratedMetricIds[metric.id] && (
-                                                    <Badge variant="secondary" className="text-[10px]">
-                                                        AI generated
-                                                    </Badge>
-                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

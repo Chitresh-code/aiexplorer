@@ -74,12 +74,23 @@ export const POST = async (req: Request): Promise<NextResponse> => {
     }
 
     const data = await response.json();
+    const chatContent = data.choices?.[0]?.message?.content;
+    const chatText = Array.isArray(chatContent)
+      ? chatContent
+          .map((part: { text?: string } | string) =>
+            typeof part === "string" ? part : part.text ?? "",
+          )
+          .join("")
+      : typeof chatContent === "string"
+        ? chatContent
+        : "";
     const outputText =
       data.output_text ||
       data.output
         ?.flatMap((item: { content?: Array<{ type: string; text?: string }> }) => item.content ?? [])
         .find((item: { type: string }) => item.type === "output_text" || item.type === "summary_text")
         ?.text ||
+      chatText ||
       "";
     const parsed = outputText ? JSON.parse(outputText) : { items: [] };
     const items = Array.isArray(parsed?.items) ? (parsed.items as TimelineItem[]) : [];

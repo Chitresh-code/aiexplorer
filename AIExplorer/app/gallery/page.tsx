@@ -22,7 +22,6 @@ const AIGallery = () => {
   const [selectedVendor, setSelectedVendor] = useState<string[]>([]);
   const [selectedPhase, setSelectedPhase] = useState("");
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
-  const [selectedSubTeams, setSelectedSubTeams] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedAiModels, setSelectedAiModels] = useState<string[]>([]);
 
@@ -33,12 +32,12 @@ const AIGallery = () => {
     aiThemes: selectedAiThemes,
     businessUnits: selectedDepartment,
     teams: selectedTeams,
-    subTeams: selectedSubTeams,
+    subTeams: [],
     status: selectedStatuses,
     aiModels: selectedAiModels,
   };
 
-  const { useCases, filtersData, isLoading } = useGalleryData({
+  const { useCases, filtersData, isLoading, isFiltersLoading } = useGalleryData({
     activeTab,
     searchText: searchUseCase,
     filters: filterState,
@@ -114,8 +113,6 @@ const AIGallery = () => {
       .sort()
       .map((team) => ({ label: team, value: team }));
   }, [filtersData, selectedDepartment]);
-
-  const subTeamOptions = useMemo(() => [], []);
 
   const phaseOptions = useMemo(
     () =>
@@ -210,17 +207,6 @@ const AIGallery = () => {
         icon,
         showBadges: false,
       },
-      {
-        id: "sub-team",
-        multiple: true,
-        options: subTeamOptions,
-        value: selectedSubTeams,
-        onChange: setSelectedSubTeams,
-        placeholder: "Sub-team Name",
-        className: baseClassName,
-        icon,
-        showBadges: false,
-      },
     ];
   }, [
     aiModelOptions,
@@ -233,11 +219,9 @@ const AIGallery = () => {
     selectedPersonas,
     selectedPhase,
     selectedStatuses,
-    selectedSubTeams,
     selectedTeams,
     selectedVendor,
     statusOptions,
-    subTeamOptions,
     teamOptions,
     themeOptions,
     vendorOptions,
@@ -251,7 +235,6 @@ const AIGallery = () => {
     setSelectedVendor([]);
     setSelectedPhase("");
     setSelectedTeams([]);
-    setSelectedSubTeams([]);
     setSelectedStatuses([]);
     setSelectedAiModels([]);
   };
@@ -268,7 +251,6 @@ const AIGallery = () => {
       selectedAiThemes.length ||
       selectedVendor.length ||
       selectedTeams.length ||
-      selectedSubTeams.length ||
       selectedStatuses.length ||
       selectedAiModels.length,
   );
@@ -290,6 +272,7 @@ const AIGallery = () => {
         filters={filterConfigs}
         onReset={handleReset}
         showReset={showReset}
+        isLoading={isFiltersLoading}
       />
 
       <GalleryResults
