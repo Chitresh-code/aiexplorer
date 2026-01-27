@@ -307,7 +307,7 @@ export const StakeholdersPlanSection = ({
                                                     onClick={() => onOpenDateDialog(phaseName)}
                                                 >
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {start ? format(start, "dd-MM-yyyy") : "Pick date"}
+                                                    {start ? format(start, "MM-dd-yyyy") : "Pick date"}
                                                 </Button>
                                             </td>
                                             <td style={{ padding: "16px 8px" }}>
@@ -317,7 +317,7 @@ export const StakeholdersPlanSection = ({
                                                     onClick={() => onOpenDateDialog(phaseName)}
                                                 >
                                                     <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {end ? format(end, "dd-MM-yyyy") : "Pick date"}
+                                                    {end ? format(end, "MM-dd-yyyy") : "Pick date"}
                                                 </Button>
                                             </td>
                                         </tr>

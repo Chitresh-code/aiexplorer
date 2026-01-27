@@ -50,7 +50,7 @@ export const MetricDatePicker = ({
                     }}
                 >
                     <CalendarIcon className="mr-2 h-3 w-3" />
-                    {dateValue ? format(dateValue, "dd-MM-yyyy") : <span>Pick date</span>}
+                    {dateValue ? format(dateValue, "MM-dd-yyyy") : <span>Pick date</span>}
                 </Button>
             </PopoverTrigger>
             {!onOpenDialog && (
@@ -60,7 +60,7 @@ export const MetricDatePicker = ({
                         selected={dateValue}
                         onSelect={(date) => {
                             if (date) {
-                                onChange(format(date, "yyyy-MM-dd"));
+                                onChange(format(date, "MM-dd-yyyy"));
                                 setOpen(false);
                             }
                         }}

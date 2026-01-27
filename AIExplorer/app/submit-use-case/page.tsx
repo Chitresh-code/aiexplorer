@@ -291,7 +291,7 @@ const SubmitUseCase = () => {
             const prevEndDate = prevState?.end;
             if (prevEndDate && tempStartDate < prevEndDate) {
                 toast.error(
-                    `Start date must be on or after the previous phase end date (${format(prevEndDate, "dd-MM-yyyy")}).`,
+                    `Start date must be on or after the previous phase end date (${format(prevEndDate, "MM-dd-yyyy")}).`,
                 );
                 return;
             }
@@ -1770,6 +1770,7 @@ const SubmitUseCase = () => {
                         <DialogDescription>
                             Please select both start and end dates for this phase.
                         </DialogDescription>
+                        
                     </DialogHeader>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
                         <div className="space-y-2">
@@ -1793,7 +1794,7 @@ const SubmitUseCase = () => {
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="gap-3">
                         <Button variant="outline" onClick={handleDateDialogClose}>
                             Cancel
                         </Button>
@@ -1932,7 +1933,7 @@ const SubmitUseCase = () => {
                             />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <DialogFooter className="gap-3">
                         <Button variant="outline" onClick={() => setIsMetricDateDialogOpen(false)}>
                             Cancel
                         </Button>
