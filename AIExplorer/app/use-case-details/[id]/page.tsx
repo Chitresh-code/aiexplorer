@@ -13,7 +13,7 @@ import { InfoSection } from "@/components/use-case-details/InfoSection";
 import { UpdateSection } from "@/components/use-case-details/UpdateSection";
 import { AgentLibrarySection } from "@/components/use-case-details/AgentLibrarySection";
 import { MetricsSection } from "@/components/use-case-details/MetricsSection";
-import type { MetricsRow } from "@/components/use-case-details/MetricsSection";
+import type { MetricsRow, ReportedHistoryRow } from "@/components/use-case-details/MetricsSection";
 import { ActionsSection } from "@/components/use-case-details/ActionsSection";
 import { ReprioritizeSection } from "@/components/use-case-details/ReprioritizeSection";
 import { ParcsCategorySelect } from "@/components/use-case-details/ParcsCategorySelect";
@@ -26,11 +26,12 @@ import { useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import { Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
 import { useUseCaseDetails } from '@/hooks/use-usecase-details';
+import { useAgentLibrary } from '@/hooks/use-agent-library';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { fetchUseCaseMetricsDetails } from '@/lib/api';
 
-import { fetchMetrics } from '@/lib/api';
 import {
     getMappingMetricCategories,
     getMappingPhases,
@@ -112,6 +113,30 @@ const UseCaseDetailsSkeleton = () => (
 
 
 type Metric = MetricsRow;
+type MetricDetailRow = {
+    id?: number | string | null;
+    usecaseid?: number | string | null;
+    metrictypeid?: number | string | null;
+    unitofmeasureid?: number | string | null;
+    primarysuccessmetricname?: string | null;
+    baselinevalue?: string | number | null;
+    baselinedate?: string | null;
+    targetvalue?: string | number | null;
+    targetdate?: string | null;
+    modified?: string | null;
+    created?: string | null;
+    editor_email?: string | null;
+};
+type ReportedMetricDetailRow = {
+    id?: number | string | null;
+    usecaseid?: number | string | null;
+    metricid?: number | string | null;
+    reportedvalue?: string | number | null;
+    reporteddate?: string | null;
+    modified?: string | null;
+    created?: string | null;
+    editor_email?: string | null;
+};
 
 type RoleOption = {
     id: number;
@@ -159,13 +184,13 @@ type UpdateItem = {
 };
 
 const metricColumnSizes = {
-    primarySuccessValue: 160,
-    parcsCategory: 160,
-    unitOfMeasurement: 160,
-    baselineValue: 160,
-    baselineDate: 160,
-    targetValue: 160,
-    targetDate: 160,
+    primarySuccessValue: 260,
+    parcsCategory: 220,
+    unitOfMeasurement: 200,
+    baselineValue: 140,
+    baselineDate: 140,
+    targetValue: 140,
+    targetDate: 140,
     reportedValue: 160,
     reportedDate: 160,
     actions: 60,
@@ -256,6 +281,10 @@ const UseCaseDetails = () => {
     );
     const { state } = useLocation<{ useCaseTitle: string; sourceScreen?: string }>();
     const { accounts } = useMsal();
+    
+    // Fetch agent library data
+    const { items: agentLibraryItems } = useAgentLibrary(typeof id === "string" ? id : undefined);
+    
     const useCase = useMemo(() => {
         const raw = useCaseDetails?.useCase ?? {};
         const phaseIdValue = Number((raw as any).phaseid ?? (raw as any).phaseId);
@@ -278,19 +307,6 @@ const UseCaseDetails = () => {
             editorEmail: String((raw as any).editor_email ?? (raw as any).editorEmail ?? ""),
         };
     }, [useCaseDetails, id, state?.useCaseTitle]);
-    const agentLibraryItems = useMemo(
-        () => useCaseDetails?.agentLibrary ?? [],
-        [useCaseDetails?.agentLibrary],
-    );
-    const agentBadgeLabel = useMemo(() => {
-        if (!agentLibraryItems.length) return "";
-        const item = agentLibraryItems[0];
-        const vendor = String(item.vendorName ?? "").trim();
-        const product = String(item.productName ?? "").trim();
-        if (vendor && product) return `${vendor} - ${product}`;
-        return vendor || product;
-    }, [agentLibraryItems]);
-
     const [selectedStatus, setSelectedStatus] = useState(useCase.statusName || 'Active');
     const showChangeStatusCard = false;
     const [phaseDates, setPhaseDates] = useState<Record<string, { start?: Date; end?: Date }>>({});
@@ -306,14 +322,15 @@ const UseCaseDetails = () => {
     const [tempEndDate, setTempEndDate] = useState<Date | undefined>(undefined);
     const [stakeholders, setStakeholders] = useState<{ id?: number | null; name: string; role: string; initial: string; canEdit: boolean; roleId?: number | null }[]>([]);
     const [updateText, setUpdateText] = useState('');
-    const [knowledgeForce, setKnowledgeForce] = useState('');
-    const [knowledgeSourceOptions, setKnowledgeSourceOptions] = useState<string[]>([]);
+    const [selectedKnowledgeSources, setSelectedKnowledgeSources] = useState<string[]>([]);
+    const [knowledgeSourceOptions, setKnowledgeSourceOptions] = useState<{ label: string; value: string }[]>([]);
     const [instructions, setInstructions] = useState('');
     const [currentStatus, setCurrentStatus] = useState('On-Track');
     const [nextPhase, setNextPhase] = useState('');
     const [statusNotes, setStatusNotes] = useState('');
     const [metrics, setMetrics] = useState<Metric[]>([]);
     const [reportedMetrics, setReportedMetrics] = useState<Metric[]>([]);
+    const [reportedHistory, setReportedHistory] = useState<ReportedHistoryRow[]>([]);
     const [updates, setUpdates] = useState<
         {
             id: number;
@@ -342,7 +359,9 @@ const UseCaseDetails = () => {
     const [themeOptions, setThemeOptions] = useState<{ label: string; value: string }[]>([]);
     const [statusOptions, setStatusOptions] = useState<string[]>([]);
     const [metricCategoryOptions, setMetricCategoryOptions] = useState<string[]>([]);
+    const [metricCategoryMap, setMetricCategoryMap] = useState<Map<number, string>>(new Map());
     const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState<string[]>([]);
+    const [unitOfMeasureMap, setUnitOfMeasureMap] = useState<Map<number, string>>(new Map());
     const [phaseMappings, setPhaseMappings] = useState<{ id: number; name: string; stage?: string }[]>([]);
 
     // AI Configuration state
@@ -354,7 +373,30 @@ const UseCaseDetails = () => {
     const [selectedModel, setSelectedModel] = useState<string>('');
     const [agentId, setAgentId] = useState<string>('');
     const [agentLink, setAgentLink] = useState<string>('');
-    const [vendorModelsData, setVendorModelsData] = useState<Map<string, string[]>>(new Map());
+    const [vendorModelsData, setVendorModelsData] = useState<Map<string, { id: number; name: string }[]>>(new Map());
+    const [isAgentLibraryEditing, setIsAgentLibraryEditing] = useState(false);
+    const [metricDetailRows, setMetricDetailRows] = useState<MetricDetailRow[]>([]);
+    const [reportedMetricRows, setReportedMetricRows] = useState<ReportedMetricDetailRow[]>([]);
+
+    const agentBadgeLabel = useMemo(() => {
+        const detailItem = useCaseDetails?.agentLibrary?.[0];
+        const vendorName = String(detailItem?.vendorName ?? "").trim();
+        const productName = String(detailItem?.productName ?? "").trim();
+        if (vendorName && productName) return `${vendorName} - ${productName}`;
+        if (vendorName || productName) return productName || vendorName;
+
+        const item = agentLibraryItems[0];
+        if (!item) return "";
+        const vendorModelId = Number(item.vendormodelid);
+        if (!Number.isFinite(vendorModelId) || vendorModelsData.size === 0) return "";
+        for (const [vendor, models] of vendorModelsData.entries()) {
+            const model = models.find((m) => m.id === vendorModelId);
+            if (model?.name) {
+                return vendor ? `${vendor} - ${model.name}` : model.name;
+            }
+        }
+        return "";
+    }, [useCaseDetails?.agentLibrary, agentLibraryItems, vendorModelsData]);
 
     // Form state for Reprioritize
     const [formData, setFormData] = useState({
@@ -373,7 +415,6 @@ const UseCaseDetails = () => {
 
     const [isEditing, setIsEditing] = useState(false);
     const [editableTitle, setEditableTitle] = useState(useCase.title);
-    const [editableDepartment, setEditableDepartment] = useState('');
     const [editableAITheme, setEditableAITheme] = useState<string[]>([]);
     const [editableHeadline, setEditableHeadline] = useState('');
     const [editableOpportunity, setEditableOpportunity] = useState('');
@@ -394,7 +435,6 @@ const UseCaseDetails = () => {
     // Sync editable fields when useCase updates
     useEffect(() => {
         setEditableTitle(useCase.title);
-        setEditableDepartment(useCase.businessUnitName || useCase.teamName || "");
         setEditableHeadline(useCase.headlines);
         setEditableOpportunity(useCase.opportunity);
         setEditableEvidence(useCase.businessValue);
@@ -403,8 +443,6 @@ const UseCaseDetails = () => {
         setCurrentStatus(useCase.statusName || "On-Track");
     }, [
         useCase.title,
-        useCase.businessUnitName,
-        useCase.teamName,
         useCase.headlines,
         useCase.opportunity,
         useCase.businessValue,
@@ -422,6 +460,31 @@ const UseCaseDetails = () => {
             setEditableAITheme([]);
         }
     }, [useCaseDetails?.themes, themeOptions.length, editableAITheme.length]);
+
+    const aiThemeDisplay = useMemo(() => {
+        const themeMap = new Map(themeOptions.map((option) => [String(option.value), option.label]));
+        const detailThemeEntries = (useCaseDetails?.themes ?? [])
+            .map((theme) => [String(theme.aithemeid ?? ""), String(theme.themeName ?? "").trim()] as const)
+            .filter((item): item is readonly [string, string] => Boolean(item[0] && item[1]));
+        const detailThemeMap = new Map(detailThemeEntries);
+        const fallbackThemes = (useCaseDetails?.themes ?? [])
+            .map((theme) => String(theme.themeName ?? "").trim())
+            .filter(Boolean);
+        const rawThemes = editableAITheme.length > 0 ? editableAITheme : fallbackThemes;
+
+        const mapped = rawThemes
+            .map((theme) => {
+                const key = String(theme ?? "").trim();
+                if (!key) return "";
+                const mappedName = themeMap.get(key) || detailThemeMap.get(key);
+                if (mappedName) return mappedName;
+                const isNumeric = /^\d+$/.test(key);
+                return isNumeric ? "" : key;
+            })
+            .filter(Boolean);
+
+        return Array.from(new Set(mapped));
+    }, [editableAITheme, themeOptions, useCaseDetails?.themes]);
 
     // Set default primary contact person to current user if missing
     useEffect(() => {
@@ -448,9 +511,11 @@ const UseCaseDetails = () => {
                 ]);
                 setThemeOptions(
                     (themes?.items ?? [])
-                        .map((item: any) => String(item.name ?? "").trim())
-                        .filter(Boolean)
-                        .map((name: string) => ({ label: name, value: name })),
+                        .filter((item: any) => item.id && item.name)
+                        .map((item: any) => ({ 
+                            label: String(item.name ?? "").trim(), 
+                            value: String(item.id) 
+                        })),
                 );
                 setStatusOptions(
                     (statuses?.items ?? [])
@@ -462,11 +527,33 @@ const UseCaseDetails = () => {
                         .map((item: any) => String(item.category ?? "").trim())
                         .filter(Boolean),
                 );
+                setMetricCategoryMap(() => {
+                    const next = new Map<number, string>();
+                    (metricCategories?.items ?? []).forEach((item: any) => {
+                        const id = Number(item.id);
+                        const name = String(item.category ?? "").trim();
+                        if (Number.isFinite(id) && name) {
+                            next.set(id, name);
+                        }
+                    });
+                    return next;
+                });
                 setUnitOfMeasureOptions(
                     (unitOfMeasure?.items ?? [])
                         .map((item: any) => String(item.name ?? "").trim())
                         .filter(Boolean),
                 );
+                setUnitOfMeasureMap(() => {
+                    const next = new Map<number, string>();
+                    (unitOfMeasure?.items ?? []).forEach((item: any) => {
+                        const id = Number(item.id);
+                        const name = String(item.name ?? "").trim();
+                        if (Number.isFinite(id) && name) {
+                            next.set(id, name);
+                        }
+                    });
+                    return next;
+                });
                 setPhaseMappings(
                     (phases?.items ?? [])
                         .map((item: any) => ({
@@ -478,27 +565,31 @@ const UseCaseDetails = () => {
                         .sort((a: any, b: any) => a.id - b.id),
                 );
 
-                // Set persona options
+                // Set persona options with IDs
                 setPersonaOptions(
                     (personas?.items ?? [])
-                        .map((item: any) => String(item.name ?? "").trim())
-                        .filter(Boolean)
-                        .map((name: string) => ({ label: name, value: name })),
+                        .filter((item: any) => item.id && item.name)
+                        .map((item: any) => ({ 
+                            label: String(item.name ?? "").trim(), 
+                            value: String(item.id) 
+                        })),
                 );
 
                 // Process vendor-model mappings
-                const vendorMap = new Map<string, Set<string>>();
+                const vendorMap = new Map<string, Map<number, { id: number; name: string }>>();
                 (vendorModels?.items ?? []).forEach((item: any) => {
                     const vendorName = String(item.vendorName ?? "").trim();
                     const productName = String(item.productName ?? "").trim();
-                    if (!vendorName) return;
+                    const vendorModelId = Number(item.id);
+                    if (!vendorName || !vendorModelId || isNaN(vendorModelId)) return;
 
                     if (!vendorMap.has(vendorName)) {
-                        vendorMap.set(vendorName, new Set());
+                        vendorMap.set(vendorName, new Map());
                     }
-                    if (productName) {
-                        vendorMap.get(vendorName)?.add(productName);
-                    }
+                    // Use product name if available, otherwise use vendor name
+                    const displayName = productName || vendorName;
+                    // Use Map to deduplicate by ID (prevents duplicate entries with same ID)
+                    vendorMap.get(vendorName)?.set(vendorModelId, { id: vendorModelId, name: displayName });
                 });
 
                 // Set vendor options
@@ -508,19 +599,28 @@ const UseCaseDetails = () => {
                         .map((name: string) => ({ label: name, value: name }))
                 );
 
-                // Store vendor-model mapping for later use
-                const vendorModelsMap = new Map<string, string[]>();
-                vendorMap.forEach((models, vendor) => {
-                    vendorModelsMap.set(vendor, Array.from(models).sort());
+                // Store vendor-model mapping for later use - convert Maps to sorted arrays
+                const vendorModelsMap = new Map<string, { id: number; name: string }[]>();
+                vendorMap.forEach((modelsMap, vendor) => {
+                    const modelsList = Array.from(modelsMap.values())
+                        .filter((m: any) => m && m.id && m.name)
+                        .sort((a: any, b: any) => a.name.localeCompare(b.name));
+                    if (modelsList.length > 0) {
+                        vendorModelsMap.set(vendor, modelsList);
+                    }
                 });
                 setVendorModelsData(vendorModelsMap);
 
                 // Set knowledge source options
                 setKnowledgeSourceOptions(
                     (knowledgeSources?.items ?? [])
-                        .map((item: any) => String(item.name ?? "").trim())
-                        .filter(Boolean)
-                        .sort(),
+                        .filter((item: any) => item?.id && item?.name)
+                        .map((item: any) => ({
+                        label: String(item.name ?? "").trim(),
+                        value: String(item.id),
+                        }))
+                        .filter((x: any) => x.label && x.value)
+                        .sort((a: any, b: any) => a.label.localeCompare(b.label)),
                 );
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
@@ -539,10 +639,15 @@ const UseCaseDetails = () => {
 
         const models = vendorModelsData.get(selectedVendor) || [];
         setModelOptions(
-            models.map((name: string) => ({ label: name, value: name }))
+            models
+                .filter((model: { id: number; name: string }) => model.id && model.name)
+                .map((model: { id: number; name: string }) => ({ 
+                    label: model.name, 
+                    value: String(model.id) 
+                }))
         );
         // Reset selected model if it's not available for the new vendor
-        if (selectedModel && !models.includes(selectedModel)) {
+        if (selectedModel && !models.find((m: { id: number; name: string }) => String(m.id) === selectedModel)) {
             setSelectedModel('');
         }
     }, [selectedVendor, vendorModelsData, selectedModel]);
@@ -719,6 +824,58 @@ const UseCaseDetails = () => {
             return next;
         });
     }, [phaseMappings]);
+
+    // Populate agent library form from fetched data
+    useEffect(() => {
+        if (!agentLibraryItems.length || !themeOptions.length || !personaOptions.length || vendorModelsData.size === 0) {
+            return;
+        }
+
+        const agentData = agentLibraryItems[0];
+
+        // Populate AI themes
+        if (agentData.aiThemeIds && Array.isArray(agentData.aiThemeIds) && agentData.aiThemeIds.length > 0) {
+            const uniqueThemeIds = [...new Set(agentData.aiThemeIds)];
+            setEditableAITheme(uniqueThemeIds.map(id => String(id)));
+        }
+
+        // Populate personas
+        if (agentData.personaIds && Array.isArray(agentData.personaIds) && agentData.personaIds.length > 0) {
+            const uniquePersonaIds = [...new Set(agentData.personaIds)];
+            setSelectedPersonas(uniquePersonaIds.map(id => String(id)));
+        }
+
+        // Populate vendor and model
+        if (agentData.vendormodelid) {
+            const vendorModelId = Number(agentData.vendormodelid);
+            // Find which vendor this model belongs to
+            for (const [vendorName, models] of vendorModelsData.entries()) {
+                const foundModel = models.find(m => m.id === vendorModelId);
+                if (foundModel) {
+                    setSelectedVendor(vendorName);
+                    setSelectedModel(String(vendorModelId));
+                    break;
+                }
+            }
+        }
+
+        // Populate knowledge sources
+        const ks = (agentData as any).knowledgeSourceIds;
+        if (Array.isArray(ks) && ks.length > 0) {
+        setSelectedKnowledgeSources([...new Set(ks)].map((x) => String(x)));
+        }
+
+        // Populate agent info
+        if (agentData.agentid) {
+            setAgentId(String(agentData.agentid));
+        }
+        if (agentData.agentlink) {
+            setAgentLink(String(agentData.agentlink));
+        }
+        if (agentData.prompt) {
+            setInstructions(String(agentData.prompt));
+        }
+    }, [agentLibraryItems, themeOptions, personaOptions, vendorModelsData]);
 
     const handleFormDataChange = (field: string, value: any) => {
         setFormData(prev => ({
@@ -932,7 +1089,6 @@ const UseCaseDetails = () => {
 
     const resetEditableFields = useCallback(() => {
         setEditableTitle(useCase.title);
-        setEditableDepartment(useCase.businessUnitName || useCase.teamName || "");
         setEditableHeadline(useCase.headlines);
         setEditableOpportunity(useCase.opportunity);
         setEditableEvidence(useCase.businessValue);
@@ -943,8 +1099,6 @@ const UseCaseDetails = () => {
         setEditableAITheme(selectedThemes);
     }, [
         useCase.title,
-        useCase.businessUnitName,
-        useCase.teamName,
         useCase.headlines,
         useCase.opportunity,
         useCase.businessValue,
@@ -961,6 +1115,79 @@ const UseCaseDetails = () => {
     const handleCancelEdit = () => {
         resetEditableFields();
         setIsEditing(false);
+    };
+
+    const resetAgentLibraryFields = useCallback(() => {
+        if (agentLibraryItems.length > 0) {
+            const item = agentLibraryItems[0];
+            setEditableAITheme([]);
+            setSelectedPersonas([]);
+            setSelectedVendor('');
+            setSelectedModel('');
+            setAgentId(String(item.agentid ?? ''));
+            setAgentLink(String(item.agentlink ?? ''));
+            setSelectedKnowledgeSources([]);
+            setInstructions(String(item.prompt ?? ''));
+        }
+    }, [agentLibraryItems]);
+
+    const handleCancelAgentLibraryEdit = () => {
+        resetAgentLibraryFields();
+        setIsAgentLibraryEditing(false);
+    };
+
+    const handleApplyAgentLibraryChanges = async () => {
+        try {
+            // Get the first agent library item ID if it exists
+            const agentLibraryId = agentLibraryItems.length > 0 ? agentLibraryItems[0].id : null;
+            
+            // Get vendorModelId from selected model
+            let vendorModelId: number | null = null;
+            if (selectedModel) {
+                vendorModelId = parseInt(selectedModel) || null;
+            }
+
+            // Get user email from MSAL context
+            const userEmail = accounts[0]?.username ?? '';
+
+            const payload = {
+                aiThemeIds: editableAITheme.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0),
+                personaIds: selectedPersonas.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0),
+
+                knowledgeSourceIds: selectedKnowledgeSources
+                    .map((id) => parseInt(id))
+                    .filter((id) => !isNaN(id) && id > 0),
+
+                agentLibraryId,
+                vendorModelId,
+                agentId: agentId || null,
+                agentLink: agentLink || null,
+                prompt: instructions || null,
+                editorEmail: userEmail,
+            };
+
+            const response = await fetch(`/api/usecases/${id}/agent-library`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to update agent library');
+            }
+
+            toast.success('Agent Library changes saved successfully');
+            setIsAgentLibraryEditing(false);
+            
+            // Optionally refetch the data
+            // await refetchAgentLibrary();
+        } catch (error) {
+            console.error('Error updating agent library:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to save agent library changes');
+        }
     };
 
     const handleOpenDateDialog = (phase: string) => {
@@ -1126,17 +1353,119 @@ const UseCaseDetails = () => {
     };
 
     useEffect(() => {
-        if (id && typeof id === 'string') {
-            fetchMetrics(id)
-                .then(setReportedMetrics)
-                .catch((error) => {
-                    console.error('Error fetching metrics:', error);
-                    setReportedMetrics([]);
-                });
-        } else {
-            setReportedMetrics([]);
+        if (!id || typeof id !== "string") {
+            setMetricDetailRows([]);
+            setReportedMetricRows([]);
+            return;
         }
+
+        let isMounted = true;
+        const controller = new AbortController();
+
+        const loadMetrics = async () => {
+            try {
+                const payload = await fetchUseCaseMetricsDetails(id);
+                if (!isMounted) return;
+                setMetricDetailRows(payload?.metrics ?? []);
+                setReportedMetricRows(payload?.reportedMetrics ?? []);
+            } catch (error) {
+                if (isMounted && !(error instanceof Error && error.name === "AbortError")) {
+                    console.error("Error fetching metrics:", error);
+                    setMetricDetailRows([]);
+                    setReportedMetricRows([]);
+                }
+            }
+        };
+
+        loadMetrics();
+
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
     }, [id]);
+
+    useEffect(() => {
+        if (!metricDetailRows.length && !reportedMetricRows.length) {
+            setMetrics([]);
+            setReportedMetrics([]);
+            setReportedHistory([]);
+            return;
+        }
+
+        const formatMetricDate = (value?: string | null) => {
+            if (!value) return "";
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return "";
+            return format(parsed, "yyyy-MM-dd");
+        };
+
+        const mappedMetrics: Metric[] = metricDetailRows
+            .map((row) => {
+                const metricId = Number(row.id);
+                if (!Number.isFinite(metricId)) return null;
+                const metricTypeId = Number(row.metrictypeid);
+                const unitId = Number(row.unitofmeasureid);
+                return {
+                    id: metricId,
+                    primarySuccessValue: String(row.primarysuccessmetricname ?? "").trim(),
+                    parcsCategory: metricCategoryMap.get(metricTypeId) ?? "",
+                    unitOfMeasurement: unitOfMeasureMap.get(unitId) ?? "",
+                    baselineValue: String(row.baselinevalue ?? ""),
+                    baselineDate: formatMetricDate(String(row.baselinedate ?? "")),
+                    targetValue: String(row.targetvalue ?? ""),
+                    targetDate: formatMetricDate(String(row.targetdate ?? "")),
+                    isSubmitted: true,
+                };
+            })
+            .filter(Boolean) as Metric[];
+
+        const latestReports = new Map<number, ReportedMetricDetailRow>();
+        reportedMetricRows.forEach((row) => {
+            const metricId = Number(row.metricid);
+            if (!Number.isFinite(metricId)) return;
+            const current = latestReports.get(metricId);
+            const currentTime = current
+                ? new Date(String(current.reporteddate ?? current.modified ?? current.created ?? "")).getTime()
+                : -1;
+            const nextTime = new Date(String(row.reporteddate ?? row.modified ?? row.created ?? "")).getTime();
+            if (!current || (Number.isFinite(nextTime) && nextTime >= currentTime)) {
+                latestReports.set(metricId, row);
+            }
+        });
+
+        const nextReportedMetrics = mappedMetrics.map((metric) => {
+            const report = latestReports.get(metric.id);
+            return {
+                ...metric,
+                reportedValue: report ? String(report.reportedvalue ?? "") : "",
+                reportedDate: report ? formatMetricDate(String(report.reporteddate ?? "")) : "",
+                isSubmitted: true,
+            };
+        });
+
+        const metricLookup = new Map<number, Metric>();
+        mappedMetrics.forEach((metric) => metricLookup.set(metric.id, metric));
+        const nextHistory: ReportedHistoryRow[] = reportedMetricRows
+            .map((row) => {
+                const reportId = Number(row.id);
+                const metricId = Number(row.metricid);
+                if (!Number.isFinite(reportId) || !Number.isFinite(metricId)) return null;
+                const metric = metricLookup.get(metricId);
+                return {
+                    id: reportId,
+                    metricId,
+                    primarySuccessValue: metric?.primarySuccessValue ?? `Metric ${metricId}`,
+                    reportedValue: String(row.reportedvalue ?? ""),
+                    reportedDate: formatMetricDate(String(row.reporteddate ?? "")),
+                };
+            })
+            .filter(Boolean) as ReportedHistoryRow[];
+
+        setMetrics(mappedMetrics);
+        setReportedMetrics(nextReportedMetrics);
+        setReportedHistory(nextHistory);
+    }, [metricDetailRows, reportedMetricRows, metricCategoryMap, unitOfMeasureMap]);
 
     const reportableMetrics = useMemo(() => {
         const submitted = reportedMetrics.filter((metric) => metric.isSubmitted);
@@ -1172,31 +1501,35 @@ const UseCaseDetails = () => {
         {
             accessorKey: 'primarySuccessValue',
             header: 'Primary Success Value',
-            cell: ({ row }) => <span>{row.original.primarySuccessValue}</span>,
+            cell: ({ row }) => (
+                <span className="whitespace-normal break-words">
+                    {row.original.primarySuccessValue}
+                </span>
+            ),
             size: metricColumnSizes.primarySuccessValue,
         },
         {
             accessorKey: 'baselineValue',
             header: 'Baseline Value',
-            cell: ({ row }) => <span>{row.original.baselineValue}</span>,
+            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.baselineValue}</span>,
             size: metricColumnSizes.baselineValue,
         },
         {
             accessorKey: 'baselineDate',
             header: 'Baseline Date',
-            cell: ({ row }) => <span>{row.original.baselineDate}</span>,
+            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.baselineDate}</span>,
             size: metricColumnSizes.baselineDate,
         },
         {
             accessorKey: 'targetValue',
             header: 'Target Value',
-            cell: ({ row }) => <span>{row.original.targetValue}</span>,
+            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.targetValue}</span>,
             size: metricColumnSizes.targetValue,
         },
         {
             accessorKey: 'targetDate',
             header: 'Target Date',
-            cell: ({ row }) => <span>{row.original.targetDate}</span>,
+            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.targetDate}</span>,
             size: metricColumnSizes.targetDate,
         },
         {
@@ -1282,7 +1615,13 @@ const UseCaseDetails = () => {
             accessorKey: 'primarySuccessValue',
             header: 'Primary Success Value',
             cell: ({ row }) => {
-                if (row.original.isSubmitted) return <span className="text-sm px-2 text-nowrap">{row.original.primarySuccessValue}</span>;
+                if (row.original.isSubmitted) {
+                    return (
+                        <span className="text-sm px-2 whitespace-normal break-words">
+                            {row.original.primarySuccessValue}
+                        </span>
+                    );
+                }
                 return (
                     <Input
                         type="text"
@@ -1298,7 +1637,7 @@ const UseCaseDetails = () => {
             accessorKey: 'parcsCategory',
             header: 'PARCS Category',
             cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2">{row.original.parcsCategory}</span>
+                <span className="text-sm px-2 whitespace-normal break-words">{row.original.parcsCategory}</span>
             ) : (
                 <ParcsCategorySelect
                     value={row.original.parcsCategory}
@@ -1313,7 +1652,7 @@ const UseCaseDetails = () => {
             accessorKey: 'unitOfMeasurement',
             header: 'Unit of Measurement',
             cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2">{row.original.unitOfMeasurement}</span>
+                <span className="text-sm px-2 whitespace-normal break-words">{row.original.unitOfMeasurement}</span>
             ) : (
                 <UnitOfMeasurementSelect
                     value={row.original.unitOfMeasurement}
@@ -1328,7 +1667,9 @@ const UseCaseDetails = () => {
             accessorKey: 'baselineValue',
             header: 'Baseline Value',
             cell: ({ row }) => {
-                if (row.original.isSubmitted) return <span className="text-sm px-2">{row.original.baselineValue}</span>;
+                if (row.original.isSubmitted) {
+                    return <span className="text-sm px-2 whitespace-normal break-words">{row.original.baselineValue}</span>;
+                }
                 return (
                     <Input
                         type="number"
@@ -1344,7 +1685,7 @@ const UseCaseDetails = () => {
             accessorKey: 'baselineDate',
             header: 'Baseline Date',
             cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 text-nowrap">{row.original.baselineDate}</span>
+                <span className="text-sm px-2 whitespace-normal break-words">{row.original.baselineDate}</span>
             ) : (
                 <MetricDatePicker
                     value={row.original.baselineDate}
@@ -1363,7 +1704,9 @@ const UseCaseDetails = () => {
             accessorKey: 'targetValue',
             header: 'Target Value',
             cell: ({ row }) => {
-                if (row.original.isSubmitted) return <span className="text-sm px-2">{row.original.targetValue}</span>;
+                if (row.original.isSubmitted) {
+                    return <span className="text-sm px-2 whitespace-normal break-words">{row.original.targetValue}</span>;
+                }
                 return (
                     <Input
                         type="number"
@@ -1379,7 +1722,7 @@ const UseCaseDetails = () => {
             accessorKey: 'targetDate',
             header: 'Target Date',
             cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 text-nowrap">{row.original.targetDate}</span>
+                <span className="text-sm px-2 whitespace-normal break-words">{row.original.targetDate}</span>
             ) : (
                 <MetricDatePicker
                     value={row.original.targetDate}
@@ -1472,7 +1815,7 @@ const UseCaseDetails = () => {
             <Tabs
                 value={activeTab}
                 onValueChange={(val) => {
-                    if (isEditing && val !== 'info') return;
+                    if ((isEditing && val !== 'info') || (isAgentLibraryEditing && val !== 'agent-library')) return;
                     setActiveTab(val);
                 }}
                 className="w-full"
@@ -1499,7 +1842,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="reprioritize"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                    disabled={isEditing}
+                                    disabled={isEditing || isAgentLibraryEditing}
                                 >
                                     Reprioritize
                                 </TabsTrigger>
@@ -1507,7 +1850,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="agent-library"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                    disabled={isEditing}
+                                    disabled={isEditing || isAgentLibraryEditing}
                                 >
                                     Agent Library
                                 </TabsTrigger>
@@ -1515,14 +1858,14 @@ const UseCaseDetails = () => {
                             <TabsTrigger
                                 value="metrics"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing}
+                                disabled={isEditing || isAgentLibraryEditing}
                             >
                                 Metrics
                             </TabsTrigger>
                             <TabsTrigger
                                 value="status"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing}
+                                disabled={isEditing || isAgentLibraryEditing}
                             >
                                 {state?.sourceScreen === 'champion' ? 'Approvals' : 'Actions'}
                             </TabsTrigger>
@@ -1556,6 +1899,33 @@ const UseCaseDetails = () => {
                                     </Button>
                                 </>
                             )}
+                            {activeTab === 'agent-library' && !isAgentLibraryEditing && (
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => setIsAgentLibraryEditing(true)}
+                                    className="border-teal-600 text-teal-600 hover:bg-teal-50"
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                            )}
+                            {activeTab === 'agent-library' && isAgentLibraryEditing && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleCancelAgentLibraryEdit}
+                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                        onClick={handleApplyAgentLibraryChanges}
+                                    >
+                                        Apply Changes
+                                    </Button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1568,8 +1938,9 @@ const UseCaseDetails = () => {
                         onTitleChange={setEditableTitle}
                         useCasePhase={useCase.phase}
                         agentBadgeLabel={agentBadgeLabel}
-                        editableDepartment={editableDepartment}
-                        editableAITheme={editableAITheme}
+                        businessUnitName={useCase.businessUnitName}
+                        teamName={useCase.teamName}
+                        aiThemeNames={aiThemeDisplay}
                         editableHeadline={editableHeadline}
                         onHeadlineChange={setEditableHeadline}
                         editableOpportunity={editableOpportunity}
@@ -1614,11 +1985,7 @@ const UseCaseDetails = () => {
 
                 <TabsContent value="agent-library" className="space-y-3">
                     <AgentLibrarySection
-                        knowledgeForce={knowledgeForce}
-                        onKnowledgeForceChange={setKnowledgeForce}
-                        knowledgeSourceOptions={knowledgeSourceOptions}
-                        instructions={instructions}
-                        onInstructionsChange={setInstructions}
+                        isEditing={isAgentLibraryEditing}
                         aiThemes={themeOptions}
                         selectedAIThemes={editableAITheme}
                         onAIThemesChange={setEditableAITheme}
@@ -1635,6 +2002,11 @@ const UseCaseDetails = () => {
                         onAgentIdChange={setAgentId}
                         agentLink={agentLink}
                         onAgentLinkChange={setAgentLink}
+                        knowledgeSourceOptions={knowledgeSourceOptions}
+                        selectedKnowledgeSources={selectedKnowledgeSources}
+                        onKnowledgeSourcesChange={setSelectedKnowledgeSources}
+                        instructions={instructions}
+                        onInstructionsChange={setInstructions}
                     />
                 </TabsContent>
 
@@ -1644,6 +2016,7 @@ const UseCaseDetails = () => {
                         addMetricsTable={addMetricsTable}
                         reportedTable={reportedTable}
                         shouldShowReportedTable={shouldShowReportedTable}
+                        reportedHistory={reportedHistory}
                         isMetricsFormValid={isMetricsFormValid}
                         onAddMetric={handleAddMetric}
                         onSubmitMetrics={handleSubmitMetrics}

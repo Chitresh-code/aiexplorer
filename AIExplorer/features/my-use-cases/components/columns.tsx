@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DeliveryHeaderFilter } from "./delivery-header-filter";
 import { PriorityHeaderFilter } from "./priority-header-filter";
+import { IdHeaderFilter } from "./id-header-filter";
 
 type PhaseColumn = {
     id: number;
@@ -56,6 +57,7 @@ export const createColumns = (
     navigate: (path: string, options?: any) => void,
     phases: PhaseColumn[],
     deliveryOptions?: { label: string; value: string }[],
+    idOptions?: { label: string; value: string }[],
 ): ColumnDef<UseCase>[] => {
     const phaseColumns: ColumnDef<UseCase>[] = phases.map((phase) => {
         const key = `phase_${phase.id}`;
@@ -98,35 +100,52 @@ export const createColumns = (
 
     return [
         {
-        accessorKey: "title",
-        header: ({ column }) => {
-            return (
-                <Button
-                    variant="ghost"
-                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                    className="hover:bg-transparent pl-0 text-left font-bold text-gray-900"
-                >
-                    Use Case
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-            )
-        },
-        cell: ({ row }) => {
-            const useCase = row.original;
-
-            return (
-                <div
-                    className="font-medium text-gray-900 cursor-pointer hover:underline"
-                    onClick={() => {
-                        setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen: 'my-use-cases' });
-                        navigate(`/use-case-details/${useCase.id}`);
-                    }}
-                >
-                    {useCase.title}
+            accessorKey: "id",
+            header: ({ column }) => (
+                <div className="w-[80px] flex justify-center mx-auto">
+                    <IdHeaderFilter column={column} options={idOptions} />
                 </div>
-            )
-        }
-    },
+            ),
+            cell: ({ row }) => (
+                <div className="text-gray-700">
+                    {row.getValue("id")}
+                </div>
+            ),
+            filterFn: (row, id, value) => {
+                const rowValue = String(row.getValue(id) ?? "");
+                return value.includes(rowValue);
+            },
+        },
+        {
+            accessorKey: "title",
+            header: ({ column }) => {
+                return (
+                    <Button
+                        variant="ghost"
+                        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                        className="hover:bg-transparent pl-0 text-left font-bold text-gray-900"
+                    >
+                        Use Case
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                )
+            },
+            cell: ({ row }) => {
+                const useCase = row.original;
+
+                return (
+                    <div
+                        className="font-medium text-gray-900 cursor-pointer hover:underline"
+                        onClick={() => {
+                            setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen: 'my-use-cases' });
+                            navigate(`/use-case-details/${useCase.id}`);
+                        }}
+                    >
+                        {useCase.title}
+                    </div>
+                )
+            }
+        },
         ...phaseColumns,
     {
         accessorKey: "delivery",

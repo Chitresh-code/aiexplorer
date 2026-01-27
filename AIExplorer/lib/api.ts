@@ -20,7 +20,6 @@ const getBaseUrl = () => {
 };
 
 const API_URL = getBaseUrl();
-console.log('API_URL resolved to:', API_URL);
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -57,6 +56,17 @@ export const deleteUseCase = async (id: string | number) => {
 export const fetchMetrics = async (useCaseId: string | number) => {
   const response = await apiClient.get(`/api/metrics/${useCaseId}`);
   return response.data;
+};
+
+export const fetchUseCaseMetricsDetails = async (useCaseId: string | number) => {
+  const response = await fetch(`/api/usecases/${useCaseId}/metrics`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    throw new Error(details || "Failed to load use case metrics.");
+  }
+  return response.json();
 };
 
 export const createMetric = async (payload: unknown) => {

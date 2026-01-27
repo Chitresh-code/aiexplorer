@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -15,8 +16,9 @@ type InfoSectionProps = {
   onTitleChange: (value: string) => void;
   useCasePhase?: string;
   agentBadgeLabel?: string;
-  editableDepartment: string;
-  editableAITheme: string[];
+  businessUnitName: string;
+  teamName: string;
+  aiThemeNames: string[];
   editableHeadline: string;
   onHeadlineChange: (value: string) => void;
   editableOpportunity: string;
@@ -33,8 +35,9 @@ export const InfoSection = ({
   onTitleChange,
   useCasePhase,
   agentBadgeLabel,
-  editableDepartment,
-  editableAITheme,
+  businessUnitName,
+  teamName,
+  aiThemeNames,
   editableHeadline,
   onHeadlineChange,
   editableOpportunity,
@@ -120,7 +123,7 @@ export const InfoSection = ({
             style={{ backgroundColor: "#c7e7e7" }}
           >
             <CardContent className="p-8 flex-1">
-              <div className="space-y-6 h-full">
+              <div className="flex h-full flex-col gap-6">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
                     Use Case:
@@ -155,20 +158,50 @@ export const InfoSection = ({
 
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    Department:
+                    Business Unit:
                   </h3>
                   <div className="text-[#13352C] font-medium">
-                    {editableDepartment || "—"}
+                    {businessUnitName || "—"}
                   </div>
+                  {teamName ? (
+                    <div className="text-sm text-[#13352C] mt-1">
+                      Team: {teamName}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
                     AI Theme:
                   </h3>
-                  <div className="text-[#13352C] font-medium text-base">
-                    {editableAITheme.join(", ") || "No AI themes selected"}
+                  {aiThemeNames.length > 0 ? (
+                    <ul className="list-disc pl-5 text-[#13352C] font-medium text-base space-y-1">
+                      {aiThemeNames.map((theme) => (
+                        <li key={theme}>{theme}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="text-[#13352C] font-medium text-base">
+                      No AI themes selected
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                    Primary Contact Person
+                  </h3>
+                  <div className="text-[#13352C] font-medium">
+                    {editableContactPerson || "—"}
                   </div>
+                </div>
+
+                <div className="mt-auto pt-2">
+                  <Button
+                    className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-8 rounded-md"
+                  >
+                    Explore
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -217,7 +250,7 @@ export const InfoSection = ({
 
                 <div>
                   <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    Evidence - Why it is needed?
+                    Business Value
                   </CardTitle>
                   {isEditing ? (
                     <Textarea
@@ -231,15 +264,6 @@ export const InfoSection = ({
                   ) : (
                     <MarkdownBlock content={editableEvidence} />
                   )}
-                </div>
-
-                <div>
-                  <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    Primary Contact Person
-                  </CardTitle>
-                  <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                    {editableContactPerson || "—"}
-                  </div>
                 </div>
               </div>
             </CardContent>

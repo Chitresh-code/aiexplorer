@@ -21,11 +21,20 @@ export type MetricsRow = {
   isSubmitted?: boolean;
 };
 
+export type ReportedHistoryRow = {
+  id: number;
+  metricId: number;
+  primarySuccessValue: string;
+  reportedValue: string;
+  reportedDate: string;
+};
+
 type MetricsSectionProps = {
   metrics: MetricsRow[];
   addMetricsTable: TableType<MetricsRow>;
   reportedTable: TableType<MetricsRow>;
   shouldShowReportedTable: boolean;
+  reportedHistory?: ReportedHistoryRow[];
   isMetricsFormValid: boolean;
   onAddMetric: () => void;
   onSubmitMetrics: () => void;
@@ -38,6 +47,7 @@ export const MetricsSection = ({
   addMetricsTable,
   reportedTable,
   shouldShowReportedTable,
+  reportedHistory,
   isMetricsFormValid,
   onAddMetric,
   onSubmitMetrics,
@@ -179,6 +189,36 @@ export const MetricsSection = ({
             </Empty>
           )}
         </div>
+
+        {reportedHistory && reportedHistory.length > 0 ? (
+          <div className="mt-6">
+            <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">
+              Reported History
+            </h4>
+            <div className="rounded-md border">
+              <ScrollArea className="h-[220px]">
+                <Table className="table-fixed">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Metric</TableHead>
+                      <TableHead>Reported Value</TableHead>
+                      <TableHead>Reported Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportedHistory.map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="text-gray-700">{row.primarySuccessValue}</TableCell>
+                        <TableCell className="text-gray-700">{row.reportedValue || "—"}</TableCell>
+                        <TableCell className="text-gray-700">{row.reportedDate || "—"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

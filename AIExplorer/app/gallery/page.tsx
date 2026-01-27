@@ -14,7 +14,7 @@ import {
 
 const AIGallery = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"similar">("similar");
+  const [activeTab, setActiveTab] = useState<"search" | "similar">("similar");
   const [searchUseCase, setSearchUseCase] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);

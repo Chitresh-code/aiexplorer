@@ -239,8 +239,6 @@ const AIGalleryDetail = () => {
                       </CardTitle>
                       <MarkdownBlock
                         content={useCase.opportunity}
-                        readOnly
-                        className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden"
                       />
                     </div>
                     <div>
@@ -249,8 +247,6 @@ const AIGalleryDetail = () => {
                       </CardTitle>
                       <MarkdownBlock
                         content={useCase.headline}
-                        readOnly
-                        className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden"
                       />
                     </div>
                     <div>
@@ -259,8 +255,6 @@ const AIGalleryDetail = () => {
                       </CardTitle>
                       <MarkdownBlock
                         content={useCase.businessValue}
-                        readOnly
-                        className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none"
                       />
                     </div>                 
                   </div>

@@ -11,54 +11,28 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
+    CommandSeparator,
 } from "@/components/ui/command"
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import { Column, Table } from "@tanstack/react-table"
+import { Column } from "@tanstack/react-table"
 
 interface IdHeaderFilterProps<TData, TValue> {
     column: Column<TData, TValue>
-    table: Table<TData>
+    options?: { label: string; value: string }[]
 }
 
 export function IdHeaderFilter<TData, TValue>({
     column,
-    table,
+    options,
 }: IdHeaderFilterProps<TData, TValue>) {
-    // Get unique IDs from the column
-    const sortedUniqueValues = React.useMemo(
-        () => {
-            const values = new Set<string>()
-            column.getFacetedUniqueValues?.()?.forEach((_, value) => {
-                if (value !== null && value !== undefined) {
-                    values.add(String(value))
-                }
-            })
+    const resolvedOptions = options?.length ? options : []
 
-            // If getFacetedUniqueValues is not available, we might need another way
-            // or we just rely on it being added to the table.
-            // For now, let's try to get them from the table rows if faceted is empty
-            if (values.size === 0) {
-                table.getCoreRowModel().flatRows.forEach((row: any) => {
-                    const value = row.getValue(column.id)
-                    if (value !== null && value !== undefined) {
-                        values.add(String(value))
-                    }
-                })
-            }
-
-            return Array.from(values).sort()
-        },
-        [column, table]
-    )
-
-    // Use local state to track selections and force re-renders
     const [selectedValues, setSelectedValues] = React.useState<Set<string>>(new Set())
 
-    // Sync with column filter value
     React.useEffect(() => {
         const filterValue = column.getFilterValue() as string[] | undefined
         setSelectedValues(new Set(filterValue ?? []))
@@ -95,11 +69,7 @@ export function IdHeaderFilter<TData, TValue>({
                         <PlusCircle className="ml-2 h-4 w-4 text-muted-foreground" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent
-                    className="w-[95px] p-0"
-                    alignOffset={65}
-                    sideOffset={55}
-                >
+                <PopoverContent className="w-[120px] p-0" align="start" sideOffset={8}>
                     <Command>
                         <CommandInput placeholder="ID" />
                         <CommandList>
@@ -114,31 +84,38 @@ export function IdHeaderFilter<TData, TValue>({
                                             Clear filters
                                         </CommandItem>
                                     </CommandGroup>
-                                    <div className="h-px bg-border" />
+                                    <CommandSeparator />
                                 </>
                             )}
                             <CommandGroup>
-                                {sortedUniqueValues.map((value) => {
-                                    const isSelected = selectedValues.has(value)
-                                    return (
-                                        <CommandItem
-                                            key={value}
-                                            onSelect={() => handleSelect(value)}
-                                        >
-                                            <div
-                                                className={cn(
-                                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                                    isSelected
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "opacity-50 [&_svg]:invisible"
-                                                )}
+                                {resolvedOptions.length === 0 ? (
+                                    <CommandItem disabled className="text-muted-foreground">
+                                        No IDs
+                                    </CommandItem>
+                                ) : (
+                                    resolvedOptions.map((option) => {
+                                        const isSelected = selectedValues.has(option.value)
+                                        return (
+                                            <CommandItem
+                                                key={option.value}
+                                                value={option.value}
+                                                onSelect={() => handleSelect(option.value)}
                                             >
-                                                <Check className="h-4 w-4" />
-                                            </div>
-                                            <span>{value}</span>
-                                        </CommandItem>
-                                    )
-                                })}
+                                                <div
+                                                    className={cn(
+                                                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                        isSelected
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "opacity-50 [&_svg]:invisible"
+                                                    )}
+                                                >
+                                                    <Check className="h-4 w-4" />
+                                                </div>
+                                                <span>{option.label}</span>
+                                            </CommandItem>
+                                        )
+                                    })
+                                )}
                             </CommandGroup>
                         </CommandList>
                     </Command>

@@ -263,6 +263,17 @@ const MyUseCases = () => {
         });
     }, [backendUseCases, phaseColumns]);
 
+    const idOptions = useMemo(() => {
+        const uniqueIds = new Set<string>();
+        normalizedUseCases.forEach((useCase) => {
+            const value = String(useCase.id ?? "").trim();
+            if (value) uniqueIds.add(value);
+        });
+        return Array.from(uniqueIds)
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+            .map((value) => ({ label: value, value }));
+    }, [normalizedUseCases]);
+
     const displayUseCases = useMemo(() => {
         if (!normalizedUseCases.length) return [];
 
@@ -301,8 +312,8 @@ const MyUseCases = () => {
     ]);
 
     const columns = useMemo(
-        () => createColumns(navigate, phaseColumns, deliveryOptions),
-        [navigate, phaseColumns, deliveryOptions],
+        () => createColumns(navigate, phaseColumns, deliveryOptions, idOptions),
+        [navigate, phaseColumns, deliveryOptions, idOptions],
     );
 
     return (
