@@ -195,12 +195,14 @@ const KanbanView = ({ data: initialData, navigate, sourceScreen = 'champion', ph
 
                                         {/* Line 2: Status, Priority, Delivery */}
                                         <div className="flex items-center gap-1 flex-wrap w-full">
-                                            <div className={cn(
-                                                "px-1 py-0 rounded text-[8px] font-bold border whitespace-nowrap",
-                                                getStatusStyles(uc.status, uc.statusColor)
-                                            )}>
-                                                {uc.status}
-                                            </div>
+                                            {uc.status && (
+                                                <div className={cn(
+                                                    "px-1 py-0 rounded text-[8px] font-bold border whitespace-nowrap",
+                                                    getStatusStyles(uc.status, uc.statusColor)
+                                                )}>
+                                                    {uc.status}
+                                                </div>
+                                            )}
 
                                             {uc.priority && (
                                                 <div className={cn(
