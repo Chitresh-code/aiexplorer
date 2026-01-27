@@ -22,17 +22,14 @@ import { Column } from "@tanstack/react-table"
 
 interface DeliveryHeaderFilterProps<TData, TValue> {
     column: Column<TData, TValue>
+    options?: { label: string; value: string }[]
 }
 
 export function DeliveryHeaderFilter<TData, TValue>({
     column,
+    options,
 }: DeliveryHeaderFilterProps<TData, TValue>) {
-    const options = [
-        { label: "FY25Q01", value: "FY25Q01" },
-        { label: "FY25Q02", value: "FY25Q02" },
-        { label: "FY25Q03", value: "FY25Q03" },
-        { label: "FY25Q04", value: "FY25Q04" },
-    ]
+    const resolvedOptions = options?.length ? options : []
 
     // Use local state to track selections and force re-renders
     const [selectedValues, setSelectedValues] = React.useState<Set<string>>(new Set())
@@ -99,28 +96,34 @@ export function DeliveryHeaderFilter<TData, TValue>({
                                 </>
                             )}
                             <CommandGroup>
-                                {options.map((option) => {
-                                    const isSelected = selectedValues.has(option.value)
-                                    return (
-                                        <CommandItem
-                                            key={option.value}
-                                            value={option.value}
-                                            onSelect={() => handleSelect(option.value)}
-                                        >
-                                            <div
-                                                className={cn(
-                                                    "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                                    isSelected
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "opacity-50 [&_svg]:invisible"
-                                                )}
+                                {resolvedOptions.length === 0 ? (
+                                    <CommandItem disabled className="text-muted-foreground">
+                                        No delivery options
+                                    </CommandItem>
+                                ) : (
+                                    resolvedOptions.map((option) => {
+                                        const isSelected = selectedValues.has(option.value)
+                                        return (
+                                            <CommandItem
+                                                key={option.value}
+                                                value={option.value}
+                                                onSelect={() => handleSelect(option.value)}
                                             >
-                                                <Check className="h-4 w-4" />
-                                            </div>
-                                            <span>{option.label}</span>
-                                        </CommandItem>
-                                    )
-                                })}
+                                                <div
+                                                    className={cn(
+                                                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                                        isSelected
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "opacity-50 [&_svg]:invisible"
+                                                    )}
+                                                >
+                                                    <Check className="h-4 w-4" />
+                                                </div>
+                                                <span>{option.label}</span>
+                                            </CommandItem>
+                                        )
+                                    })
+                                )}
                             </CommandGroup>
                         </CommandList>
                     </Command>

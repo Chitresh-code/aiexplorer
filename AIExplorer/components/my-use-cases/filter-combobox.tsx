@@ -19,23 +19,21 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover"
 
-interface MyUseCasesSubTeamComboboxProps {
+interface FilterComboboxProps {
     value?: string[]
     onChange: (value: string[]) => void
     options: { label: string; value: string }[]
+    label: string
     className?: string
-    placeholder?: string
-    alignOffset?: number
 }
 
-export function MyUseCasesSubTeamCombobox({
+export function FilterCombobox({
     value = [],
     onChange,
     options,
+    label,
     className,
-    placeholder = "Sub Team Name",
-    alignOffset = 312,
-}: MyUseCasesSubTeamComboboxProps) {
+}: FilterComboboxProps) {
     const [open, setOpen] = React.useState(false)
 
     const toggle = (val: string) => {
@@ -89,7 +87,7 @@ export function MyUseCasesSubTeamCombobox({
                         <div className="flex items-center gap-2 truncate">
                             <PlusCircle className="h-4 w-4 text-muted-foreground" />
                             <span className="truncate">
-                                {value.length ? `${value.length} selected` : placeholder}
+                                {value.length ? `${value.length} selected` : label}
                             </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -99,13 +97,10 @@ export function MyUseCasesSubTeamCombobox({
                 <PopoverContent
                     side="bottom"
                     align="start"
-                    alignOffset={alignOffset}
-                    sideOffset={30}
+                    alignOffset={0}
+                    sideOffset={4}
                     avoidCollisions={false}
-                    collisionPadding={0}
-                    className={cn(
-                        "p-0 border shadow-lg w-[330] max-w-none"
-                    )}
+                    className="p-0 border shadow-lg w-[--radix-popover-trigger-width] -translate-x-px"
                 >
                     <Command>
                         <CommandInput placeholder="Search..." />

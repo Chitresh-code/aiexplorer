@@ -87,6 +87,13 @@ const formSchema = z.object({
     checklistResponses: z.record(z.any()).optional(),
 })
 
+const normalizeStakeholderRole = (role: string) => {
+    const trimmed = String(role ?? "").trim();
+    if (!trimmed) return "";
+    if (trimmed.toLowerCase() === "primary contact") return "Owner";
+    return trimmed;
+};
+
 const SubmitUseCase = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -798,13 +805,13 @@ const SubmitUseCase = () => {
                 seen.add(key);
                 return true;
             })
-            .map((name) => ({ value: name, label: name }));
+            .map((name) => ({ value: name, label: normalizeStakeholderRole(name) }));
     }, [rolesData]);
 
     const visibleStakeholders = useMemo(() => {
         return stakeholdersData.filter((stakeholder) => {
             const role = String(stakeholder?.role ?? "").trim().toLowerCase();
-            return role !== "champion delegate";
+            return role === "champion";
         });
     }, [stakeholdersData]);
 
@@ -1375,18 +1382,16 @@ const SubmitUseCase = () => {
                 const stakeholdersPayload = addedStakeholders
                     .map((stakeholder) => {
                         const email = String(stakeholder.email ?? "").trim();
-                        const role = String(stakeholder.role ?? "").trim();
-                        const roleId = roleIdByName.get(role.toLowerCase());
+                        const rawRole = String(stakeholder.role ?? "").trim();
+                        const role = normalizeStakeholderRole(rawRole);
+                        const roleId = roleIdByName.get(role.toLowerCase())
+                            ?? roleIdByName.get(rawRole.toLowerCase());
                         if (!email || !role || !Number.isFinite(roleId)) return null;
                         return { roleId, role, stakeholderEmail: email };
                     })
                     .filter(Boolean);
 
-                const delegatePayload = stakeholdersData
-                    .filter((stakeholder) => {
-                        const role = String(stakeholder?.role ?? "").trim().toLowerCase();
-                        return role === "champion delegate";
-                    })
+                const apiStakeholdersPayload = stakeholdersData
                     .map((stakeholder) => {
                         const email = String(stakeholder?.email ?? "").trim();
                         const role = String(stakeholder?.role ?? "").trim();
@@ -1399,7 +1404,7 @@ const SubmitUseCase = () => {
                     })
                     .filter(Boolean);
 
-                const combinedStakeholders = [...stakeholdersPayload, ...delegatePayload].filter(Boolean);
+                const combinedStakeholders = [...stakeholdersPayload, ...apiStakeholdersPayload].filter(Boolean);
                 const uniqueStakeholders: Array<{ roleId: number; role: string; stakeholderEmail: string }> = [];
                 const seenStakeholders = new Set<string>();
                 combinedStakeholders.forEach((stakeholder) => {

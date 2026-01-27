@@ -132,6 +132,7 @@ export type UseCase = {
     delivery: string;
     priority: 1 | 2 | 3 | 4 | 5 | null;
     status: string;
+    statusColor?: string;
 };
 
 // Helper function for navigation instructions

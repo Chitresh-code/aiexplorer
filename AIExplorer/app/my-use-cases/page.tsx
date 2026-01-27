@@ -1,9 +1,8 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-nocheck
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from '@/lib/router';
+import { useMsal } from '@azure/msal-react';
 import { Plus, LayoutGrid, List, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
@@ -21,12 +20,14 @@ import { useUseCases } from '@/hooks/use-usecases';
 import { DataTable } from '@/features/my-use-cases/components/data-table';
 import { createColumns } from '@/features/my-use-cases/components/columns';
 import KanbanView from '@/features/champion/components/kanban-view';
-import { getBusinessStructure, getBusinessUnitsFromData, getSubTeamsForTeam, getTeamsForBusinessUnit } from '@/lib/submit-use-case';
+import {
+    getMappingBusinessUnits,
+    getMappingImplementationTimespans,
+    getMappingPhases,
+    getMappingStatus,
+} from '@/lib/submit-use-case';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MyUseCasesPhaseCombobox } from "./phase-combobox";
-import { MyUseCasesBusinessUnitCombobox } from "./business-unit-combobox";
-import { MyUseCasesTeamCombobox } from "./team-combobox";
-import { MyUseCasesSubTeamCombobox } from "./sub-team-combobox";
+import { FilterCombobox } from "@/components/my-use-cases/filter-combobox";
 
 const UseCaseSkeleton = () => (
     <div className="space-y-4">
@@ -42,143 +43,267 @@ const UseCaseSkeleton = () => (
     </div>
 );
 
+type BusinessUnitMapping = {
+    businessUnitName?: string;
+    teams?: { teamName?: string }[];
+};
+
+type PhaseMapping = {
+    id?: number | string;
+    name?: string;
+    stage?: string;
+};
+
+type StatusMapping = {
+    id?: number | string;
+    name?: string;
+    color?: string;
+};
+
+type TimespanMapping = {
+    id?: number | string;
+    timespan?: string;
+    name?: string;
+};
+
+type BackendUseCase = {
+    id?: number | string;
+    ID?: number | string;
+    title?: string;
+    Title?: string;
+    UseCase?: string;
+    phase?: string;
+    Phase?: string;
+    phaseId?: number | string | null;
+    PhaseId?: number | string | null;
+    phaseid?: number | string | null;
+    statusName?: string;
+    Status?: string;
+    statusColor?: string;
+    StatusColor?: string;
+    businessUnitName?: string;
+    BusinessUnit?: string;
+    BusinessUnitName?: string;
+    teamName?: string;
+    TeamName?: string;
+    deliveryTimespan?: string;
+    Delivery?: string;
+    priority?: number | string | null;
+    Priority?: number | string | null;
+    currentPhaseStartDate?: string;
+    CurrentPhaseStartDate?: string;
+    currentPhaseEndDate?: string;
+    CurrentPhaseEndDate?: string;
+};
+
+type NormalizedUseCase = {
+    id: string;
+    title: string;
+    delivery: string;
+    priority: number | null;
+    status: string;
+    statusColor: string;
+    teamName: string;
+    businessUnit: string;
+    phase: string;
+    phaseId: number | null;
+    currentPhaseDisplay: string;
+    [key: string]: string | number | null;
+};
+
 const MyUseCases = () => {
-    const { useCases: backendUseCases, loading, error } = useUseCases();
+    const { accounts } = useMsal();
+    const userEmail = accounts[0]?.username ?? "";
+    const { useCases: backendUseCases, loading, error } = useUseCases({ email: userEmail });
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
     const [searchUseCase, setSearchUseCase] = useState('');
     const [searchPhase, setSearchPhase] = useState<string[]>([]);
     const [searchBusinessUnit, setSearchBusinessUnit] = useState<string[]>([]);
-    const [searchTeams, setSearchTeams] = useState<string[]>([]);
-    const [searchSubTeams, setSearchSubTeams] = useState<string[]>([]);
-    const [businessStructureData, setBusinessStructureData] = useState<any>(null);
+    const [searchStatus, setSearchStatus] = useState<string[]>([]);
+    const [businessUnitsData, setBusinessUnitsData] = useState<{ items?: BusinessUnitMapping[] } | null>(null);
+    const [phasesData, setPhasesData] = useState<PhaseMapping[]>([]);
+    const [statusData, setStatusData] = useState<StatusMapping[]>([]);
+    const [timespansData, setTimespansData] = useState<TimespanMapping[]>([]);
 
-    // Fetch business structure data on mount
+    // Fetch mappings on mount
     useEffect(() => {
-        const fetchBusinessStructure = async () => {
+        const fetchMappings = async () => {
             try {
-                const data = await getBusinessStructure();
-                setBusinessStructureData(data);
+                const [businessUnits, phases, statuses, timespans] = await Promise.all([
+                    getMappingBusinessUnits(),
+                    getMappingPhases(),
+                    getMappingStatus(),
+                    getMappingImplementationTimespans(),
+                ]);
+                setBusinessUnitsData(businessUnits);
+                setPhasesData(phases?.items ?? []);
+                setStatusData(statuses?.items ?? []);
+                setTimespansData(timespans?.items ?? []);
             } catch (error) {
-                console.error('Error fetching business structure:', error);
+                console.error('Error fetching mappings:', error);
             }
         };
-        fetchBusinessStructure();
+        fetchMappings();
     }, []);
 
     const businessUnits = useMemo(() => {
-        return getBusinessUnitsFromData(businessStructureData);
-    }, [businessStructureData]);
+        const items = businessUnitsData?.items ?? [];
+        return items
+            .map((unit) => String(unit.businessUnitName ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b));
+    }, [businessUnitsData]);
 
-    const selectedBusinessUnits = useMemo(() => {
-        const filteredUnits = searchBusinessUnit.filter((unit) => unit !== "all");
-        return filteredUnits.length ? filteredUnits : businessUnits;
-    }, [searchBusinessUnit, businessUnits]);
+    const phaseOptions = useMemo(() => {
+        return phasesData
+            .map((item) => String(item.name ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b))
+            .map((name: string) => ({ label: name, value: name }));
+    }, [phasesData]);
 
-    const teams = useMemo(() => {
-        if (!businessStructureData) return [];
-        const teamSet = new Set<string>();
-        selectedBusinessUnits.forEach((unit) => {
-            getTeamsForBusinessUnit(businessStructureData, unit).forEach((team) => teamSet.add(team));
-        });
-        return Array.from(teamSet).sort().map((name) => ({ label: name, value: name }));
-    }, [businessStructureData, selectedBusinessUnits]);
+    const statusOptions = useMemo(() => {
+        return statusData
+            .map((item) => String(item.name ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b))
+            .map((name: string) => ({ label: name, value: name }));
+    }, [statusData]);
 
-    const subTeams = useMemo(() => {
-        if (!businessStructureData) return [];
-        const selectedTeams = searchTeams.filter((team) => team !== "all");
-        const teamCandidates = selectedTeams.length ? selectedTeams : teams.map((team) => team.value);
-        const subTeamSet = new Set<string>();
-        selectedBusinessUnits.forEach((unit) => {
-            const teamsForUnit = getTeamsForBusinessUnit(businessStructureData, unit);
-            const teamsToUse = teamCandidates.length
-                ? teamCandidates.filter((team) => teamsForUnit.includes(team))
-                : teamsForUnit;
-            teamsToUse.forEach((team) => {
-                getSubTeamsForTeam(businessStructureData, unit, team).forEach((subTeam) => subTeamSet.add(subTeam));
+    const phaseColumns = useMemo(() => {
+        return phasesData
+            .map((item) => ({
+                id: Number(item.id),
+                name: String(item.name ?? "").trim(),
+                stage: String(item.stage ?? "").trim(),
+            }))
+            .filter((item) => item.name && Number.isFinite(item.id))
+            .sort((a, b) => {
+                if (a.id !== b.id) return a.id - b.id;
+                return a.name.localeCompare(b.name);
             });
-        });
-        return Array.from(subTeamSet).sort().map((name) => ({ label: name, value: name }));
-    }, [businessStructureData, selectedBusinessUnits, searchTeams, teams]);
+    }, [phasesData]);
 
-    const phaseOptions = [
-        { label: "Idea", value: "Idea" },
-        { label: "Diagnose", value: "Diagnose" },
-        { label: "Design", value: "Design" },
-        { label: "Implemented", value: "Implemented" },
-    ];
+    const deliveryOptions = useMemo(() => {
+        return timespansData
+            .map((item) => String(item.timespan ?? item.name ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b))
+            .map((name: string) => ({ label: name, value: name }));
+    }, [timespansData]);
 
-    const businessUnitOptions = [
+    const businessUnitOptions = useMemo(() => [
         { label: "All Units", value: "all" },
-        { label: "Communications", value: "Communications" },
-        { label: "Customer Experience", value: "Customer Experience" },
-        { label: "Engineering Product Innovation Cloud", value: "Engineering Product Innovation Cloud" },
-        { label: "Global Business Operations", value: "Global Business Operations" },
-        { label: "Go-to-Market", value: "Go-to-Market" },
-        { label: "Legal", value: "Legal" },
-        { label: "People", value: "People" },
-    ];
+        ...businessUnits.map((unit) => ({ label: unit, value: unit })),
+    ], [businessUnits]);
 
-    const finalTeams = useMemo(() => [
-        { label: "All Teams", value: "all" },
-        ...teams.map((team) => ({ label: team.label, value: team.value }))
-    ], [teams]);
+    const normalizedUseCases = useMemo<NormalizedUseCase[]>(() => {
+        if (!backendUseCases || backendUseCases.length === 0) return [];
 
-    const finalSubTeams = useMemo(() => [
-        { label: "All Sub Teams", value: "all" },
-        ...subTeams.map((subTeam) => ({ label: subTeam.label, value: subTeam.value }))
-    ], [subTeams]);
+        const formatDate = (value: string): string => {
+            if (!value) return "";
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return "";
+            return new Intl.DateTimeFormat("en-US", {
+                timeZone: "America/New_York",
+                month: "short",
+                day: "2-digit",
+                year: "numeric",
+            }).format(parsed);
+        };
+
+        return backendUseCases.flatMap((raw) => {
+            const uc = raw as BackendUseCase;
+            const legacy = uc as Record<string, unknown>;
+            const phaseName = String(uc.phase || uc.Phase || '').trim();
+            const phaseId = Number(uc.phaseId ?? uc.PhaseId ?? uc.phaseid);
+            const status = String(uc.statusName || uc.Status || 'In Progress').trim();
+            const startRaw = String(uc.currentPhaseStartDate ?? uc.CurrentPhaseStartDate ?? "");
+            const endRaw = String(uc.currentPhaseEndDate ?? uc.CurrentPhaseEndDate ?? "");
+            const start = formatDate(startRaw);
+            const end = formatDate(endRaw);
+            const currentPhaseDisplay = start && end ? `${start} - ${end}` : status;
+
+            const phaseValues: Record<string, string> = {};
+            phaseColumns.forEach((phase) => {
+                const key = `phase_${phase.id}`;
+                if (!Number.isFinite(phaseId)) {
+                    phaseValues[key] = "Not Set";
+                    return;
+                }
+                if (phase.id < phaseId) {
+                    phaseValues[key] = "completed";
+                    return;
+                }
+                if (phase.id > phaseId) {
+                    phaseValues[key] = "Not Set";
+                    return;
+                }
+                phaseValues[key] = currentPhaseDisplay;
+            });
+
+            const rawId = uc.id ?? uc.ID;
+            if (rawId == null) return [];
+
+            return [{
+                id: String(rawId),
+                title: uc.title || uc.Title || uc.UseCase || 'Untitled',
+                delivery: uc.deliveryTimespan || uc.Delivery || '',
+                priority: Number(uc.priority ?? uc.Priority) || null,
+                status,
+                statusColor: uc.statusColor || uc.StatusColor || '',
+                teamName: uc.teamName || uc.TeamName || String(legacy["Team Name"] ?? '') || '',
+                businessUnit: uc.businessUnitName || uc.BusinessUnit || uc.BusinessUnitName || String(legacy["Business Unit"] ?? '') || '',
+                phase: phaseName,
+                phaseId: Number.isFinite(phaseId) ? phaseId : null,
+                currentPhaseDisplay,
+                ...phaseValues,
+            }];
+        });
+    }, [backendUseCases, phaseColumns]);
 
     const displayUseCases = useMemo(() => {
-        if (!backendUseCases) return [];
-        if (backendUseCases.length === 0) return [];
-        let mapped = backendUseCases.map(uc => ({
-            id: uc.ID,
-            title: uc.Title || uc.UseCase || 'Untitled',
-            idea: uc.Phase === 'Idea' ? (uc.Status || 'In Progress') : (uc.Phase ? 'completed' : 'Not Set'),
-            diagnose: uc.Phase === 'Diagnose' ? (uc.Status || 'In Progress') : 'Not Set',
-            design: uc.Phase === 'Design' ? (uc.Status || 'In Progress') : 'Not Set',
-            implemented: uc.Phase === 'Implemented' ? (uc.Status || 'In Progress') : 'Not Set',
-            delivery: 'FY25Q04',
-            priority: 1,
-            status: uc.Status || 'In Progress',
-            teamName: uc.TeamName || uc["Team Name"] || '',
-            subTeamName: uc.SubTeamName || uc["Sub Team Name"] || ''
-        }));
+        if (!normalizedUseCases.length) return [];
+
+        let mapped = normalizedUseCases.slice();
 
         // Filter Logic
         mapped = mapped.filter(uc => {
             if (searchUseCase && !uc.title.toLowerCase().includes(searchUseCase.toLowerCase())) return false;
 
             if (searchPhase.length > 0 && !searchPhase.includes('all')) {
-                // Determine current phase for filtering
-                const phase = uc.idea !== 'Not Set' && uc.idea !== 'completed' ? 'Idea' :
-                    uc.diagnose !== 'Not Set' ? 'Diagnose' :
-                        uc.design !== 'Not Set' ? 'Design' :
-                            uc.implemented !== 'Not Set' ? 'Implemented' : '';
-                if (!searchPhase.includes(phase)) return false;
+                const phaseValue = String(uc.phase || '').toLowerCase();
+                if (!searchPhase.some((phase) => phase.toLowerCase() === phaseValue)) return false;
             }
 
-            if (searchTeams.length > 0 && !searchTeams.includes('all')) {
-                const teamValue = (uc.teamName || '').toLowerCase();
-                if (!searchTeams.some((team) => team.toLowerCase() === teamValue)) return false;
+            if (searchStatus.length > 0 && !searchStatus.includes('all')) {
+                const statusValue = (uc.status || '').toLowerCase();
+                if (!searchStatus.some((status) => status.toLowerCase() === statusValue)) return false;
             }
 
-            if (searchSubTeams.length > 0 && !searchSubTeams.includes('all')) {
-                const subTeamValue = (uc.subTeamName || '').toLowerCase();
-                if (!searchSubTeams.some((subTeam) => subTeam.toLowerCase() === subTeamValue)) return false;
+            if (searchBusinessUnit.length > 0 && !searchBusinessUnit.includes('all')) {
+                const unitValue = (uc.businessUnit || '').toLowerCase();
+                if (!searchBusinessUnit.some((unit) => unit.toLowerCase() === unitValue)) return false;
             }
-            // Business Unit filtering - assuming it would be available in the future, for now mostly UI
-            // if (searchBusinessUnit && searchBusinessUnit !== 'all' && uc.businessUnit !== searchBusinessUnit) return false;
 
             return true;
         });
 
         return mapped;
 
-    }, [backendUseCases, searchUseCase, searchPhase, searchBusinessUnit, searchTeams, searchSubTeams]);
+    }, [
+        normalizedUseCases,
+        searchUseCase,
+        searchPhase,
+        searchStatus,
+        searchBusinessUnit,
+    ]);
 
-    const columns = useMemo(() => createColumns(navigate), [navigate]);
+    const columns = useMemo(
+        () => createColumns(navigate, phaseColumns, deliveryOptions),
+        [navigate, phaseColumns, deliveryOptions],
+    );
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
@@ -186,7 +311,7 @@ const MyUseCases = () => {
             <Card className="shadow-sm">
                 <CardContent className="pt-6">
                     <div className="w-full overflow-x-auto">
-                        <div className="grid min-w-[1120px] grid-cols-[auto_minmax(220px,1fr)_repeat(4,minmax(180px,1fr))_auto] items-center gap-4">
+                        <div className="grid min-w-[940px] grid-cols-[auto_minmax(220px,1fr)_repeat(3,minmax(180px,1fr))_auto] items-center gap-4">
                             <Tabs value={viewMode} onValueChange={(val: any) => setViewMode(val)}>
                                 <TabsList className="bg-gray-100/80 p-1 rounded-lg border border-gray-200 h-10">
                                     <TabsTrigger
@@ -216,40 +341,36 @@ const MyUseCases = () => {
                                 />
                             </div>
 
-                            <MyUseCasesPhaseCombobox
+                            <FilterCombobox
+                                label="Phase"
                                 options={[{ label: "All Phases", value: "all" }, ...phaseOptions]}
                                 value={searchPhase}
                                 onChange={setSearchPhase}
                             />
 
-                            <MyUseCasesBusinessUnitCombobox
+                            <FilterCombobox
+                                label="Status"
+                                options={[{ label: "All Statuses", value: "all" }, ...statusOptions]}
+                                value={searchStatus}
+                                onChange={setSearchStatus}
+                            />
+
+                            <FilterCombobox
+                                label="Business Unit"
                                 options={businessUnitOptions}
                                 value={searchBusinessUnit}
                                 onChange={setSearchBusinessUnit}
                             />
 
-                            <MyUseCasesTeamCombobox
-                                options={finalTeams}
-                                value={searchTeams}
-                                onChange={setSearchTeams}
-                            />
-
-                            <MyUseCasesSubTeamCombobox
-                                options={finalSubTeams}
-                                value={searchSubTeams}
-                                onChange={setSearchSubTeams}
-                            />
-
-                            {(searchUseCase || searchPhase.length > 0 || searchBusinessUnit.length > 0 || searchTeams.length > 0 || searchSubTeams.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || searchStatus.length > 0 || searchBusinessUnit.length > 0) && (
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-3 text-sm justify-self-end"
                                     onClick={() => {
                                         setSearchUseCase('');
                                         setSearchPhase([]);
+                                        setSearchStatus([]);
                                         setSearchBusinessUnit([]);
-                                        setSearchTeams([]);
-                                        setSearchSubTeams([]);
                                     }}
                                 >
                                     Reset
@@ -292,7 +413,12 @@ const MyUseCases = () => {
                             <DataTable columns={columns} data={displayUseCases} />
                         ) : (
                             // @ts-ignore
-                            <KanbanView data={displayUseCases} navigate={navigate} sourceScreen="my-use-cases" />
+                            <KanbanView
+                                data={displayUseCases}
+                                navigate={navigate}
+                                sourceScreen="my-use-cases"
+                                phases={phaseColumns}
+                            />
                         )
                     )}
                 </CardContent>

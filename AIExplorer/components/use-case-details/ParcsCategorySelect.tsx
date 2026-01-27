@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-interface UnitOfMeasurementSelectProps {
+interface ParcsCategorySelectProps {
     value: string;
     onSelect: (value: string) => void;
+    options?: string[];
     placeholder?: string;
     width?: string;
     className?: string;
@@ -19,34 +20,25 @@ interface UnitOfMeasurementSelectProps {
     align?: "start" | "center" | "end";
 }
 
-const options = [
-    'HoursPerDay',
-    'HoursPerMonth',
-    'HoursPerYear',
-    'HoursPerCase',
-    'HoursPerTransaction',
-    'USDPerMonth',
-    'USDPerYear',
-    'USD',
-    'Users',
-    'Audited Risks'
-];
+const defaultOptions = ['Productivity', 'Adoption', 'Risk Mitigation', 'Cost', 'Scale'];
 
-export function UnitOfMeasurementSelect({
+export function ParcsCategorySelect({
     value,
     onSelect,
+    options,
     sideOffset = 70,
-    alignOffset = 150, // Default for Unit of Measurement (shifted more right)
+    alignOffset = 110, // Default for PARCS
     placeholder = "Select",
     width = "w-[220px]",
     className,
     align = "start"
-}: UnitOfMeasurementSelectProps) {
+}: ParcsCategorySelectProps) {
     const handleValueChange = (newValue: string) => {
         onSelect(newValue === " " ? "" : newValue);
     };
 
     const displayValue = value === "" ? " " : value;
+    const resolvedOptions = options?.length ? options : defaultOptions;
 
     return (
         <Select value={displayValue} onValueChange={handleValueChange}>
@@ -55,9 +47,9 @@ export function UnitOfMeasurementSelect({
             >
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>
-            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset} avoidCollisions={false}>
+            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset}>
                 <SelectItem value=" " className="text-muted-foreground">{placeholder}</SelectItem>
-                {options.map((option) => (
+                {resolvedOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                         {option}
                     </SelectItem>

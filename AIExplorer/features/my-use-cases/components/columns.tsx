@@ -15,39 +15,30 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DeliveryHeaderFilter } from "./delivery-header-filter";
 import { PriorityHeaderFilter } from "./priority-header-filter";
-import { IdHeaderFilter } from "./id-header-filter";
 
-const phaseTooltips = {
-    Idea: "Pitch idea. It is submitted for AI Champions or Business Leaders prioritization and approvals.",
-    Diagnose: "Play with Proof of Concepts. Run the experiments in development environment.",
-    Design: "Pilot a solution in a non-production environment. Quantify outcomes metrics and finalize a launch plan.",
-    Implemented: "Production Launch of the solution and celebrate success."
+type PhaseColumn = {
+    id: number;
+    name: string;
+    stage?: string;
 };
 
 // Define the UseCase type based on what's used in MyUseCases.tsx
 export type UseCase = {
     id: string;
     title: string;
-    idea: string;
-    diagnose: string;
-    design: string;
-    implemented: string;
     delivery: string;
-    priority: number;
+    priority: number | null;
+    status?: string;
+    statusColor?: string;
+    phaseId?: number | null;
+    phase?: string;
+    currentPhaseDisplay?: string;
+    [key: string]: string | number | null | undefined;
 };
 
 // Helper function for navigation instructions
 const getPhaseAndStatus = (useCase: UseCase) => {
-    let phase = 'Idea';
-    const status = 'On-Track';
-
-    if (useCase.idea !== 'Not Set' && useCase.idea !== 'completed') phase = 'Idea';
-    else if (useCase.diagnose !== 'Not Set') phase = 'Diagnose';
-    else if (useCase.design !== 'Not Set') phase = 'Design';
-    else if (useCase.implemented !== 'Not Set') phase = 'Implemented';
-    else if (useCase.delivery) phase = 'Delivery';
-
-    return { phase, status };
+    return { phase: useCase.phase || "Idea", status: useCase.status || "On-Track" };
 };
 
 const getPriorityColor = (priority: number) => {
@@ -61,23 +52,52 @@ const getPriorityColor = (priority: number) => {
     }
 };
 
-export const createColumns = (navigate: (path: string, options?: any) => void): ColumnDef<UseCase>[] => [
-    {
-        accessorKey: "id",
-        header: ({ column, table }) => (
-            <div className="w-[80px] flex justify-center mx-auto">
-                <IdHeaderFilter column={column} table={table} />
-            </div>
-        ),
-        cell: ({ row }) => {
-            const id = row.getValue("id") as string | number;
-            return <div className="w-[80px] text-center text-gray-600 mx-auto">{id}</div>;
-        },
-        filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id)?.toString());
-        },
-    },
-    {
+export const createColumns = (
+    navigate: (path: string, options?: any) => void,
+    phases: PhaseColumn[],
+    deliveryOptions?: { label: string; value: string }[],
+): ColumnDef<UseCase>[] => {
+    const phaseColumns: ColumnDef<UseCase>[] = phases.map((phase) => {
+        const key = `phase_${phase.id}`;
+        return {
+            accessorKey: key,
+            header: () => (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">
+                                {phase.name}
+                            </div>
+                        </TooltipTrigger>
+                        {phase.stage ? (
+                            <TooltipContent side="bottom" align="start">
+                                <p className="max-w-[200px] text-xs">{phase.stage}</p>
+                            </TooltipContent>
+                        ) : null}
+                    </Tooltip>
+                </TooltipProvider>
+            ),
+            cell: ({ row }) => {
+                const value = String(row.getValue(key) ?? "");
+                const isCompleted = value === "completed";
+                const isNotSet = value === "Not Set" || value === "";
+
+                return (
+                    <div
+                        className={cn(
+                            "text-center py-2 whitespace-nowrap min-w-[120px]",
+                            isCompleted ? "text-green-600" : isNotSet ? "text-gray-400" : "text-teal-700"
+                        )}
+                    >
+                        {isCompleted ? <Check size={16} /> : value || "Not Set"}
+                    </div>
+                );
+            },
+        };
+    });
+
+    return [
+        {
         accessorKey: "title",
         header: ({ column }) => {
             return (
@@ -107,138 +127,17 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
             )
         }
     },
-    {
-        accessorKey: "idea",
-        header: () => (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Idea</div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="start" sideOffset={-40} alignOffset={160}>
-                        <p className="max-w-[200px] text-xs">{phaseTooltips.Idea}</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        ),
-        cell: ({ row }) => {
-            const useCase = row.original;
-            const isCompleted = useCase.idea === 'completed';
-            const isNotSet = useCase.idea === 'Not Set';
-            const isClickable = !isCompleted && !isNotSet;
-
-            return (
-                <div
-                    className={cn(
-                        "flex items-center justify-center w-full h-full py-2 rounded whitespace-nowrap min-w-[120px]",
-                        isCompleted ? "text-green-600" : "text-gray-400"
-                    )}
-                >
-                    {isCompleted ? <Check size={16} /> : useCase.idea}
-                </div>
-            )
-        },
-    },
-    {
-        accessorKey: "diagnose",
-        header: () => (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Diagnose</div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="start" sideOffset={-40} alignOffset={200}>
-                        <p className="max-w-[200px] text-xs">{phaseTooltips.Diagnose}</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        ),
-        cell: ({ row }) => {
-            const useCase = row.original;
-            const isNotSet = useCase.diagnose === 'Not Set';
-
-            return (
-                <div
-                    className={cn(
-                        "text-center py-2 whitespace-nowrap min-w-[120px]",
-                        !isNotSet ? "text-teal-700" : "text-gray-400"
-                    )}
-                >
-                    {useCase.diagnose}
-                </div>
-            )
-        }
-    },
-    {
-        accessorKey: "design",
-        header: () => (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Design</div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="start" sideOffset={-40} alignOffset={450}>
-                        <p className="max-w-[200px] text-xs">{phaseTooltips.Design}</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        ),
-        cell: ({ row }) => {
-            const useCase = row.original;
-            const isNotSet = useCase.design === 'Not Set';
-
-            return (
-                <div
-                    className={cn(
-                        "text-center py-2 whitespace-nowrap min-w-[120px]",
-                        !isNotSet ? "text-teal-700" : "text-gray-400"
-                    )}
-                >
-                    {useCase.design}
-                </div>
-            )
-        }
-    },
-    {
-        accessorKey: "implemented",
-        header: () => (
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="text-center w-full cursor-pointer hover:text-teal-700 transition-colors">Implemented</div>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" align="start" sideOffset={-30} alignOffset={3450}>
-                        <p className="max-w-[210px] text-xs">{phaseTooltips.Implemented}</p>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        ),
-        cell: ({ row }) => {
-            const useCase = row.original;
-            const isNotSet = useCase.implemented === 'Not Set';
-
-            return (
-                <div
-                    className={cn(
-                        "text-center py-2 whitespace-nowrap min-w-[120px]",
-                        !isNotSet ? "text-teal-700" : "text-gray-400"
-                    )}
-                >
-                    {useCase.implemented}
-                </div>
-            )
-        }
-    },
+        ...phaseColumns,
     {
         accessorKey: "delivery",
         header: ({ column }) => (
             <div className="w-[80px] flex justify-center mx-auto">
-                <DeliveryHeaderFilter column={column} />
+                <DeliveryHeaderFilter column={column} options={deliveryOptions} />
             </div>
         ),
         cell: ({ row }) => (
             <div className="w-[80px] text-center text-gray-600 mx-auto">
-                {row.getValue("delivery")}
+                {row.getValue("delivery") || "—"}
             </div>
         ),
         filterFn: (row, id, value) => {
@@ -253,7 +152,14 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
             </div>
         ),
         cell: ({ row }) => {
-            const priority = row.getValue("priority") as number;
+            const priority = row.getValue("priority") as number | null;
+            if (!priority) {
+                return (
+                    <div className="w-[80px] text-center text-gray-400 mx-auto">
+                        —
+                    </div>
+                );
+            }
             return (
                 <div className="w-[80px] flex justify-center mx-auto">
                     <span className={cn(
@@ -330,4 +236,5 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
     //         )
     //     },
     // },
-]
+    ];
+}

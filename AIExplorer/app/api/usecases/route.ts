@@ -185,6 +185,7 @@ export const POST = async (request: Request): Promise<NextResponse> => {
     }
 
     const pool = await getSqlPool();
+
     const result = await pool
       .request()
       .input("BusinessUnitId", payload.businessUnitId ?? null)

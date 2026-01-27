@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSqlPool } from "@/lib/azure-sql";
 import { getUiErrorMessage, logErrorTrace } from "@/lib/error-utils";
+import type { IProcedureResult, IRecordSet } from "mssql";
 
 export const GET = async (
   _request: Request,
@@ -15,15 +16,36 @@ export const GET = async (
 
   try {
     const pool = await getSqlPool();
-    const result = await pool.request().execute("dbo.GetGalleryUseCases");
-    const items = (result.recordset ?? []) as Array<{ id?: number | null }>;
-    const useCase = items.find((item) => Number(item.id) === id);
+    const result = (await pool
+      .request()
+      .input("UseCaseId", id)
+      .execute("dbo.GetUseCaseDetails")) as IProcedureResult<any>;
+
+    const recordsets: IRecordSet<any>[] = Array.isArray(result.recordsets)
+      ? result.recordsets
+      : [];
+
+    const [
+      useCaseRows = [],
+      agentLibraryRows = [],
+      personaRows = [],
+      themeRows = [],
+    ] = recordsets;
+
+    const useCase = useCaseRows[0] as Record<string, unknown> | undefined;
     if (!useCase) {
       return NextResponse.json({ message: "Not found" }, { status: 404 });
     }
-    return NextResponse.json(useCase, {
-      headers: { "cache-control": "no-store" },
-    });
+
+    return NextResponse.json(
+      {
+        useCase,
+        agentLibrary: agentLibraryRows,
+        personas: personaRows,
+        themes: themeRows,
+      },
+      { headers: { "cache-control": "no-store" } },
+    );
   } catch (error) {
     logErrorTrace("Usecase detail failed", error);
     return NextResponse.json(

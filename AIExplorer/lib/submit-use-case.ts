@@ -235,11 +235,29 @@ export const getMappingPersonas = async (): Promise<any> => {
     }
 };
 
+export const getMappingStatus = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/status');
+    } catch (error) {
+        console.error('Error fetching status mappings:', error);
+        throw error;
+    }
+};
+
 export const getMappingVendorModels = async (): Promise<any> => {
     try {
         return await requestJson('/api/mappings/vendor-models');
     } catch (error) {
         console.error('Error fetching vendor model mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingKnowledgeSources = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/knowledge-sources');
+    } catch (error) {
+        console.error('Error fetching knowledge source mappings:', error);
         throw error;
     }
 };
@@ -276,6 +294,15 @@ export const getMappingPhases = async (): Promise<any> => {
         return await requestJson('/api/mappings/phases');
     } catch (error) {
         console.error('Error fetching phase mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingImplementationTimespans = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/implementation-timespans');
+    } catch (error) {
+        console.error('Error fetching implementation timespans:', error);
         throw error;
     }
 };

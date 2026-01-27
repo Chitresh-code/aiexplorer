@@ -57,6 +57,13 @@ const formatDisplayName = (email: string) => {
         .join(" ");
 };
 
+const formatRoleLabel = (role?: string) => {
+    const trimmed = String(role ?? "").trim();
+    if (!trimmed) return "";
+    if (trimmed.toLowerCase() === "primary contact") return "Owner";
+    return trimmed;
+};
+
 export const StakeholdersPlanSection = ({
     stakeholders,
     isLoading,
@@ -119,6 +126,7 @@ export const StakeholdersPlanSection = ({
                                         .map((n) => n[0])
                                         .join("")
                                         .toUpperCase();
+                                    const roleLabel = formatRoleLabel(stakeholder.role);
                                     return (
                                         <div key={`stakeholder-${idx}`} className="flex items-center justify-between gap-3 group">
                                             <div className="flex items-center gap-3">
@@ -132,7 +140,7 @@ export const StakeholdersPlanSection = ({
                                                         {displayName}
                                                     </p>
                                                     <p className="text-xs text-gray-500 mt-1">
-                                                        {stakeholder.role || "Champion"}
+                                                        {roleLabel || "Champion"}
                                                     </p>
                                                 </div>
                                             </div>
@@ -150,7 +158,7 @@ export const StakeholdersPlanSection = ({
                                         </Avatar>
                                         <div>
                                             <p className="text-sm font-semibold text-gray-900 leading-none">{stakeholder.name}</p>
-                                            <p className="text-xs text-gray-500 mt-1">{stakeholder.role}</p>
+                                            <p className="text-xs text-gray-500 mt-1">{formatRoleLabel(stakeholder.role)}</p>
                                         </div>
                                     </div>
                                     {!["owner", "primary contact"].includes(

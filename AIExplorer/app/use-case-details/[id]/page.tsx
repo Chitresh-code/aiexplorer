@@ -1,77 +1,47 @@
 'use client';
 
-import { UseCaseDetailsMultiCombobox as MultiCombobox } from "../multi-combobox"
-
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ConfidenceCombobox } from "./components/reprioritize/ConfidenceCombobox";
-import { DeliveryCombobox } from "./components/reprioritize/DeliveryCombobox";
-import { EffortCombobox } from "./components/reprioritize/EffortCombobox";
-import { ImpactCombobox } from "./components/reprioritize/ImpactCombobox";
-import { ParcsCategorySelect } from "./components/ParcsCategorySelect";
-import { UnitOfMeasurementSelect } from "./components/UnitOfMeasurementSelect";
-import { PriorityCombobox } from "./components/reprioritize/PriorityCombobox";
-import { ReportingFrequencyCombobox } from "./components/reprioritize/ReportingFrequencyCombobox";
-import { UserBaseCombobox } from "./components/reprioritize/UserBaseCombobox";
+import { InfoSection } from "@/components/use-case-details/InfoSection";
+import { UpdateSection } from "@/components/use-case-details/UpdateSection";
+import { AgentLibrarySection } from "@/components/use-case-details/AgentLibrarySection";
+import { MetricsSection } from "@/components/use-case-details/MetricsSection";
+import type { MetricsRow } from "@/components/use-case-details/MetricsSection";
+import { ActionsSection } from "@/components/use-case-details/ActionsSection";
+import { ReprioritizeSection } from "@/components/use-case-details/ReprioritizeSection";
+import { ParcsCategorySelect } from "@/components/use-case-details/ParcsCategorySelect";
+import { UnitOfMeasurementSelect } from "@/components/use-case-details/UnitOfMeasurementSelect";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Empty, EmptyMedia, EmptyTitle, EmptyDescription, EmptyHeader, EmptyContent } from '@/components/ui/empty';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Bot, Check, ChevronsUpDown } from "lucide-react";
-import { useNavigate, useLocation } from '@/lib/router';
+import { useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Switch } from '@/components/ui/switch';
-import {
-    Clock,
-    Users,
-    Plus,
-    MessageSquare,
-    CheckCircle2,
-    Calendar as CalendarIcon,
-    Send,
-    MoreHorizontal,
-    ChevronDown,
-    Edit,
-    AlertCircle,
-    FileText,
-    History,
-    Library,
-    Wand2,
-    Trash2
-} from 'lucide-react';
-import { useUseCases } from '@/hooks/use-usecases';
+import { Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
+import { useUseCaseDetails } from '@/hooks/use-usecase-details';
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 import { fetchMetrics } from '@/lib/api';
-import { getDropdownData } from '@/lib/submit-use-case';
+import {
+    getMappingMetricCategories,
+    getMappingPhases,
+    getMappingRoles,
+    getMappingStatus,
+    getMappingThemes,
+    getMappingUnitOfMeasure,
+    getMappingPersonas,
+    getMappingVendorModels,
+    getMappingKnowledgeSources,
+} from '@/lib/submit-use-case';
 import {
     Table,
     TableBody,
@@ -81,7 +51,6 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
-import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const UseCaseDetailsSkeleton = () => (
@@ -142,19 +111,52 @@ const UseCaseDetailsSkeleton = () => (
 );
 
 
-interface Metric {
+type Metric = MetricsRow;
+
+type RoleOption = {
     id: number;
-    primarySuccessValue: string;
-    parcsCategory: string;
-    unitOfMeasurement: string;
-    baselineValue: string;
-    baselineDate: string;
-    targetValue: string;
-    targetDate: string;
-    reportedValue?: string;
-    reportedDate?: string;
-    isSubmitted?: boolean;
-}
+    name: string;
+    roleType: string;
+};
+
+type PlanItem = {
+    id: number | null;
+    usecaseid: number | null;
+    usecasephaseid: number | null;
+    phase: string | null;
+    startdate: string | null;
+    enddate: string | null;
+    modified: string | null;
+    created: string | null;
+    editor_email: string | null;
+};
+
+type StakeholderItem = {
+    id: number | null;
+    roleid: number | null;
+    usecaseid: number | null;
+    role: string | null;
+    stakeholder_email: string | null;
+    modified: string | null;
+    created: string | null;
+    editor_email: string | null;
+};
+
+type UpdateItem = {
+    id: number | null;
+    usecaseid: number | null;
+    meaningfulupdate: string | null;
+    roleid: number | null;
+    role: string | null;
+    usecasephaseid: number | null;
+    phase: string | null;
+    usecasestatusid: number | null;
+    status: string | null;
+    statusColor: string | null;
+    modified: string | null;
+    created: string | null;
+    editor_email: string | null;
+};
 
 const metricColumnSizes = {
     primarySuccessValue: 160,
@@ -232,34 +234,66 @@ const MetricDatePicker = ({
     );
 };
 
+const normalizeRoleName = (value: string) => value.trim().toLowerCase();
+
+const isOwnerRole = (value: string) => normalizeRoleName(value) === "owner";
+
+const isChampionDelegateRole = (value: string) =>
+    normalizeRoleName(value) === "champion delegate";
+
+const buildInitials = (value: string) => {
+    const parts = value.split(/[\s@._-]+/).filter(Boolean);
+    const letters = parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "");
+    return letters.join("");
+};
+
 const UseCaseDetails = () => {
-    const { id } = useParams();
-    const { useCases, loading } = useUseCases();
-    const navigate = useNavigate();
+    const params = useParams();
+    const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
+    const id = idParam ?? "";
+    const { data: useCaseDetails, loading, error } = useUseCaseDetails(
+        typeof id === "string" ? id : undefined,
+    );
     const { state } = useLocation<{ useCaseTitle: string; sourceScreen?: string }>();
     const { accounts } = useMsal();
-
     const useCase = useMemo(() => {
-        const found = useCases?.find(uc => uc.ID.toString() === id);
-        const title = state?.useCaseTitle || found?.Title || found?.UseCase || 'Process Automation with AI';
-        return found ? { ...found, Title: title } : {
-            ID: id,
-            Title: title,
-            Phase: 'Idea',
-            Status: 'In Progress',
+        const raw = useCaseDetails?.useCase ?? {};
+        const phaseIdValue = Number((raw as any).phaseid ?? (raw as any).phaseId);
+        const businessValue = String((raw as any).business_value ?? (raw as any).businessValue ?? "");
+        return {
+            id: (raw as any).id ?? id,
+            title: String((raw as any).title ?? state?.useCaseTitle ?? "Use Case"),
+            phase: String((raw as any).phase ?? ""),
+            phaseStage: String((raw as any).phaseStage ?? (raw as any).phasestage ?? ""),
+            phaseId: Number.isFinite(phaseIdValue) ? phaseIdValue : null,
+            statusName: String((raw as any).statusName ?? ""),
+            statusColor: String((raw as any).statusColor ?? ""),
+            businessUnitName: String((raw as any).businessUnitName ?? ""),
+            teamName: String((raw as any).teamName ?? ""),
+            headlines: String((raw as any).headlines ?? ""),
+            opportunity: String((raw as any).opportunity ?? ""),
+            businessValue,
+            informationUrl: String((raw as any).informationurl ?? (raw as any).informationUrl ?? ""),
+            primaryContact: String((raw as any).primarycontact ?? (raw as any).primaryContact ?? ""),
+            editorEmail: String((raw as any).editor_email ?? (raw as any).editorEmail ?? ""),
         };
-    }, [useCases, id, state]);
+    }, [useCaseDetails, id, state?.useCaseTitle]);
+    const agentLibraryItems = useMemo(
+        () => useCaseDetails?.agentLibrary ?? [],
+        [useCaseDetails?.agentLibrary],
+    );
+    const agentBadgeLabel = useMemo(() => {
+        if (!agentLibraryItems.length) return "";
+        const item = agentLibraryItems[0];
+        const vendor = String(item.vendorName ?? "").trim();
+        const product = String(item.productName ?? "").trim();
+        if (vendor && product) return `${vendor} - ${product}`;
+        return vendor || product;
+    }, [agentLibraryItems]);
 
-    const [selectedStatus, setSelectedStatus] = useState(useCase.Status || 'Active');
+    const [selectedStatus, setSelectedStatus] = useState(useCase.statusName || 'Active');
     const showChangeStatusCard = false;
-    const [startDate, setStartDate] = useState<Date | undefined>(new Date('2024-01-01'));
-    const [endDate, setEndDate] = useState<Date | undefined>(new Date('2024-12-31'));
-    const [phaseDates, setPhaseDates] = useState({
-        idea: { start: new Date('2024-01-01'), end: undefined as Date | undefined },
-        diagnose: { start: undefined as Date | undefined, end: undefined as Date | undefined },
-        design: { start: undefined as Date | undefined, end: undefined as Date | undefined },
-        implemented: { start: undefined as Date | undefined, end: new Date('2024-12-31') }
-    });
+    const [phaseDates, setPhaseDates] = useState<Record<string, { start?: Date; end?: Date }>>({});
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('info');
     const [selectedMetricIdForReporting, setSelectedMetricIdForReporting] = useState<string>("");
@@ -267,55 +301,60 @@ const UseCaseDetails = () => {
     const [stakeholderRole, setStakeholderRole] = useState('');
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
     const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
-    const [editingPhase, setEditingPhase] = useState<keyof typeof phaseDates | null>(null);
+    const [editingPhase, setEditingPhase] = useState<string | null>(null);
     const [tempStartDate, setTempStartDate] = useState<Date | undefined>(undefined);
     const [tempEndDate, setTempEndDate] = useState<Date | undefined>(undefined);
-    const [stakeholders, setStakeholders] = useState([
-        { name: 'John Doe', role: 'Champion', initial: 'JD' },
-        { name: 'Alice Smith', role: 'Expert', initial: 'AS' },
-        { name: 'Bob Johnson', role: 'Contributor', initial: 'BJ' },
-    ]);
+    const [stakeholders, setStakeholders] = useState<{ id?: number | null; name: string; role: string; initial: string; canEdit: boolean; roleId?: number | null }[]>([]);
     const [updateText, setUpdateText] = useState('');
     const [knowledgeForce, setKnowledgeForce] = useState('');
+    const [knowledgeSourceOptions, setKnowledgeSourceOptions] = useState<string[]>([]);
     const [instructions, setInstructions] = useState('');
     const [currentStatus, setCurrentStatus] = useState('On-Track');
     const [nextPhase, setNextPhase] = useState('');
     const [statusNotes, setStatusNotes] = useState('');
     const [metrics, setMetrics] = useState<Metric[]>([]);
-    const [inputValues, setInputValues] = useState({});
     const [reportedMetrics, setReportedMetrics] = useState<Metric[]>([]);
-    const [updates, setUpdates] = useState([
+    const [updates, setUpdates] = useState<
         {
-            id: 1,
-            author: 'John Doe',
-            content: 'Initial requirement gathering completed. Moving to design phase.',
-            time: '2 hours ago',
-            type: 'status_change',
-        },
-        {
-            id: 2,
-            author: 'Alice Smith',
-            content: 'Started working on the design document. Expecting to finish by Friday.',
-            time: '5 hours ago',
-            type: 'comment',
-        },
-        {
-            id: 3,
-            author: 'Bob Johnson',
-            content: 'Set up the environment and initial project structure.',
-            time: 'Yesterday',
-            type: 'activity',
-        },
-    ]);
+            id: number;
+            author: string;
+            role?: string;
+            phase?: string;
+            status?: string;
+            statusColor?: string;
+            content: string;
+            time: string;
+            type: string;
+        }[]
+    >([]);
+    const [planItems, setPlanItems] = useState<PlanItem[]>([]);
+    const [stakeholderItems, setStakeholderItems] = useState<StakeholderItem[]>([]);
+    const [updateItems, setUpdateItems] = useState<UpdateItem[]>([]);
+    const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
+    const [isTimelineEditing, setIsTimelineEditing] = useState(false);
+    const [isUpdateDataLoading, setIsUpdateDataLoading] = useState(false);
     const [isMetricDateDialogOpen, setIsMetricDateDialogOpen] = useState(false);
     const [editingMetricId, setEditingMetricId] = useState<number | null>(null);
     const [tempBaselineDate, setTempBaselineDate] = useState<Date | undefined>(undefined);
     const [tempTargetDate, setTempTargetDate] = useState<Date | undefined>(undefined);
-    const [metricsSubmitted, setMetricsSubmitted] = useState(false);
     const [isMetricSelectDialogOpen, setIsMetricSelectDialogOpen] = useState(false);
 
-    // Dropdown data state
-    const [dropdownData, setDropdownData] = useState(null);
+    const [themeOptions, setThemeOptions] = useState<{ label: string; value: string }[]>([]);
+    const [statusOptions, setStatusOptions] = useState<string[]>([]);
+    const [metricCategoryOptions, setMetricCategoryOptions] = useState<string[]>([]);
+    const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState<string[]>([]);
+    const [phaseMappings, setPhaseMappings] = useState<{ id: number; name: string; stage?: string }[]>([]);
+
+    // AI Configuration state
+    const [personaOptions, setPersonaOptions] = useState<{ label: string; value: string }[]>([]);
+    const [vendorOptions, setVendorOptions] = useState<{ label: string; value: string }[]>([]);
+    const [modelOptions, setModelOptions] = useState<{ label: string; value: string }[]>([]);
+    const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
+    const [selectedVendor, setSelectedVendor] = useState<string>('');
+    const [selectedModel, setSelectedModel] = useState<string>('');
+    const [agentId, setAgentId] = useState<string>('');
+    const [agentLink, setAgentLink] = useState<string>('');
+    const [vendorModelsData, setVendorModelsData] = useState<Map<string, string[]>>(new Map());
 
     // Form state for Reprioritize
     const [formData, setFormData] = useState({
@@ -323,50 +362,363 @@ const UseCaseDetails = () => {
         impact: '',
         confidence: '',
         effort: '',
-        riceScore: '10434783',
+        riceScore: '',
         priority: '',
         delivery: '',
         totalUserBase: '',
-        displayInGallery: true,
-        sltReporting: true,
-        reportingFrequency: 'Once in two week'
+        displayInGallery: false,
+        sltReporting: false,
+        reportingFrequency: ''
     });
 
     const [isEditing, setIsEditing] = useState(false);
-    const [editableTitle, setEditableTitle] = useState(state?.useCaseTitle || useCase.Title);
-    const [editableDepartment, setEditableDepartment] = useState('Communications');
-    const [editableAITheme, setEditableAITheme] = useState(['Audio Generation', 'Causal Inference / Causal AI', 'Data Extraction']);
-    const [editableHeadline, setEditableHeadline] = useState('Streamline multilingual communication through AI-assisted translation.');
-    const [editableOpportunity, setEditableOpportunity] = useState('Streamline multilingual communication through AI-assisted translation.');
-    const [editableEvidence, setEditableEvidence] = useState('Streamline multilingual communication through AI-assisted translation.');
-    const [editableContactPerson, setEditableContactPerson] = useState('Current User');
+    const [editableTitle, setEditableTitle] = useState(useCase.title);
+    const [editableDepartment, setEditableDepartment] = useState('');
+    const [editableAITheme, setEditableAITheme] = useState<string[]>([]);
+    const [editableHeadline, setEditableHeadline] = useState('');
+    const [editableOpportunity, setEditableOpportunity] = useState('');
+    const [editableEvidence, setEditableEvidence] = useState('');
+    const [editableContactPerson, setEditableContactPerson] = useState('');
 
-    // Sync editable title when useCase updates
-    useEffect(() => {
-        setEditableTitle(useCase.Title);
-    }, [useCase.Title]);
+    const roleSelectOptions = useMemo(
+        () =>
+            roleOptions.filter(
+                (role) =>
+                    String(role.roleType ?? "").trim() === "2" &&
+                    !isOwnerRole(role.name) &&
+                    !isChampionDelegateRole(role.name),
+            ),
+        [roleOptions],
+    );
 
-    // Set default primary contact person to current user
+    // Sync editable fields when useCase updates
     useEffect(() => {
-        if (accounts && accounts.length > 0) {
+        setEditableTitle(useCase.title);
+        setEditableDepartment(useCase.businessUnitName || useCase.teamName || "");
+        setEditableHeadline(useCase.headlines);
+        setEditableOpportunity(useCase.opportunity);
+        setEditableEvidence(useCase.businessValue);
+        setEditableContactPerson(useCase.primaryContact);
+        setSelectedStatus(useCase.statusName || "Active");
+        setCurrentStatus(useCase.statusName || "On-Track");
+    }, [
+        useCase.title,
+        useCase.businessUnitName,
+        useCase.teamName,
+        useCase.headlines,
+        useCase.opportunity,
+        useCase.businessValue,
+        useCase.primaryContact,
+        useCase.statusName,
+    ]);
+
+    useEffect(() => {
+        const selectedThemes = (useCaseDetails?.themes ?? [])
+            .map((theme) => String(theme.themeName ?? "").trim())
+            .filter(Boolean);
+        if (selectedThemes.length > 0) {
+            setEditableAITheme(selectedThemes);
+        } else if (themeOptions.length > 0 && editableAITheme.length === 0) {
+            setEditableAITheme([]);
+        }
+    }, [useCaseDetails?.themes, themeOptions.length, editableAITheme.length]);
+
+    // Set default primary contact person to current user if missing
+    useEffect(() => {
+        if (!useCase.primaryContact && accounts && accounts.length > 0) {
             const account = accounts[0];
             const displayName = account.name || account.username || 'Current User';
             setEditableContactPerson(displayName);
         }
-    }, [accounts]);
+    }, [accounts, useCase.primaryContact]);
 
-    // Fetch dropdown data
+    // Fetch mapping data
     useEffect(() => {
         const fetchDropdownData = async () => {
             try {
-                const data = await getDropdownData();
-                setDropdownData(data);
+                const [themes, statuses, metricCategories, unitOfMeasure, phases, personas, vendorModels, knowledgeSources] = await Promise.all([
+                    getMappingThemes(),
+                    getMappingStatus(),
+                    getMappingMetricCategories(),
+                    getMappingUnitOfMeasure(),
+                    getMappingPhases(),
+                    getMappingPersonas(),
+                    getMappingVendorModels(),
+                    getMappingKnowledgeSources(),
+                ]);
+                setThemeOptions(
+                    (themes?.items ?? [])
+                        .map((item: any) => String(item.name ?? "").trim())
+                        .filter(Boolean)
+                        .map((name: string) => ({ label: name, value: name })),
+                );
+                setStatusOptions(
+                    (statuses?.items ?? [])
+                        .map((item: any) => String(item.name ?? "").trim())
+                        .filter(Boolean),
+                );
+                setMetricCategoryOptions(
+                    (metricCategories?.items ?? [])
+                        .map((item: any) => String(item.category ?? "").trim())
+                        .filter(Boolean),
+                );
+                setUnitOfMeasureOptions(
+                    (unitOfMeasure?.items ?? [])
+                        .map((item: any) => String(item.name ?? "").trim())
+                        .filter(Boolean),
+                );
+                setPhaseMappings(
+                    (phases?.items ?? [])
+                        .map((item: any) => ({
+                            id: Number(item.id),
+                            name: String(item.name ?? "").trim(),
+                            stage: String(item.phasestage ?? item.stage ?? "").trim(),
+                        }))
+                        .filter((item: any) => item.name && Number.isFinite(item.id))
+                        .sort((a: any, b: any) => a.id - b.id),
+                );
+
+                // Set persona options
+                setPersonaOptions(
+                    (personas?.items ?? [])
+                        .map((item: any) => String(item.name ?? "").trim())
+                        .filter(Boolean)
+                        .map((name: string) => ({ label: name, value: name })),
+                );
+
+                // Process vendor-model mappings
+                const vendorMap = new Map<string, Set<string>>();
+                (vendorModels?.items ?? []).forEach((item: any) => {
+                    const vendorName = String(item.vendorName ?? "").trim();
+                    const productName = String(item.productName ?? "").trim();
+                    if (!vendorName) return;
+
+                    if (!vendorMap.has(vendorName)) {
+                        vendorMap.set(vendorName, new Set());
+                    }
+                    if (productName) {
+                        vendorMap.get(vendorName)?.add(productName);
+                    }
+                });
+
+                // Set vendor options
+                setVendorOptions(
+                    Array.from(vendorMap.keys())
+                        .sort()
+                        .map((name: string) => ({ label: name, value: name }))
+                );
+
+                // Store vendor-model mapping for later use
+                const vendorModelsMap = new Map<string, string[]>();
+                vendorMap.forEach((models, vendor) => {
+                    vendorModelsMap.set(vendor, Array.from(models).sort());
+                });
+                setVendorModelsData(vendorModelsMap);
+
+                // Set knowledge source options
+                setKnowledgeSourceOptions(
+                    (knowledgeSources?.items ?? [])
+                        .map((item: any) => String(item.name ?? "").trim())
+                        .filter(Boolean)
+                        .sort(),
+                );
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
             }
         };
         fetchDropdownData();
     }, []);
+
+    // Update model options when vendor changes
+    useEffect(() => {
+        if (!selectedVendor || vendorModelsData.size === 0) {
+            setModelOptions([]);
+            setSelectedModel('');
+            return;
+        }
+
+        const models = vendorModelsData.get(selectedVendor) || [];
+        setModelOptions(
+            models.map((name: string) => ({ label: name, value: name }))
+        );
+        // Reset selected model if it's not available for the new vendor
+        if (selectedModel && !models.includes(selectedModel)) {
+            setSelectedModel('');
+        }
+    }, [selectedVendor, vendorModelsData, selectedModel]);
+
+    useEffect(() => {
+        if (activeTab !== "update" || roleOptions.length > 0) return;
+
+        let isMounted = true;
+
+        const fetchRoles = async () => {
+            try {
+                const data = await getMappingRoles();
+                if (!isMounted) return;
+                const items = (data?.items ?? [])
+                    .map((item: any) => ({
+                        id: Number(item.id),
+                        name: String(item.name ?? "").trim(),
+                        roleType: String(item.roleType ?? "").trim(),
+                    }))
+                    .filter((item: RoleOption) => Number.isFinite(item.id) && item.name);
+                setRoleOptions(items);
+            } catch (error) {
+                console.error("Error fetching role mappings:", error);
+            }
+        };
+
+        fetchRoles();
+        return () => {
+            isMounted = false;
+        };
+    }, [activeTab, roleOptions.length]);
+
+    useEffect(() => {
+        if (activeTab !== "update" || !id) return;
+
+        let isMounted = true;
+        const controller = new AbortController();
+
+        const fetchUpdateData = async () => {
+            try {
+                setIsUpdateDataLoading(true);
+                const [planResult, stakeholderResult, updatesResult] = await Promise.allSettled([
+                    fetch(`/api/usecases/${id}/plan`, { signal: controller.signal }),
+                    fetch(`/api/usecases/${id}/stakeholders`, { signal: controller.signal }),
+                    fetch(`/api/usecases/${id}/updates`, { signal: controller.signal }),
+                ]);
+
+                const planData =
+                    planResult.status === "fulfilled" && planResult.value.ok
+                        ? await planResult.value.json()
+                        : null;
+                const stakeholderData =
+                    stakeholderResult.status === "fulfilled" && stakeholderResult.value.ok
+                        ? await stakeholderResult.value.json()
+                        : null;
+                const updatesData =
+                    updatesResult.status === "fulfilled" && updatesResult.value.ok
+                        ? await updatesResult.value.json()
+                        : null;
+
+                if (!isMounted) return;
+
+                const planRows = (planData?.items ?? []) as PlanItem[];
+                const stakeholderRows = (stakeholderData?.items ?? []) as StakeholderItem[];
+                const updateRows = (updatesData?.items ?? []) as UpdateItem[];
+
+                setPlanItems(planRows);
+                setStakeholderItems(stakeholderRows);
+                setUpdateItems(updateRows);
+
+                if (!isTimelineEditing) {
+                    const nextPhaseDates: Record<string, { start?: Date; end?: Date }> = {};
+                    planRows.forEach((row) => {
+                        const phaseName = String(row.phase ?? "").trim();
+                        if (!phaseName) return;
+                        nextPhaseDates[phaseName] = {
+                            start: row.startdate ? new Date(row.startdate) : undefined,
+                            end: row.enddate ? new Date(row.enddate) : undefined,
+                        };
+                    });
+                    if (Object.keys(nextPhaseDates).length > 0) {
+                        setPhaseDates((prev) => ({
+                            ...prev,
+                            ...nextPhaseDates,
+                        }));
+                    }
+                }
+
+                const mappedUpdates = updateRows
+                    .map((row) => {
+                        const created = row.created ?? row.modified;
+                        const timeLabel = created ? format(new Date(created), "MMM d, yyyy") : "";
+                        return {
+                            id: Number(row.id ?? 0),
+                            author: String(row.editor_email ?? "").trim() || "Unknown",
+                            role: String(row.role ?? "").trim(),
+                            phase: String(row.phase ?? "").trim(),
+                            status: String(row.status ?? "").trim(),
+                            statusColor: String(row.statusColor ?? "").trim(),
+                            content: String(row.meaningfulupdate ?? "").trim(),
+                            time: timeLabel,
+                            type: "comment",
+                        };
+                    })
+                    .filter((row) => row.content);
+
+                setUpdates(mappedUpdates);
+            } catch (error) {
+                console.error("Error fetching update data:", error);
+            } finally {
+                if (isMounted) {
+                    setIsUpdateDataLoading(false);
+                }
+            }
+        };
+
+        fetchUpdateData();
+        return () => {
+            isMounted = false;
+            controller.abort();
+            setIsUpdateDataLoading(false);
+        };
+    }, [activeTab, id]);
+
+    useEffect(() => {
+        if (!stakeholderItems.length) {
+            setStakeholders([]);
+            return;
+        }
+
+        const nextStakeholders = stakeholderItems
+            .map((item) => {
+                const roleName = String(item.role ?? "").trim();
+                const email = String(item.stakeholder_email ?? "").trim();
+                if (!roleName || isChampionDelegateRole(roleName)) {
+                    return null;
+                }
+                const roleOption =
+                    roleOptions.find((role) => role.id === Number(item.roleid)) ??
+                    roleOptions.find(
+                        (role) => normalizeRoleName(role.name) === normalizeRoleName(roleName),
+                    );
+                const roleType = roleOption?.roleType ?? "";
+                const canEdit = roleType === "2" && !isOwnerRole(roleName);
+                return {
+                    id: item.id ?? null,
+                    name: email || "Unknown",
+                    role: roleName,
+                    initial: buildInitials(email || roleName),
+                    canEdit,
+                    roleId: item.roleid ?? null,
+                };
+            })
+            .filter(Boolean) as {
+                name: string;
+                role: string;
+                initial: string;
+                canEdit: boolean;
+                roleId?: number | null;
+            }[];
+
+        setStakeholders(nextStakeholders);
+    }, [stakeholderItems, roleOptions]);
+
+    useEffect(() => {
+        if (!phaseMappings.length) return;
+        setPhaseDates((prev) => {
+            const next: Record<string, { start?: Date; end?: Date }> = { ...prev };
+            phaseMappings.forEach((phase) => {
+                if (!next[phase.name]) {
+                    next[phase.name] = { start: undefined, end: undefined };
+                }
+            });
+            return next;
+        });
+    }, [phaseMappings]);
 
     const handleFormDataChange = (field: string, value: any) => {
         setFormData(prev => ({
@@ -398,14 +750,12 @@ const UseCaseDetails = () => {
 
 
 
-    const approvalHistory = [
-        {
-            phase: 'Diagnose',
-            approver: 'Saurabh Yadav - Executive Sponsor',
-            status: 'Approved',
-            date: 'Oct 03, 2025',
-        },
-    ];
+    const approvalHistory: {
+        phase: string;
+        approver: string;
+        status: string;
+        date: string;
+    }[] = [];
 
 
 
@@ -421,47 +771,86 @@ const UseCaseDetails = () => {
 
 
 
-    const getStatusBadge = (status: string) => {
-        if (status === 'Approved') {
-            return { bg: '#d4edda', color: '#155724' };
-        } else if (status === 'Rejected') {
-            return { bg: '#f8d7da', color: '#721c24' };
+    const handleUpdateStakeholder = async () => {
+        if (!stakeholderName || !stakeholderRole) return;
+        if (!id) {
+            toast.error("Missing use case id.");
+            return;
         }
-        return { bg: '#e0e0e0', color: '#666' };
-    };
 
-    const handleUpdateStakeholder = () => {
-        if (stakeholderName && stakeholderRole) {
-            // Generate initials from the name
-            const initial = stakeholderName.split(' ').map(n => n[0]).join('').toUpperCase();
-
-            if (editingIndex !== null) {
-                // Update existing stakeholder
-                setStakeholders(prev => prev.map((stakeholder, idx) =>
-                    idx === editingIndex
-                        ? { ...stakeholder, name: stakeholderName, role: stakeholderRole, initial: initial }
-                        : stakeholder
-                ));
-                toast.success('Stakeholder updated successfully');
-            } else {
-                // Add new stakeholder to the list
-                setStakeholders(prev => [...prev, {
-                    name: stakeholderName,
-                    role: stakeholderRole,
-                    initial: initial
-                }]);
-                toast.success('Stakeholder added successfully');
+        try {
+            const roleOption = roleOptions.find(
+                (role) => normalizeRoleName(role.name) === normalizeRoleName(stakeholderRole),
+            );
+            if (!roleOption) {
+                toast.error("Select a valid role.");
+                return;
             }
 
+            const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            const payload: {
+                id?: number | null;
+                roleId: number;
+                stakeholderEmail: string;
+                editorEmail?: string;
+            } = {
+                roleId: roleOption.id,
+                stakeholderEmail: stakeholderName.trim(),
+                editorEmail,
+            };
+
+            if (editingIndex !== null) {
+                payload.id = stakeholders[editingIndex]?.id ?? null;
+                if (!payload.id) {
+                    toast.error("Missing stakeholder id.");
+                    return;
+                }
+            }
+
+            const response = await fetch(`/api/usecases/${id}/stakeholders`, {
+                method: editingIndex !== null ? "PATCH" : "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update stakeholder.");
+            }
+
+            const data = await response.json();
+            const item = data?.item;
+            if (item) {
+                setStakeholderItems((prev) => {
+                    if (editingIndex !== null && payload.id) {
+                        return prev.map((row) =>
+                            String(row.id) === String(payload.id) ? item : row,
+                        );
+                    }
+                    return [...prev, item];
+                });
+            }
+
+            toast.success(
+                editingIndex !== null
+                    ? "Stakeholder updated successfully"
+                    : "Stakeholder added successfully",
+            );
+
             setIsDialogOpen(false);
-            setStakeholderName('');
-            setStakeholderRole('');
+            setStakeholderName("");
+            setStakeholderRole("");
             setEditingIndex(null);
+        } catch (error) {
+            console.error("Failed to update stakeholder:", error);
+            toast.error("Failed to update stakeholder.");
         }
     };
 
     const handleEditStakeholder = (index: number) => {
         const stakeholder = stakeholders[index];
+        if (!stakeholder?.canEdit) {
+            return;
+        }
         setStakeholderName(stakeholder.name);
         setStakeholderRole(stakeholder.role);
         setEditingIndex(index);
@@ -480,46 +869,151 @@ const UseCaseDetails = () => {
         setEditingIndex(null);
     };
 
-    const handlePostUpdate = () => {
-        if (updateText.trim()) {
+    const handlePostUpdate = async () => {
+        if (!id) {
+            toast.error("Missing use case id.");
+            return;
+        }
+        const trimmedUpdate = updateText.trim();
+        if (!trimmedUpdate) return;
+
+        try {
+            const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            if (!editorEmail) {
+                toast.error("Missing user email.");
+                return;
+            }
+
+            const response = await fetch(`/api/usecases/${id}/updates`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    meaningfulUpdate: trimmedUpdate,
+                    editorEmail,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to add update.");
+            }
+
+            const data = await response.json();
+            const item = data?.item;
+            const roleFromStakeholder = stakeholderItems.find(
+                (entry) =>
+                    String(entry.stakeholder_email ?? "").trim().toLowerCase() ===
+                    editorEmail.toLowerCase(),
+            );
+            const roleLabel =
+                String(roleFromStakeholder?.role ?? "").trim() ||
+                roleOptions.find((role) => role.id === Number(item?.roleid))?.name ||
+                "Stakeholder";
+            const createdAt = item?.created ?? item?.modified ?? new Date().toISOString();
             const newUpdate = {
-                id: updates.length + 1,
-                author: 'Current User', // Placeholder - should come from auth context
-                content: updateText,
-                time: 'Just now',
-                type: 'comment',
+                id: Number(item?.id ?? Date.now()),
+                author: editorEmail,
+                role: roleLabel,
+                phase: useCase.phase || undefined,
+                status: useCase.statusName || undefined,
+                statusColor: useCase.statusColor || undefined,
+                content: trimmedUpdate,
+                time: format(new Date(createdAt), "MMM d, yyyy"),
+                type: "comment",
             };
-            setUpdates(prev => [newUpdate, ...prev]);
-            setUpdateText('');
-            toast.success('Update posted successfully!');
+            setUpdates((prev) => [newUpdate, ...prev]);
+            setUpdateItems((prev) => [item, ...prev]);
+            setUpdateText("");
+            toast.success("Update posted successfully!");
+        } catch (error) {
+            console.error("Update post failed:", error);
+            toast.error("Failed to post update.");
         }
     };
 
-    const handleSaveAgentLibrary = () => {
-        // Here you would typically save the data
-        toast.success('Agent library submitted successfully');
-    };
+    const resetEditableFields = useCallback(() => {
+        setEditableTitle(useCase.title);
+        setEditableDepartment(useCase.businessUnitName || useCase.teamName || "");
+        setEditableHeadline(useCase.headlines);
+        setEditableOpportunity(useCase.opportunity);
+        setEditableEvidence(useCase.businessValue);
+        setEditableContactPerson(useCase.primaryContact);
+        const selectedThemes = (useCaseDetails?.themes ?? [])
+            .map((theme) => String(theme.themeName ?? "").trim())
+            .filter(Boolean);
+        setEditableAITheme(selectedThemes);
+    }, [
+        useCase.title,
+        useCase.businessUnitName,
+        useCase.teamName,
+        useCase.headlines,
+        useCase.opportunity,
+        useCase.businessValue,
+        useCase.primaryContact,
+        useCaseDetails?.themes,
+    ]);
 
     const handleApplyChanges = () => {
-        toast.success('Changes Made Successfully');
-        navigate('/my-use-cases');
+        // TODO: wire to update API
+        toast.success('Changes saved');
+        setIsEditing(false);
     };
 
-    const handlePhaseDateChange = (phase: keyof typeof phaseDates, field: 'start' | 'end', date: Date | undefined) => {
-        setPhaseDates(prev => ({
-            ...prev,
-            [phase]: {
-                ...prev[phase],
-                [field]: date
-            }
-        }));
+    const handleCancelEdit = () => {
+        resetEditableFields();
+        setIsEditing(false);
     };
 
-    const handleOpenDateDialog = (phase: keyof typeof phaseDates) => {
+    const handleOpenDateDialog = (phase: string) => {
+        if (!isTimelineEditing) return;
         setEditingPhase(phase);
-        setTempStartDate(phaseDates[phase].start);
-        setTempEndDate(phaseDates[phase].end);
+        setTempStartDate(phaseDates[phase]?.start);
+        setTempEndDate(phaseDates[phase]?.end);
         setIsDateDialogOpen(true);
+    };
+
+    const handleToggleTimelineEdit = () => {
+        setIsTimelineEditing(true);
+    };
+
+    const handleSaveTimeline = async () => {
+        if (!id) {
+            toast.error("Missing use case id.");
+            return;
+        }
+        try {
+            const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            const items = phaseMappings
+                .map((phase) => {
+                    const dates = phaseDates[phase.name];
+                    if (!dates?.start || !dates?.end) return null;
+                    return {
+                        usecasephaseid: phase.id,
+                        startdate: format(dates.start, "yyyy-MM-dd"),
+                        enddate: format(dates.end, "yyyy-MM-dd"),
+                    };
+                })
+                .filter(Boolean);
+
+            if (!items.length) {
+                toast.error("Add start and end dates before saving.");
+                return;
+            }
+
+            const response = await fetch(`/api/usecases/${id}/plan`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ items, editorEmail }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to save timeline.");
+            }
+            toast.success("Timeline saved");
+            setIsTimelineEditing(false);
+        } catch (error) {
+            console.error("Failed to save timeline:", error);
+            toast.error("Failed to save timeline.");
+        }
     };
 
     const handleDateDialogClose = () => {
@@ -571,10 +1065,6 @@ const UseCaseDetails = () => {
     }, []);
 
     const handleInputChange = useCallback((id: number, field: string, value: string) => {
-        // Update local input values for immediate feedback
-        const inputKey = `${id}-${field}`;
-        setInputValues(prev => ({ ...prev, [inputKey]: value }));
-
         // Update main metrics state
         setMetrics(prev => prev.map(metric =>
             metric.id === id ? { ...metric, [field]: value } : metric
@@ -814,6 +1304,7 @@ const UseCaseDetails = () => {
                     value={row.original.parcsCategory}
                     onSelect={(val) => handleInputChange(row.original.id, 'parcsCategory', val)}
                     className="metric-select"
+                    options={metricCategoryOptions}
                 />
             ),
             size: metricColumnSizes.parcsCategory,
@@ -828,6 +1319,7 @@ const UseCaseDetails = () => {
                     value={row.original.unitOfMeasurement}
                     onSelect={(val) => handleInputChange(row.original.id, 'unitOfMeasurement', val)}
                     className="metric-select"
+                    options={unitOfMeasureOptions}
                 />
             ),
             size: metricColumnSizes.unitOfMeasurement,
@@ -933,18 +1425,58 @@ const UseCaseDetails = () => {
         getCoreRowModel: getCoreRowModel(),
     });
 
-    const timeline = [
-        { label: 'Start Date', date: '2024-01-01', status: 'completed' },
-        { label: 'End Date', date: '2024-12-31', status: 'pending' },
-    ];
+    const completionSummary = useMemo(() => {
+        if (!phaseMappings.length) return [];
+        return phaseMappings.map((phase) => {
+            let status = "Not Started";
+            if (useCase.phaseId && phase.id < useCase.phaseId) {
+                status = "Completed";
+            } else if (useCase.phaseId && phase.id === useCase.phaseId) {
+                status = "In Progress";
+            }
+            return { name: phase.name, status };
+        });
+    }, [phaseMappings, useCase.phaseId]);
+
+    const nextPhaseOptions = useMemo(() => {
+        if (!phaseMappings.length) return [];
+
+        const currentPhaseId = useCase.phaseId;
+        if (currentPhaseId == null) {
+            return phaseMappings.map((phase) => phase.name);
+        }
+
+        return phaseMappings
+            .filter((phase) => phase.id > currentPhaseId)
+            .map((phase) => phase.name);
+    }, [phaseMappings, useCase.phaseId]);
+
+    const decisionPhaseLabel = useMemo(() => {
+        const phaseName = useCase.phase?.trim();
+        return phaseName ? `${phaseName.toUpperCase()} PHASE` : "CURRENT PHASE";
+    }, [useCase.phase]);
 
     if (loading) {
         return <UseCaseDetailsSkeleton />;
     }
+    if (error) {
+        return (
+            <div className="flex flex-1 items-center justify-center p-6 text-sm text-red-600">
+                Failed to load use case details: {error}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+                value={activeTab}
+                onValueChange={(val) => {
+                    if (isEditing && val !== 'info') return;
+                    setActiveTab(val);
+                }}
+                className="w-full"
+            >
                 {/* Tabs and Apply Changes Button on same line */}
                 <div className="bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100 mb-6">
                     <div className="w-[95%] mx-auto flex items-center justify-between">
@@ -952,12 +1484,14 @@ const UseCaseDetails = () => {
                             <TabsTrigger
                                 value="info"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                disabled={false}
                             >
                                 Info
                             </TabsTrigger>
                             <TabsTrigger
                                 value="update"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                disabled={isEditing}
                             >
                                 Update
                             </TabsTrigger>
@@ -965,6 +1499,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="reprioritize"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                    disabled={isEditing}
                                 >
                                     Reprioritize
                                 </TabsTrigger>
@@ -972,6 +1507,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="agent-library"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                    disabled={isEditing}
                                 >
                                     Agent Library
                                 </TabsTrigger>
@@ -979,1174 +1515,178 @@ const UseCaseDetails = () => {
                             <TabsTrigger
                                 value="metrics"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                disabled={isEditing}
                             >
                                 Metrics
                             </TabsTrigger>
                             <TabsTrigger
                                 value="status"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                disabled={isEditing}
                             >
                                 {state?.sourceScreen === 'champion' ? 'Approvals' : 'Actions'}
                             </TabsTrigger>
                         </TabsList>
 
                         <div className="flex items-center gap-2">
-                            {activeTab === 'info' && (
+                            {activeTab === 'info' && !isEditing && (
                                 <Button
                                     variant="outline"
-                                    onClick={() => setIsEditing(!isEditing)}
-                                    className="border-teal-600 text-teal-600 hover:bg-teal-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                    size="icon"
+                                    onClick={() => setIsEditing(true)}
+                                    className="border-teal-600 text-teal-600 hover:bg-teal-50"
                                 >
-                                    {isEditing ? 'Save' : 'Edit'}
+                                    <Pencil className="h-4 w-4" />
                                 </Button>
                             )}
-                            {activeTab !== 'metrics' && (
-                                <Button
-                                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
-                                    onClick={handleApplyChanges}
-                                >
-                                    Apply Changes
-                                </Button>
+                            {activeTab === 'info' && isEditing && (
+                                <>
+                                    <Button
+                                        variant="outline"
+                                        onClick={handleCancelEdit}
+                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                        onClick={handleApplyChanges}
+                                    >
+                                        Apply Changes
+                                    </Button>
+                                </>
                             )}
                         </div>
                     </div>
                 </div>
 
                 <TabsContent value="info" className="space-y-6">
-                    <div className="w-[95%] mx-auto">
-                        {/* Header Section */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6">
-                            <div className="flex-1 max-w-xl">
-                                <Input
-                                    value={editableTitle}
-                                    onChange={(e) => setEditableTitle(e.target.value)}
-                                    readOnly={!isEditing}
-                                    className={cn(
-                                        "text-3xl font-bold text-gray-900 tracking-tight h-auto py-1 p-0 border-none shadow-none focus-visible:ring-0 bg-transparent mb-1",
-                                        isEditing && "border-solid border border-gray-200 bg-white px-3 py-2 shadow-sm focus-visible:ring-1"
-                                    )}
-                                />
-                                <div className="flex items-center gap-2 mt-2">
-                                    <Badge variant="outline" className="text-gray-600">
-                                        ID: {id}
-                                    </Badge>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Gallery Detail Content */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(80vh-150px)]">
-                            {/* Left Column: Sidebar Card */}
-                            <div className="lg:col-span-1">
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col" style={{ backgroundColor: '#c7e7e7' }}>
-                                    <CardContent className="p-8 flex-1">
-                                        <div className="space-y-6 h-full">
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Use Case:</h3>
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <Input
-                                                        value={editableTitle}
-                                                        onChange={(e) => setEditableTitle(e.target.value)}
-                                                        readOnly={!isEditing}
-                                                        className={cn(
-                                                            "text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto",
-                                                            isEditing && "bg-white/50 border-white/20 px-2 py-1 shadow-sm focus-visible:ring-1"
-                                                        )}
-                                                    />
-                                                    <Badge variant="secondary" className="bg-white/80 text-[#13352C] border-none shadow-sm hover:bg-white font-semibold flex-shrink-0">
-                                                        {useCase.Phase}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="bg-[#13352C] text-white border-none shadow-md px-3 py-1 font-medium flex-shrink-0">
-                                                        Poppulo AI
-                                                    </Badge>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Department:</h3>
-                                                <Input
-                                                    value={editableDepartment}
-                                                    onChange={(e) => setEditableDepartment(e.target.value)}
-                                                    readOnly={!isEditing}
-                                                    className={cn(
-                                                        "text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto",
-                                                        isEditing && "bg-white/50 border-white/20 px-2 py-1 shadow-sm focus-visible:ring-1"
-                                                    )}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">AI Theme:</h3>
-                                                {isEditing ? (
-                                                    <MultiCombobox
-                                                        value={editableAITheme}
-                                                        onChange={setEditableAITheme}
-                                                        options={(dropdownData as any)?.ai_themes || []}
-                                                        placeholder="Select AI Themes"
-                                                        searchPlaceholder="Search themes..."
-                                                        className={cn(
-                                                            "bg-white/50 border-white/20 px-2 py-1 shadow-sm focus-visible:ring-1"
-                                                        )}
-                                                    />
-                                                ) : (
-                                                    <div className="text-[#13352C] font-medium text-base">
-                                                        {editableAITheme.join(', ') || 'No AI themes selected'}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-
-                            {/* Right Column: Main Content Card */}
-                            <div className="lg:col-span-1">
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col">
-                                    <CardContent className="pt-6 flex-1">
-                                        <div className="space-y-8 h-full">
-                                            <div>
-                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Headline - One line Executive Headline</CardTitle>
-                                                <Textarea
-                                                    value={editableHeadline}
-                                                    onChange={(e) => setEditableHeadline(e.target.value)}
-                                                    readOnly={!isEditing}
-                                                    className={cn(
-                                                        "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                                                        isEditing && "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y"
-                                                    )}
-                                                    ref={(el) => {
-                                                        if (el && !isEditing) {
-                                                            el.style.height = 'auto';
-                                                            el.style.height = el.scrollHeight + 'px';
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Opportunity - What is the idea for which AI is being used?</CardTitle>
-                                                <Textarea
-                                                    value={editableOpportunity}
-                                                    onChange={(e) => setEditableOpportunity(e.target.value)}
-                                                    readOnly={!isEditing}
-                                                    className={cn(
-                                                        "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                                                        isEditing && "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y"
-                                                    )}
-                                                    ref={(el) => {
-                                                        if (el && !isEditing) {
-                                                            el.style.height = 'auto';
-                                                            el.style.height = el.scrollHeight + 'px';
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Evidence - Why it is needed?</CardTitle>
-                                                <Textarea
-                                                    value={editableEvidence}
-                                                    onChange={(e) => setEditableEvidence(e.target.value)}
-                                                    readOnly={!isEditing}
-                                                    className={cn(
-                                                        "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                                                        isEditing && "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y"
-                                                    )}
-                                                    ref={(el) => {
-                                                        if (el && !isEditing) {
-                                                            el.style.height = 'auto';
-                                                            el.style.height = el.scrollHeight + 'px';
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">Primary Contact Person</CardTitle>
-                                                <Textarea
-                                                    value={editableContactPerson}
-                                                    onChange={(e) => setEditableContactPerson(e.target.value)}
-                                                    readOnly={!isEditing}
-                                                    className={cn(
-                                                        "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                                                        isEditing && "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y"
-                                                    )}
-                                                    ref={(el) => {
-                                                        if (el && !isEditing) {
-                                                            el.style.height = 'auto';
-                                                            el.style.height = el.scrollHeight + 'px';
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    </div>
+                    <InfoSection
+                        id={id}
+                        isEditing={isEditing}
+                        editableTitle={editableTitle}
+                        onTitleChange={setEditableTitle}
+                        useCasePhase={useCase.phase}
+                        agentBadgeLabel={agentBadgeLabel}
+                        editableDepartment={editableDepartment}
+                        editableAITheme={editableAITheme}
+                        editableHeadline={editableHeadline}
+                        onHeadlineChange={setEditableHeadline}
+                        editableOpportunity={editableOpportunity}
+                        onOpportunityChange={setEditableOpportunity}
+                        editableEvidence={editableEvidence}
+                        onEvidenceChange={setEditableEvidence}
+                        editableContactPerson={editableContactPerson}
+                    />
                 </TabsContent>
 
                 <TabsContent value="update" className="space-y-6">
-                    <div className="w-[95%] mx-auto">
-                        <div className="grid grid-cols-1 lg:grid-cols-[40%_1fr] gap-6 items-start lg:items-stretch mx-auto">
-                            {/* Left Column: Change Status, Timeline, Stakeholders */}
-                            <div className="space-y-6 lg:self-stretch lg:flex lg:flex-col lg:gap-6 lg:space-y-0">
-                                {/* Change Status Card */}
-                                {showChangeStatusCard && (
-                                    <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 flex flex-col min-h-[176px]">
-                                        <CardHeader className="pb-3">
-                                            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                                <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                                                Change Status
-                                                <Badge variant="secondary" className="bg-teal-50 text-teal-700 hover:bg-teal-100 border-teal-200">
-                                                    {useCase.Phase}
-                                                </Badge>
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="flex-1 flex flex-col justify-center">
-                                            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                                <span className="font-medium text-gray-900">{selectedStatus}</span>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-teal-600 hover:text-teal-700 hover:bg-teal-50">
-                                                            <ChevronDown className="h-3 w-3" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-48">
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('On-Track')}>On-Track</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('At Risk')}>At Risk</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Completed')}>Completed</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Help Needed')}>Help Needed</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('No Updates')}>No Updates</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Not Started')}>Not Started</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Parked')}>Parked</DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => setSelectedStatus('Rejected')}>Rejected</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-
-                                {/* Timeline Card */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
-                                    <CardHeader className="pb-3">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                            <CalendarIcon className="w-4 h-4 text-teal-600" />
-                                            Timeline
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="px-6 py-4">
-                                        <div className="space-y-4">
-                                            {/* Idea Phase */}
-                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
-                                                <div className="font-medium text-gray-900 text-sm">Idea</div>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('idea')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.idea.start ? format(phaseDates.idea.start, "dd-MM-yyyy") : "Pick start date"}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('idea')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.idea.end ? format(phaseDates.idea.end, "dd-MM-yyyy") : "Pick end date"}
-                                                </Button>
-                                            </div>
-
-                                            {/* Diagnose Phase */}
-                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
-                                                <div className="font-medium text-gray-900 text-sm">Diagnose</div>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('diagnose')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.diagnose.start ? format(phaseDates.diagnose.start, "dd-MM-yyyy") : "Pick start date"}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('diagnose')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.diagnose.end ? format(phaseDates.diagnose.end, "dd-MM-yyyy") : "Pick end date"}
-                                                </Button>
-                                            </div>
-
-                                            {/* Design Phase */}
-                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
-                                                <div className="font-medium text-gray-900 text-sm">Design</div>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('design')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.design.start ? format(phaseDates.design.start, "dd-MM-yyyy") : "Pick start date"}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('design')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.design.end ? format(phaseDates.design.end, "dd-MM-yyyy") : "Pick end date"}
-                                                </Button>
-                                            </div>
-
-                                            {/* Implemented Phase */}
-                                            <div className="grid grid-cols-3 gap-4 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">
-                                                <div className="font-medium text-gray-900 text-sm">Implemented</div>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('implemented')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.implemented.start ? format(phaseDates.implemented.start, "dd-MM-yyyy") : "Pick start date"}
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    className="h-9 justify-start text-left font-normal text-sm"
-                                                    onClick={() => handleOpenDateDialog('implemented')}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {phaseDates.implemented.end ? format(phaseDates.implemented.end, "dd-MM-yyyy") : "Pick end date"}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Stakeholders Card */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
-                                    <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-teal-600" />
-                                            Stakeholders
-                                        </CardTitle>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-teal-600 hover:bg-teal-50"
-                                            onClick={() => setIsDialogOpen(true)}
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                        </Button>
-                                    </CardHeader>
-                                    <CardContent className="pt-2">
-                                        <ScrollArea className="h-48">
-                                            <div className="space-y-2 pr-3">
-                                                {stakeholders.map((person, index) => {
-                                                    return (
-                                                        <div key={index} className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5 hover:bg-gray-50/70 transition-colors group">
-                                                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                                <Avatar className="h-7 w-7 border-none ring-1 ring-gray-100 shadow-sm">
-                                                                    <AvatarFallback className="bg-[#E5FF1F] text-gray-900 text-[10px] font-bold">
-                                                                        {person.initial}
-                                                                    </AvatarFallback>
-                                                                </Avatar>
-                                                                <div className="min-w-0">
-                                                                    <p className="text-sm font-semibold text-gray-900 leading-none truncate">{person.name}</p>
-                                                                    <p className="text-[11px] text-gray-500 mt-0.5 truncate">{person.role}</p>
-                                                                </div>
-                                                            </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6 text-gray-400 hover:text-teal-600 hover:bg-teal-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => handleEditStakeholder(index)}
-                                                            >
-                                                                <Edit className="w-3 h-3" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6 mr-1 text-gray-400 hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                onClick={() => handleDeleteStakeholder(index)}
-                                                            >
-                                                                <Trash2 className="w-3 h-3" />
-                                                            </Button>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-
-
-                            </div>
-
-                            {/* Right Column: Post Update, Recent Updates */}
-                            <div className="space-y-6 lg:self-stretch lg:flex lg:flex-col lg:gap-6 lg:space-y-0">
-                                {/* Post Update Card */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
-                                    <CardHeader className="pb-2">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                            Post your update
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        <div className="relative">
-                                            <Textarea
-                                                placeholder="What's the latest on this use case?"
-                                                value={updateText}
-                                                onChange={(e) => setUpdateText(e.target.value)}
-                                                className="min-h-[100px] bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-none"
-                                            />
-                                            <div className="absolute bottom-3 right-3 flex items-center gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-full px-4"
-                                                    onClick={handlePostUpdate}
-                                                    disabled={!updateText.trim()}
-                                                >
-                                                    Update
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Recent Updates Feed */}
-                                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 flex flex-col lg:flex-1 lg:min-h-0">
-                                    <CardHeader className="pb-3 border-b border-gray-100 flex flex-row items-center justify-between">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                            <Clock className="w-4 h-4 text-teal-600" />
-                                            Recent Updates
-                                        </CardTitle>
-                                        <Badge variant="outline" className="text-[10px] font-bold text-gray-400 border-gray-200">
-                                            {updates.length} TOTAL
-                                        </Badge>
-                                    </CardHeader>
-                                    <CardContent className="p-0 flex-1 overflow-hidden lg:min-h-0">
-                                        <ScrollArea className="h-48 lg:h-full">
-                                            <div className="divide-y divide-gray-100">
-                                                {updates.map((update) => (
-                                                    <div key={update.id} className="p-4 hover:bg-gray-50/50 transition-colors">
-                                                        <div className="flex gap-4">
-                                                            <Avatar className="h-10 w-10 shrink-0 ring-2 ring-white shadow-sm">
-                                                                <AvatarFallback className="bg-[#E5FF1F] text-gray-900 font-bold">
-                                                                    {update.author.split(' ').map(n => n[0]).join('')}
-                                                                </AvatarFallback>
-                                                            </Avatar>
-                                                            <div className="flex-1 space-y-1">
-                                                                <div className="flex items-center justify-between">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <p className="text-sm font-bold text-gray-900">{update.author}</p>
-                                                                        {stakeholders.find(s => s.name === update.author)?.role && (
-                                                                            <Badge variant="secondary" className="text-[10px] px-2 py-0 h-5 font-medium bg-gray-100 text-gray-600 hover:bg-gray-200">
-                                                                                {stakeholders.find(s => s.name === update.author)?.role}
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
-                                                                    <span className="text-xs text-gray-400">{update.time}</span>
-                                                                </div>
-                                                                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">
-                                                                    {update.content}
-                                                                </p>
-                                                                {update.type === 'status_change' && (
-                                                                    <div className="mt-3 flex items-center gap-2">
-                                                                        <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
-                                                                        <span className="text-[11px] font-bold text-teal-700 uppercase tracking-tight">Phase Updated</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    </div>
+                    <UpdateSection
+                        showChangeStatusCard={showChangeStatusCard}
+                        selectedStatus={selectedStatus}
+                        onSelectedStatusChange={setSelectedStatus}
+                        statusOptions={statusOptions}
+                        useCasePhase={useCase.phase}
+                        phaseMappings={phaseMappings}
+                        phaseDates={phaseDates}
+                        onOpenPhaseDates={handleOpenDateDialog}
+                        isLoading={isUpdateDataLoading}
+                        isTimelineEditing={isTimelineEditing}
+                        onToggleTimelineEdit={handleToggleTimelineEdit}
+                        onSaveTimeline={handleSaveTimeline}
+                        stakeholders={stakeholders}
+                        onOpenStakeholderDialog={() => setIsDialogOpen(true)}
+                        onEditStakeholder={handleEditStakeholder}
+                        onDeleteStakeholder={handleDeleteStakeholder}
+                        updateText={updateText}
+                        onUpdateTextChange={setUpdateText}
+                        onPostUpdate={handlePostUpdate}
+                        updates={updates}
+                    />
                 </TabsContent>
                 <TabsContent value="reprioritize" className="space-y-3">
-                    <div className="flex justify-center w-full">
-                        <div className="flex flex-1 flex-col gap-6 mx-auto max-w-7xl w-full px-4">
-                            <Card className="shadow-sm">
-                                <CardHeader className="border-b">
-                                    <CardTitle>Impact Metrics</CardTitle>
-                                    <CardDescription>Measure the potential reach and impact of this use case</CardDescription>
-                                </CardHeader>
-                                <CardContent className="pt-6 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label>Reach</Label>
-                                            <Input
-                                                type="text"
-                                                value={formData.reach}
-                                                onChange={(e) => handleFormDataChange('reach', e.target.value)}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Impact</Label>
-                                            <ImpactCombobox
-                                                value={formData.impact}
-                                                onChange={(value) => handleFormDataChange('impact', value)}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Confidence</Label>
-                                            <ConfidenceCombobox
-                                                value={formData.confidence}
-                                                onChange={(value) => handleFormDataChange('confidence', value)}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Effort</Label>
-                                            <EffortCombobox
-                                                value={formData.effort}
-                                                onChange={(value) => handleFormDataChange('effort', value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="shadow-sm">
-                                <CardHeader className="border-b">
-                                    <CardTitle>Priority & Scoring</CardTitle>
-                                    <CardDescription>Define prioritization and scoring metrics</CardDescription>
-                                </CardHeader>
-                                <CardContent className="pt-6 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <Label>RICE Score</Label>
-                                            <Input
-                                                type="text"
-                                                value={formData.riceScore}
-                                                onChange={(e) => handleFormDataChange('riceScore', e.target.value)}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Priority</Label>
-                                            <PriorityCombobox
-                                                value={formData.priority}
-                                                onChange={(value) => handleFormDataChange('priority', value)}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Delivery</Label>
-                                            <DeliveryCombobox
-                                                value={formData.delivery}
-                                                onChange={(value) => handleFormDataChange('delivery', value)}
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label>Total User Base</Label>
-                                            <UserBaseCombobox
-                                                value={formData.totalUserBase}
-                                                onChange={(value) => handleFormDataChange('totalUserBase', value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="shadow-sm">
-                                <CardHeader className="border-b">
-                                    <CardTitle>Reporting Configuration</CardTitle>
-                                    <CardDescription>Configure how this use case is reported</CardDescription>
-                                </CardHeader>
-                                <CardContent className="pt-6 space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                Display in AI Gallery
-                                            </div>
-                                            <div className="text-sm text-gray-500">
-                                                Show this use case publicly in the gallery
-                                            </div>
-                                        </div>
-                                        <Switch
-                                            checked={formData.displayInGallery}
-                                            onCheckedChange={() => handleToggle('displayInGallery')}
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center justify-between border-t pt-6">
-                                        <div className="space-y-0.5">
-                                            <div className="text-sm font-medium text-gray-900">
-                                                SLT Reporting
-                                            </div>
-                                            <div className="text-sm text-gray-500">
-                                                Include in senior leadership reports
-                                            </div>
-                                        </div>
-                                        <Switch
-                                            checked={formData.sltReporting}
-                                            onCheckedChange={() => handleToggle('sltReporting')}
-                                        />
-                                    </div>
-
-                                    <div className={cn("flex items-center justify-between border-t pt-6 flex-wrap gap-4", !formData.sltReporting && "opacity-50")}>
-                                        <div className="space-y-0.5 flex-1 min-w-[200px]">
-                                            <div className={cn("text-sm font-medium", formData.sltReporting ? "text-gray-900" : "text-gray-400")}>
-                                                Reporting Frequency
-                                            </div>
-                                            <div className={cn("text-sm", formData.sltReporting ? "text-gray-500" : "text-gray-400")}>
-                                                How often this use case is reported
-                                            </div>
-                                        </div>
-                                        <ReportingFrequencyCombobox
-                                            value={formData.reportingFrequency}
-                                            onChange={(value) => handleFormDataChange('reportingFrequency', value)}
-                                            disabled={!formData.sltReporting}
-                                        />
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                    <ReprioritizeSection
+                        formData={formData}
+                        onFormDataChange={(field, value) => handleFormDataChange(field, value)}
+                        onToggle={handleToggle}
+                    />
                 </TabsContent>
 
                 <TabsContent value="agent-library" className="space-y-3">
-                    <div className="max-w-6xl mx-auto space-y-6">
-                        {/* Knowledge Source Selection */}
-                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
-                            <CardHeader className="pb-3 border-b border-gray-100">
-                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                    SELECT KNOWLEDGE SOURCE
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-semibold text-gray-500 uppercase">Knowledge Source</Label>
-                                    <Select value={knowledgeForce} onValueChange={setKnowledgeForce}>
-                                        <SelectTrigger className="h-10 bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-teal-500/20 focus:border-teal-500 transition-all">
-                                            <SelectValue placeholder="Select Knowledge Source" />
-                                        </SelectTrigger>
-                                        <SelectContent position="item-aligned" className="w-60 -translate-x-0.5">
-                                            <SelectItem value="Sharepoint">Sharepoint</SelectItem>
-                                            <SelectItem value="OneDrive">OneDrive</SelectItem>
-                                            <SelectItem value="ServiceNow">ServiceNow</SelectItem>
-                                            <SelectItem value="Salesforce">Salesforce</SelectItem>
-                                            <SelectItem value="Public Websites">Public Websites</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Instructions Section */}
-                        <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
-                            <CardHeader className="pb-3 border-b border-gray-100">
-                                <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                    ADD INSTRUCTIONS / PROMPT
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <div className="space-y-3">
-                                    <Label className="text-xs font-semibold text-gray-500 uppercase">Agent Instructions / Prompt</Label>
-                                    <Textarea
-                                        placeholder="Enter agent instructions or prompt..."
-                                        rows={8}
-                                        value={instructions}
-                                        onChange={(e) => setInstructions(e.target.value)}
-                                        className="min-h-[200px] bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-teal-500/20 focus:border-teal-500 transition-all resize-none"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <AgentLibrarySection
+                        knowledgeForce={knowledgeForce}
+                        onKnowledgeForceChange={setKnowledgeForce}
+                        knowledgeSourceOptions={knowledgeSourceOptions}
+                        instructions={instructions}
+                        onInstructionsChange={setInstructions}
+                        aiThemes={themeOptions}
+                        selectedAIThemes={editableAITheme}
+                        onAIThemesChange={setEditableAITheme}
+                        personas={personaOptions}
+                        selectedPersonas={selectedPersonas}
+                        onPersonasChange={setSelectedPersonas}
+                        vendors={vendorOptions}
+                        selectedVendor={selectedVendor}
+                        onVendorChange={setSelectedVendor}
+                        models={modelOptions}
+                        selectedModel={selectedModel}
+                        onModelChange={setSelectedModel}
+                        agentId={agentId}
+                        onAgentIdChange={setAgentId}
+                        agentLink={agentLink}
+                        onAgentLinkChange={setAgentLink}
+                    />
                 </TabsContent>
 
                 <TabsContent value="metrics" className="space-y-6">
-                    <div className="w-[95%] mx-auto">
-
-                        <div className="mb-8 p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Add Metrics</h3>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleAddMetric}
-                                        className="text-teal-600 border-teal-600 hover:bg-teal-50 h-8"
-                                    >
-                                        <Plus size={14} className="mr-1" />
-                                        Add New Metric
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSubmitMetrics}
-                                        className="bg-teal-600 hover:bg-teal-700 text-white h-8"
-                                        disabled={!isMetricsFormValid}
-                                    >
-                                        Save
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {metrics.length > 0 ? (
-                                <div className="rounded-md border">
-                                    <ScrollArea className="h-[250px]">
-                                        <Table className="table-fixed">
-                                            <TableHeader>
-                                                {addMetricsTable.getHeaderGroups().map((headerGroup) => (
-                                                    <TableRow key={headerGroup.id}>
-                                                        {headerGroup.headers.map((header) => (
-                                                            <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                                {header.isPlaceholder
-                                                                    ? null
-                                                                    : flexRender(
-                                                                        header.column.columnDef.header,
-                                                                        header.getContext()
-                                                                    )}
-                                                            </TableHead>
-                                                        ))}
-                                                    </TableRow>
-                                                ))}
-                                            </TableHeader>
-                                            <TableBody>
-                                                {addMetricsTable.getRowModel().rows?.length ? (
-                                                    addMetricsTable.getRowModel().rows.map((row) => (
-                                                        <TableRow
-                                                            key={row.id}
-                                                            data-state={row.getIsSelected() && "selected"}
-                                                        >
-                                                            {row.getVisibleCells().map((cell) => (
-                                                                <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                </TableCell>
-                                                            ))}
-                                                        </TableRow>
-                                                    ))
-                                                ) : null}
-                                            </TableBody>
-                                        </Table>
-                                    </ScrollArea>
-                                </div>
-                            ) : (
-                                <Empty className="border border-dashed border-gray-200 bg-white/70">
-                                    <EmptyHeader>
-                                        <EmptyMedia variant="icon">
-                                            <Plus className="size-5 text-gray-600" />
-                                        </EmptyMedia>
-                                        <EmptyTitle>No metrics added yet</EmptyTitle>
-                                        <EmptyDescription>
-                                            Start by adding a new metric to track your progress.
-                                        </EmptyDescription>
-                                    </EmptyHeader>
-                                    <EmptyContent>
-                                        <Button onClick={handleAddMetric}>
-                                            Add New Metric
-                                        </Button>
-                                    </EmptyContent>
-                                </Empty>
-                            )}
-                        </div>
-
-                        {/* Reported Metrics Section */}
-                        <div className="p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Reported Metrics</h3>
-                                <div className="flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setIsMetricSelectDialogOpen(true)}
-                                        className="text-teal-600 border-teal-600 hover:bg-teal-50 h-8"
-                                    >
-                                        Report Metric
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        onClick={handleSaveReportedMetrics}
-                                        className="bg-teal-600 hover:bg-teal-700 text-white h-8"
-                                    >
-                                        Save
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-6">
-                                {shouldShowReportedTable ? (
-                                    <div className="rounded-md border">
-                                        <ScrollArea className="h-[250px]">
-                                            <Table className="table-fixed">
-                                                <TableHeader>
-                                                    {reportedTable.getHeaderGroups().map((headerGroup) => (
-                                                        <TableRow key={headerGroup.id}>
-                                                            {headerGroup.headers.map((header) => (
-                                                                <TableHead key={header.id} style={{ width: header.getSize() }}>
-                                                                    {header.isPlaceholder
-                                                                        ? null
-                                                                        : flexRender(
-                                                                            header.column.columnDef.header,
-                                                                            header.getContext()
-                                                                        )}
-                                                                </TableHead>
-                                                            ))}
-                                                        </TableRow>
-                                                    ))}
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {reportedTable.getRowModel().rows.map((row) => (
-                                                        <TableRow key={row.id}>
-                                                            {row.getVisibleCells().map((cell) => (
-                                                                <TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
-                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                </TableCell>
-                                                            ))}
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </ScrollArea>
-                                    </div>
-                                ) : (
-                                    <Empty className="border border-dashed border-gray-200 bg-white/70">
-                                        <EmptyHeader>
-                                            <EmptyMedia variant="icon">
-                                                <History className="size-5 text-gray-600" />
-                                            </EmptyMedia>
-                                            <EmptyTitle>No reporting active</EmptyTitle>
-                                            <EmptyDescription>
-                                                Select a metric from the dropdown above and click 'Report Metric' to start.
-                                            </EmptyDescription>
-                                        </EmptyHeader>
-                                    </Empty>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                    <MetricsSection
+                        metrics={metrics}
+                        addMetricsTable={addMetricsTable}
+                        reportedTable={reportedTable}
+                        shouldShowReportedTable={shouldShowReportedTable}
+                        isMetricsFormValid={isMetricsFormValid}
+                        onAddMetric={handleAddMetric}
+                        onSubmitMetrics={handleSubmitMetrics}
+                        onOpenReportMetric={() => setIsMetricSelectDialogOpen(true)}
+                        onSaveReportedMetrics={handleSaveReportedMetrics}
+                    />
                 </TabsContent>
 
                 <TabsContent value="status" className="space-y-8">
-                    <div className="w-[95%] mx-auto space-y-8">
-                        {state?.sourceScreen === 'champion' ? (
-                            <>
-                                {/* Top Section - 3 Cards */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                                    {/* Use Case Details */}
-                                    <Card className="h-full">
-                                        <CardHeader className="pb-3 border-b border-gray-100">
-                                            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                                <FileText className="w-4 h-4 text-teal-600" />
-                                                USE CASE DETAILS
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="space-y-6">
-                                                <div>
-                                                    <div className="text-sm text-gray-600 mb-1">Use Case Title</div>
-                                                    <div className="text-base font-semibold text-gray-900">{useCase.Title}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm text-gray-600 mb-1">Submitted By</div>
-                                                    <div className="text-base font-medium text-gray-900">Achman Saxena</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm text-gray-600 mb-1">Status</div>
-                                                    <div className="text-base font-medium text-gray-900">{useCase.Status}</div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-sm text-gray-600 mb-1">Business Unit</div>
-                                                    <div className="text-base font-medium text-gray-900">Demo Channel</div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-
-
-                                    {/* Approval History */}
-                                    <Card className="h-full">
-                                        <CardHeader className="pb-3 border-b border-gray-100">
-                                            <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                                <History className="w-4 h-4 text-teal-600" />
-                                                APPROVAL HISTORY
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="space-y-6">
-                                                {approvalHistory.map((item, index) => {
-                                                    const badgeStyle = getStatusBadge(item.status);
-                                                    return (
-                                                        <div
-                                                            key={index}
-                                                            className={`pb-4 ${index < approvalHistory.length - 1 ? 'border-b border-gray-200' : ''}`}
-                                                        >
-                                                            <div className="mb-4">
-                                                                <div className="text-sm text-gray-600 mb-1">Phase</div>
-                                                                <div className="text-base font-semibold text-gray-900">{item.phase}</div>
-                                                            </div>
-                                                            <div className="mb-4">
-                                                                <div className="text-sm text-gray-600 mb-1">Status</div>
-                                                                <span className="text-sm px-3 py-1 rounded-full font-semibold"
-                                                                    style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.color }}>
-                                                                    {item.status}
-                                                                </span>
-                                                            </div>
-                                                            <div className="mb-4">
-                                                                <div className="text-sm text-gray-600 mb-1">Approver</div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-base font-medium text-gray-900">{item.approver}</span>
-                                                                    <Avatar className="h-6 w-6">
-                                                                        <AvatarFallback className="bg-[#13352C] text-white text-xs">
-                                                                            {item.approver.split(' ').map(name => name.charAt(0)).join('').slice(0, 2).toUpperCase()}
-                                                                        </AvatarFallback>
-                                                                    </Avatar>
-                                                                </div>
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-sm text-gray-600 mb-1">Date</div>
-                                                                <div className="text-base font-medium text-gray-900">{item.date}</div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </div>
-
-                                {/* Your Decision Section */}
-                                <Card className="mb-8">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
-                                            <MessageSquare className="w-4 h-4 text-teal-600" />
-                                            YOUR DECISION ON DESIGN PHASE
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-6">
-                                        <div className="flex flex-col md:flex-row gap-8 mb-6">
-                                            <div className="w-full md:w-1/4">
-                                                <Label htmlFor="decision">Your Decision</Label>
-                                                <Select value={decision} onValueChange={setDecision}>
-                                                    <SelectTrigger>
-                                                        <SelectValue placeholder="Select Decision" />
-                                                    </SelectTrigger>
-                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={130} alignOffset={70} className="w-[180px]">
-                                                        <SelectItem value="Approve">Approve</SelectItem>
-                                                        <SelectItem value="Reject">Reject</SelectItem>
-                                                        <SelectItem value="Request Clarification">Request Clarification</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <div className="flex-1">
-                                                <Label htmlFor="comments">Comments</Label>
-                                                <Textarea
-                                                    id="comments"
-                                                    rows={6}
-                                                    placeholder="Add your comments here..."
-                                                    value={comments}
-                                                    onChange={(e) => setComments(e.target.value)}
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-4 justify-end mt-4">
-                                            <Button variant="outline" onClick={handleClearDecision}>
-                                                Clear
-                                            </Button>
-                                            <Button
-                                                onClick={handleApprovalSubmit}
-                                                disabled={!comments.trim()}
-                                                className="bg-[#13352C] hover:bg-[#0f2a23] text-white"
-                                            >
-                                                Submit
-                                            </Button>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </>
-                        ) : null}
-
-                        {state?.sourceScreen !== 'champion' && (
-                            /* Original Status Content for My Use Cases */
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                {/* Current Phase & Status */}
-                                <Card className="lg:col-span-1">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                            CURRENT PHASE & STATUS
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6 pt-6">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <Label className="text-sm font-medium">Current Phase</Label>
-                                                <div className="text-xl font-semibold text-primary mt-1">{useCase.Phase}</div>
-                                            </div>
-
-                                            <div>
-                                                <Label className="text-sm font-medium">Current Status</Label>
-                                                <Select value={currentStatus} onValueChange={setCurrentStatus}>
-                                                    <SelectTrigger className="mt-2">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={70} alignOffset={70} className="w-[200px]">
-                                                        <SelectItem value="On-Track">On-Track</SelectItem>
-                                                        <SelectItem value="At Risk">At Risk</SelectItem>
-                                                        <SelectItem value="Completed">Completed</SelectItem>
-                                                        <SelectItem value="Help Needed">Help Needed</SelectItem>
-                                                        <SelectItem value="No Updates">No Updates</SelectItem>
-                                                        <SelectItem value="Not Started">Not Started</SelectItem>
-                                                        <SelectItem value="Parked">Parked</SelectItem>
-                                                        <SelectItem value="Rejected">Rejected</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                        </div>
-                                        <Button onClick={() => toast.success('Status updated successfully')} className="w-full">
-                                            Update Status
-                                        </Button>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Completion Summary */}
-                                <Card className="lg:col-span-1">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                            COMPLETION SUMMARY
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3 pt-6">
-                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                                            <span className="font-medium text-sm">Idea</span>
-                                            <Badge variant="default" className="text-xs">
-                                                Completed
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                                            <span className="font-medium text-sm">Diagnose</span>
-                                            <Badge variant="secondary" className="text-xs">
-                                                Not Started
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                                            <span className="font-medium text-sm">Design</span>
-                                            <Badge variant="secondary" className="text-xs">
-                                                Not Started
-                                            </Badge>
-                                        </div>
-                                        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border">
-                                            <span className="font-medium text-sm">Implement</span>
-                                            <Badge variant="secondary" className="text-xs">
-                                                Not Started
-                                            </Badge>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Approval History */}
-                                <Card className="lg:col-span-1">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                            APPROVAL HISTORY
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="max-h-80 overflow-y-auto pt-6">
-                                        <div className="space-y-4">
-                                            <div className="border-b border-border pb-3 last:border-b-0 last:pb-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="font-semibold text-sm">Idea</span>
-                                                    <Badge variant="default" className="text-xs">
-                                                        Approved
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                                    <span>10/25/2025</span>
-                                                    <span>System</span>
-                                                </div>
-                                            </div>
-                                            <div className="border-b border-border pb-3 last:border-b-0 last:pb-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <span className="font-semibold text-sm">Diagnose</span>
-                                                    <Badge variant="destructive" className="text-xs">
-                                                        Rejected
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                                                    <span>11/02/2025</span>
-                                                    <span>Jane Doe</span>
-                                                </div>
-                                                <div className="text-xs text-muted-foreground italic bg-muted/30 p-2 rounded">
-                                                    "More details needed on ROI."
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
-
-                        {/* Request Approval Section - Only for My Use Cases, or if we want it for both but likely just my use cases as per request to keep it */}
-                        {state?.sourceScreen !== 'champion' && (
-                            <Card>
-                                <CardHeader className="pb-3 border-b border-gray-100">
-                                    <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                                        REQUEST APPROVAL FOR NEXT PHASE
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6 pt-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        <div className="space-y-4">
-                                            <div>
-                                                <Label className="text-sm font-medium">Request Approval For</Label>
-                                                <Select value={nextPhase} onValueChange={setNextPhase}>
-                                                    <SelectTrigger className="mt-2">
-                                                        <SelectValue placeholder="Select Next Phase" />
-                                                    </SelectTrigger>
-                                                    <SelectContent position="popper" side="bottom" align="start" sideOffset={120} alignOffset={70} className="w-[200px]">
-                                                        <SelectItem value="Diagnose">Diagnose</SelectItem>
-                                                        <SelectItem value="Design">Design</SelectItem>
-                                                        <SelectItem value="Implement">Implement</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <Alert variant="destructive">
-                                                <AlertCircle className="h-4 w-4" />
-                                                <AlertDescription className="text-sm">
-                                                    Action blocked — phase must be Completed or Not Started, select 'Request Approval for Next Phase'.
-                                                </AlertDescription>
-                                            </Alert>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label className="text-sm font-medium">Notes and Justification</Label>
-                                            <Textarea
-                                                rows={6}
-                                                placeholder="Describe the work completed and why you're ready to advance to the next phase..."
-                                                value={statusNotes}
-                                                onChange={(e) => setStatusNotes(e.target.value)}
-                                                className="resize-none"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t">
-                                        <Button variant="outline" onClick={() => { setNextPhase(''); setStatusNotes(''); }} className="sm:w-auto">
-                                            Clear Form
-                                        </Button>
-                                        <Button onClick={() => toast.success('Approval request sent successfully')} className="sm:w-auto">
-                                            Send Request
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </div>
+                    <ActionsSection
+                        isChampion={state?.sourceScreen === 'champion'}
+                        useCaseTitle={useCase.title}
+                        submittedBy={useCase.editorEmail || useCase.primaryContact}
+                        statusName={useCase.statusName}
+                        businessUnitName={useCase.businessUnitName}
+                        useCasePhase={useCase.phase}
+                        decisionPhaseLabel={decisionPhaseLabel}
+                        decision={decision}
+                        onDecisionChange={setDecision}
+                        comments={comments}
+                        onCommentsChange={setComments}
+                        onClearDecision={handleClearDecision}
+                        onSubmitDecision={handleApprovalSubmit}
+                        approvalHistory={approvalHistory}
+                        statusOptions={statusOptions}
+                        currentStatus={currentStatus}
+                        onCurrentStatusChange={setCurrentStatus}
+                        completionSummary={completionSummary}
+                        nextPhaseOptions={nextPhaseOptions}
+                        nextPhase={nextPhase}
+                        onNextPhaseChange={(value) => {
+                            if (!value) {
+                                setNextPhase("");
+                                setStatusNotes("");
+                                return;
+                            }
+                            setNextPhase(value);
+                        }}
+                        statusNotes={statusNotes}
+                        onStatusNotesChange={setStatusNotes}
+                        onUpdateStatus={() => toast.success('Status updated successfully')}
+                        onSendApprovalRequest={() => toast.success('Approval request sent successfully')}
+                    />
                 </TabsContent>
             </Tabs>
 
@@ -2330,19 +1870,18 @@ const UseCaseDetails = () => {
                                 <SelectTrigger className="col-span-3">
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Product Manager">Product Manager</SelectItem>
-                                    <SelectItem value="Program Manager">Program Manager</SelectItem>
-                                    <SelectItem value="Team Member">Team Member</SelectItem>
-                                    <SelectItem value="Champion">Champion</SelectItem>
-                                    <SelectItem value="Executive Sponsor">Executive Sponsor</SelectItem>
-                                    <SelectItem value="Process Owner">Process Owner</SelectItem>
-                                    <SelectItem value="Other">Other</SelectItem>
-                                    <SelectItem value="Engineering Lead">Engineering Lead</SelectItem>
-                                    <SelectItem value="Security Lead">Security Lead</SelectItem>
-                                    <SelectItem value="Procurement Lead">Procurement Lead</SelectItem>
-                                    <SelectItem value="Legal lead">Legal lead</SelectItem>
-                                    <SelectItem value="Arch Review">Arch Review</SelectItem>
+                                <SelectContent side="bottom" align="start" position="popper">
+                                    {roleSelectOptions.length > 0 ? (
+                                        roleSelectOptions.map((role) => (
+                                            <SelectItem key={role.id} value={role.name}>
+                                                {role.name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="__roles_loading" disabled>
+                                            Roles unavailable
+                                        </SelectItem>
+                                    )}
                                 </SelectContent>
                             </Select>
                         </div>

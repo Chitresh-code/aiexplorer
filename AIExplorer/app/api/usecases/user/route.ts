@@ -38,6 +38,16 @@ const toUseCaseItem = (row: SqlRow) => ({
   phase: toStringValue(pickValue(row, ["phase", "Phase"])).trim(),
   statusName: toStringValue(pickValue(row, ["statusName", "StatusName"])).trim(),
   statusColor: toStringValue(pickValue(row, ["statusColor", "StatusColor"])).trim(),
+  priority: toNumberValue(pickValue(row, ["priority", "Priority"])),
+  deliveryTimespan: toStringValue(
+    pickValue(row, ["deliveryTimespan", "DeliveryTimespan", "timespan", "Timespan"]),
+  ).trim(),
+  currentPhaseStartDate: toStringValue(
+    pickValue(row, ["currentPhaseStartDate", "CurrentPhaseStartDate", "startdate", "StartDate"]),
+  ).trim(),
+  currentPhaseEndDate: toStringValue(
+    pickValue(row, ["currentPhaseEndDate", "CurrentPhaseEndDate", "enddate", "EndDate"]),
+  ).trim(),
 });
 
 export const GET = async (request: Request): Promise<NextResponse> => {

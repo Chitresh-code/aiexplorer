@@ -20,7 +20,7 @@ interface UseCasesHookState {
   refetch: () => Promise<void>;
 }
 
-export const useUseCases = (): UseCasesHookState => {
+export const useUseCases = (options?: { email?: string }): UseCasesHookState => {
   const [useCases, setUseCases] = useState<UseCaseRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +28,26 @@ export const useUseCases = (): UseCasesHookState => {
   const loadUseCases = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchUseCases();
-      setUseCases(Array.isArray(data) ? data : []);
+      if (options?.email !== undefined && !options.email.trim()) {
+        setUseCases([]);
+        setError(null);
+        return;
+      }
+      if (options?.email) {
+        const response = await fetch(
+          `/api/usecases/user?email=${encodeURIComponent(options.email)}`,
+          { headers: { Accept: "application/json" } },
+        );
+        if (!response.ok) {
+          const details = await response.text().catch(() => "");
+          throw new Error(details || "Failed to load user use cases.");
+        }
+        const data = await response.json();
+        setUseCases(Array.isArray(data?.items) ? data.items : []);
+      } else {
+        const data = await fetchUseCases();
+        setUseCases(Array.isArray(data) ? data : []);
+      }
       setError(null);
     } catch (err) {
       console.error('Failed to load use cases', err);
@@ -37,7 +55,7 @@ export const useUseCases = (): UseCasesHookState => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [options?.email]);
 
   useEffect(() => {
     void loadUseCases();

@@ -61,6 +61,80 @@ export const UseCaseInfoSection = ({
             <CardContent className="pt-6 space-y-6">
                 <FormField
                     control={form.control}
+                    name="opportunity"
+                    render={({ field, fieldState }) => (
+                            <Field>
+                                <FieldLabel className="w-full justify-between h-4">
+                                    <span>
+                                        Opportunity for AI Agent<span className="text-red-500">*</span>
+                                        {aiGeneratedFields.opportunity && (
+                                            <span
+                                                className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
+                                                title="AI generated"
+                                            >
+                                                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                                            </span>
+                                        )}
+                                    </span>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant="link"
+                                                    className="h-auto px-0 text-xs text-sky-600"
+                                                    onClick={onGenerateAi}
+                                                    disabled={aiStatus === "loading"}
+                                                >
+                                                    {aiStatus === "loading" ? "Generating..." : "Write with AI"}
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="left" className="max-w-[260px]">
+                                                Generates a title, headline, rewritten opportunity, and business value from your opportunity.
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </FieldLabel>
+                                <FieldContent>
+                                    <Textarea
+                                        rows={3}
+                                        placeholder="What process is AI Automating? (ie. Agent Purpose)"
+                                        {...field}
+                                        className="form-textarea"
+                                    />
+                                    <FieldError errors={[fieldState.error]} />
+                                    {aiSuggestions.opportunity && (
+                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
+                                            <span>Use AI suggestion?</span>
+                                            <div className="flex items-center gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onAcceptSuggestion("opportunity")}
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
+                                                    onClick={() => onRejectSuggestion("opportunity")}
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </FieldContent>
+                            </Field>
+                        )}
+                    />
+
+                <FormField
+                    control={form.control}
                     name="useCaseTitle"
                     render={({ field, fieldState }) => (
                             <Field>
@@ -158,80 +232,6 @@ export const UseCaseInfoSection = ({
                                                     size="icon"
                                                     className="h-6 w-6 text-sky-600 hover:text-sky-700"
                                                     onClick={() => onRejectSuggestion("headline")}
-                                                >
-                                                    <X className="h-3.5 w-3.5" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </FieldContent>
-                            </Field>
-                        )}
-                    />
-
-                <FormField
-                    control={form.control}
-                    name="opportunity"
-                    render={({ field, fieldState }) => (
-                            <Field>
-                                <FieldLabel className="w-full justify-between h-4">
-                                    <span>
-                                        Opportunity<span className="text-red-500">*</span>
-                                        {aiGeneratedFields.opportunity && (
-                                            <span
-                                                className="ml-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-600"
-                                                title="AI generated"
-                                            >
-                                                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                                            </span>
-                                        )}
-                                    </span>
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    type="button"
-                                                    variant="link"
-                                                    className="h-auto px-0 text-xs text-sky-600"
-                                                    onClick={onGenerateAi}
-                                                    disabled={aiStatus === "loading"}
-                                                >
-                                                    {aiStatus === "loading" ? "Generating..." : "Write with AI"}
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="left" className="max-w-[260px]">
-                                                Generates a title, headline, rewritten opportunity, and business value from your opportunity.
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                </FieldLabel>
-                                <FieldContent>
-                                    <Textarea
-                                        rows={3}
-                                        placeholder="What is AI being used for?"
-                                        {...field}
-                                        className="form-textarea"
-                                    />
-                                    <FieldError errors={[fieldState.error]} />
-                                    {aiSuggestions.opportunity && (
-                                        <div className="mt-2 flex items-center justify-between text-xs text-sky-600">
-                                            <span>Use AI suggestion?</span>
-                                            <div className="flex items-center gap-1">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
-                                                    onClick={() => onAcceptSuggestion("opportunity")}
-                                                >
-                                                    <Check className="h-3.5 w-3.5" />
-                                                </Button>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-6 w-6 text-sky-600 hover:text-sky-700"
-                                                    onClick={() => onRejectSuggestion("opportunity")}
                                                 >
                                                     <X className="h-3.5 w-3.5" />
                                                 </Button>
