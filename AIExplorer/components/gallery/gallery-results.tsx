@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, ChevronUp } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Bot, ChevronUp, LayoutGrid } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 import type { GalleryUseCaseListItem } from "@/features/gallery/types";
 
@@ -14,6 +15,7 @@ type GalleryResultsProps = {
   onReset: () => void;
   onExplore: (useCase: GalleryUseCaseListItem) => void;
   onSubmitNew: () => void;
+  totalCount?: number;
 };
 
 const PAGE_SIZE = 12;
@@ -24,6 +26,7 @@ export const GalleryResults = ({
   onReset,
   onExplore,
   onSubmitNew,
+  totalCount
 }: GalleryResultsProps) => {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -69,6 +72,18 @@ export const GalleryResults = ({
 
   return (
     <Card className="shadow-sm">
+      <CardHeader className="pb-3 border-b border-gray-100 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+          <LayoutGrid className="w-4 h-4 text-teal-600" />
+          Use Cases
+        </CardTitle>
+        <Badge
+          variant="outline"
+          className="text-[10px] font-bold text-gray-400 border-gray-200"
+        >
+          {totalCount} TOTAL
+        </Badge>
+      </CardHeader>
       <CardContent className="pt-6">
         {isLoading ? (
           <div className="grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-4">

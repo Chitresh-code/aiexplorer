@@ -15,6 +15,8 @@ import type {
   GalleryUseCase,
   GalleryUseCaseListItem,
 } from "@/features/gallery/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const AIGalleryDetail = () => {
   const router = useRouter();
@@ -57,7 +59,7 @@ const AIGalleryDetail = () => {
   const hasDetails = (
     value: GalleryUseCase | GalleryUseCaseListItem,
   ): value is GalleryUseCase =>
-    "headline" in value && "opportunity" in value && "evidence" in value;
+    "headline" in value && "opportunity" in value && "evidence" in value && "businessValue" in value;
 
   if (isLoading) {
     return (
@@ -92,7 +94,39 @@ const AIGalleryDetail = () => {
       </div>
     );
   }
-
+  const MarkdownBlock = ({ content }: { content: string }) => {
+  if (!content?.trim()) {
+    return <div className="text-gray-400 italic">No content provided.</div>;
+  }
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => (
+          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-4 last:mb-0">
+            {children}
+          </p>
+        ),
+        ul: ({ children }) => (
+          <ul className="list-disc pl-5 text-gray-700 leading-relaxed space-y-1 mb-4">
+            {children}
+          </ul>
+        ),
+        ol: ({ children }) => (
+          <ol className="list-decimal pl-5 text-gray-700 leading-relaxed space-y-1 mb-4">
+            {children}
+          </ol>
+        ),
+        li: ({ children }) => <li className="text-gray-700">{children}</li>,
+        strong: ({ children }) => (
+          <strong className="font-semibold text-gray-900">{children}</strong>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+};
   if (!useCase || !hasDetails(useCase)) return null;
 
   return (
@@ -105,7 +139,8 @@ const AIGalleryDetail = () => {
                 className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col"
                 style={{ backgroundColor: useCase.bgColor }}
               >
-                <CardContent className="p-8 flex-1">
+                <CardHeader className="relative h-[72px]" />
+                <CardContent className="pt-2p-8 flex-1">
                   <div className="space-y-6 h-full">
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
@@ -134,7 +169,7 @@ const AIGalleryDetail = () => {
 
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Department:
+                        Business Unit:
                       </h3>
                       <Input
                         value={useCase.businessUnit}
@@ -142,7 +177,16 @@ const AIGalleryDetail = () => {
                         className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
                       />
                     </div>
-
+                      <div>
+                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                        Team:
+                      </h3>
+                      <Input
+                        value={useCase.team || "Undefined"}
+                        readOnly
+                        className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
+                      />
+                    </div>
                     <div>
                       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
                         AI Theme:
@@ -151,8 +195,27 @@ const AIGalleryDetail = () => {
                         {useCase.aiThemes.join(", ")}
                       </div>
                     </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                      Primary Contact Person:
+                    </h3>
+                    <Input
+                      value={useCase.primaryContact}
+                      readOnly
+                      className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
+                    />
                   </div>
+                                      <div className="pt-4">
+                      <Button 
+                        className="bg-[#D2E247] hover:bg-[#C1D136] text-[#13352C] font-bold px-10 py-2 rounded-lg shadow-sm border-none"
+                      >
+                        Explore
+                      </Button>
+                    </div>
+                </div>
                 </CardContent>
+                
               </Card>
             </div>
 
@@ -172,47 +235,34 @@ const AIGalleryDetail = () => {
                   <div className="space-y-8 h-full">
                     <div>
                       <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Headline - One line Executive Headline
-                      </CardTitle>
-                      <Textarea
-                        value={useCase.headline}
-                        readOnly
-                        className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden"
-                      />
-                    </div>
-
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
                         Opportunity - What is the idea for which AI is being used?
                       </CardTitle>
-                      <Textarea
-                        value={useCase.opportunity}
+                      <MarkdownBlock
+                        content={useCase.opportunity}
                         readOnly
                         className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden"
                       />
                     </div>
-
                     <div>
                       <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Evidence - Why it is needed?
+                        Headline - One line Executive Headline
                       </CardTitle>
-                      <Textarea
-                        value={useCase.evidence}
+                      <MarkdownBlock
+                        content={useCase.headline}
                         readOnly
                         className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden"
                       />
                     </div>
-
                     <div>
                       <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Primary Contact Person
+                        Business Value - What is the impact of this AI agent?
                       </CardTitle>
-                      <Textarea
-                        value={useCase.primaryContact}
+                      <MarkdownBlock
+                        content={useCase.businessValue}
                         readOnly
-                        className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden"
+                        className="text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none"
                       />
-                    </div>
+                    </div>                 
                   </div>
                 </CardContent>
               </Card>

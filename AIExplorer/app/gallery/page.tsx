@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@/lib/router";
 import { PlusCircle } from "lucide-react";
-import { SectionCards } from "@/features/dashboard/components/SectionCards";
+//import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import { GallerySearch } from "@/components/gallery/gallery-search";
 import { GalleryFilters, type GalleryFilterConfig } from "@/components/gallery/gallery-filters";
 import { GalleryResults } from "@/components/gallery/gallery-results";
@@ -14,7 +14,7 @@ import {
 
 const AIGallery = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"search" | "similar">("search");
+  const [activeTab, setActiveTab] = useState<"similar">("similar");
   const [searchUseCase, setSearchUseCase] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
   const [selectedPersonas, setSelectedPersonas] = useState<string[]>([]);
@@ -205,7 +205,7 @@ const AIGallery = () => {
         placeholder: "Team Name",
         className: baseClassName,
         icon,
-        showBadges: false,
+        showBadges: true,
       },
     ];
   }, [
@@ -245,21 +245,21 @@ const AIGallery = () => {
 
   const showReset = Boolean(
     searchUseCase ||
-      selectedDepartment.length ||
-      selectedPhase ||
-      selectedPersonas.length ||
-      selectedAiThemes.length ||
-      selectedVendor.length ||
-      selectedTeams.length ||
-      selectedStatuses.length ||
-      selectedAiModels.length,
+    selectedDepartment.length ||
+    selectedPhase ||
+    selectedPersonas.length ||
+    selectedAiThemes.length ||
+    selectedVendor.length ||
+    selectedTeams.length ||
+    selectedStatuses.length ||
+    selectedAiModels.length,
   );
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-      <div className="w-full">
+      {/* <div className="w-full">
         <SectionCards />
-      </div>
+      </div> */}
 
       <GallerySearch
         activeTab={activeTab}
@@ -281,6 +281,7 @@ const AIGallery = () => {
         onReset={handleReset}
         onExplore={handleExplore}
         onSubmitNew={() => navigate("/submit-use-case")}
+        totalCount={useCases.total}
       />
     </div>
   );

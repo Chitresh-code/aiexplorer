@@ -32,23 +32,7 @@ export const GallerySearch = ({
             className="h-12 text-sm border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
             aria-label="Search use cases"
           />
-          <Button
-            size="sm"
-            variant={activeTab === "similar" ? "secondary" : "ghost"}
-            onClick={() => onTabChange("similar")}
-            className="h-9 text-xs px-3"
-          >
-            <PlusCircle className="h-3 w-3 mr-1" />
-            Find Similar
-          </Button>
-          <Button
-            size="sm"
-            variant={activeTab === "search" ? "secondary" : "ghost"}
-            onClick={() => onTabChange("search")}
-            className="h-9 text-xs px-3"
-          >
-            Search
-          </Button>
+          
         </div>
       </div>
     </div>

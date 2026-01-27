@@ -128,6 +128,7 @@ const toDetailItem = (item: GalleryDbUseCase): GalleryUseCase => ({
   opportunity: item.opportunity ?? "",
   evidence: item.businessValue ?? "",
   primaryContact: item.primaryContact ?? "",
+  businessValue: item.businessValue ?? "",
 });
 
 const buildQuery = (query: UseCaseQuery) => {
@@ -189,17 +190,37 @@ export const fetchUseCase = async (
   id: number,
   signal?: AbortSignal,
 ): Promise<GalleryUseCase> => {
-  const response = await fetch("/api/usecases/gallery", { signal });
+  // 1. Fetch from the specific ID endpoint to get full details
+  const response = await fetch(`/api/usecases/${id}`, { signal });
   if (!response.ok) {
     throw new Error("Failed to load use case.");
   }
-  const payload = (await response.json()) as { items?: GalleryDbUseCase[] };
-  const items = payload.items ?? [];
-  const match = items.find((item) => Number(item.id) === id);
-  if (!match) {
-    throw new Error("Failed to load use case.");
-  }
-  return toDetailItem(match);
+  
+  const payload = await response.json();
+  const item = payload.useCase; // Extract the core use case object
+  
+  // 2. Map everything including themes and personas from the response
+  return {
+    ...item,
+    id: Number(item.id),
+    title: item.title || "",
+    phase: item.phase || "",
+    status: item.statusName || "",
+    businessUnit: item.businessUnitName || "",
+    team: item.teamName || "",
+    subTeam: "",
+    vendorName: "",
+    aiModel: item.aiModel || "",
+    // Map themes and personas from the specific arrays in the payload
+    aiThemes: payload.themes?.map((t: any) => t.themeName) || [],
+    personas: payload.personas?.map((p: any) => p.personaName) || [],
+    bgColor: resolveStatusColor(item.statusColor),
+    headline: item.headlines || "",
+    opportunity: item.opportunity || "",
+    evidence: item.businessValue || "",
+    primaryContact: item.primarycontact || "", // Note: Use lowercase 'primarycontact' to match your API output
+    businessValue: item.business_value || "", // Note: Use 'business_value' to match your API output
+  };
 };
 
 export const fetchFilters = async (

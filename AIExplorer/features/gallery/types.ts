@@ -16,7 +16,8 @@ export type GalleryUseCase = {
   headline: string;
   opportunity: string;
   evidence: string;
-  primaryContact: string;
+  primaryContact: string
+  businessValue: string;
 };
 
 export type GalleryUseCaseListItem = Pick<
