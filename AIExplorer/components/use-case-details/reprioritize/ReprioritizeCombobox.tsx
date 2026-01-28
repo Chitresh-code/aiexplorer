@@ -28,10 +28,10 @@ export const ReprioritizeCombobox = ({
   placeholder,
   searchPlaceholder,
   className,
-  align = "end",
-  alignOffset = 130,
-  sideOffset = 60,
-  contentClassName = "w-[calc(var(--radix-popper-anchor-width)-8px)] min-w-[200px]",
+  align = "start",
+  alignOffset = 0,
+  sideOffset = 4,
+  contentClassName = "w-[var(--radix-popper-anchor-width)] min-w-[220px]",
   disabled,
 }: ReprioritizeComboboxProps) => {
   return (

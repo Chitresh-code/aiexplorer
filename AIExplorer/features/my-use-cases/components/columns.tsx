@@ -13,9 +13,7 @@ import { useNavigate } from "@/lib/router";
 import { setRouteState } from "@/lib/navigation-state";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DeliveryHeaderFilter } from "./delivery-header-filter";
-import { PriorityHeaderFilter } from "./priority-header-filter";
-import { IdHeaderFilter } from "./id-header-filter";
+import { HeaderMultiFilter } from "@/components/table/header-multi-filter";
 
 type PhaseColumn = {
     id: number;
@@ -104,7 +102,7 @@ export const createColumns = (
             accessorKey: "id",
             header: ({ column }) => (
                 <div className="w-[80px] flex items-start justify-start">
-                    <IdHeaderFilter column={column} options={idOptions} />
+                    <HeaderMultiFilter column={column} label="ID" options={idOptions} />
                 </div>
             ),
             cell: ({ row }) => (
@@ -134,15 +132,18 @@ export const createColumns = (
             },
             cell: ({ row }) => {
                 const useCase = row.original;
+                const userType = sourceScreen === "champion" ? "champion" : "owner";
+                const defaultTab = "info";
+                const detailsUrl = `/use-case-details/${useCase.id}?user=${userType}&tab=${defaultTab}`;
 
                 return (
                     <div
-                    className="font-medium text-gray-900 cursor-pointer hover:underline whitespace-normal break-words"
-                    onClick={() => {
-                        setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen });
-                        navigate(`/use-case-details/${useCase.id}`);
-                    }}
-                >
+                        className="font-medium text-gray-900 cursor-pointer hover:underline whitespace-normal break-words"
+                        onClick={() => {
+                        setRouteState(detailsUrl, { useCaseTitle: useCase.title, sourceScreen });
+                        navigate(detailsUrl);
+                        }}
+                    >
                         {useCase.title}
                     </div>
                 )
@@ -153,7 +154,7 @@ export const createColumns = (
         accessorKey: "delivery",
         header: ({ column }) => (
             <div className="w-[80px] flex justify-center mx-auto">
-                <DeliveryHeaderFilter column={column} options={deliveryOptions} />
+                <HeaderMultiFilter column={column} label="Delivery" options={deliveryOptions} />
             </div>
         ),
         cell: ({ row }) => (
@@ -162,14 +163,26 @@ export const createColumns = (
             </div>
         ),
         filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id) as string);
+            if (!value || !Array.isArray(value) || value.length === 0) return true;
+            const rowValue = String(row.getValue(id) ?? "");
+            return value.includes(rowValue);
         },
     },
     {
         accessorKey: "priority",
         header: ({ column }) => (
             <div className="w-[80px] flex justify-center mx-auto">
-                <PriorityHeaderFilter column={column} />
+                <HeaderMultiFilter
+                    column={column}
+                    label="Priority"
+                    options={[
+                        { label: "1", value: "1" },
+                        { label: "2", value: "2" },
+                        { label: "3", value: "3" },
+                        { label: "4", value: "4" },
+                        { label: "5", value: "5" },
+                    ]}
+                />
             </div>
         ),
         cell: ({ row }) => {
@@ -193,7 +206,9 @@ export const createColumns = (
             )
         },
         filterFn: (row, id, value) => {
-            return value.includes(row.getValue(id)?.toString());
+            if (!value || !Array.isArray(value) || value.length === 0) return true;
+            const rowValue = String(row.getValue(id) ?? "");
+            return value.includes(rowValue);
         },
     },
     // Temporarily removed actions column

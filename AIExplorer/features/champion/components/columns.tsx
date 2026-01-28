@@ -4,7 +4,6 @@ import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { MoreVertical, Check, Calendar, BarChart2, User, FileText, ArrowUp, Edit, CheckCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -29,9 +28,7 @@ import { setRouteState } from "@/lib/navigation-state";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DeliveryHeaderFilter } from "./delivery-header-filter";
-import { PriorityHeaderFilter } from "./priority-header-filter";
-import { IdHeaderFilter } from "./id-header-filter";
+import { HeaderMultiFilter } from "@/components/table/header-multi-filter";
 
 const phaseTooltips = {
     Idea: "Pitch idea. It is submitted for AI Champions or Business Leaders prioritization and approvals.",
@@ -53,7 +50,6 @@ const StatusUpdateDialog = ({ useCase, open, onOpenChange }: {
     const statusOptions = ['On-Track', 'At Risk', 'Completed', 'Help Needed', 'No Updates', 'Not Started', 'Parked', 'Rejected'];
 
     const handleUpdateStatus = () => {
-        console.log('Updating status for:', useCase.title, 'Phase:', selectedPhase, 'Status:', selectedStatus);
         toast.success('Status updated successfully');
         onOpenChange(false);
         // Reset to default values
@@ -264,9 +260,9 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
     },
     {
         accessorKey: "id",
-        header: ({ column, table }) => (
+        header: ({ column }) => (
             <div className="w-[80px] flex justify-center mx-auto">
-                <IdHeaderFilter column={column} table={table} />
+                <HeaderMultiFilter column={column} label="ID" />
             </div>
         ),
         cell: ({ row }) => {
@@ -424,7 +420,7 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
         accessorKey: "delivery",
         header: ({ column }) => (
             <div className="w-[80px] flex justify-center mx-auto">
-                <DeliveryHeaderFilter column={column} />
+                <HeaderMultiFilter column={column} label="Delivery" />
             </div>
         ),
         cell: ({ row }) => (
@@ -441,7 +437,17 @@ export const createColumns = (navigate: (path: string, options?: any) => void): 
         accessorKey: "priority",
         header: ({ column }) => (
             <div className="w-[80px] flex justify-center mx-auto">
-                <PriorityHeaderFilter column={column} />
+                <HeaderMultiFilter
+                    column={column}
+                    label="Priority"
+                    options={[
+                        { label: "1", value: "1" },
+                        { label: "2", value: "2" },
+                        { label: "3", value: "3" },
+                        { label: "4", value: "4" },
+                        { label: "5", value: "5" },
+                    ]}
+                />
             </div>
         ),
         cell: ({ row }) => {

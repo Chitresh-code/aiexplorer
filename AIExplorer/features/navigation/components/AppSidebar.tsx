@@ -6,12 +6,12 @@ import { usePathname, useRouter } from "next/navigation"
 import * as React from "react"
 import { useMsal } from "@azure/msal-react"
 import {
-  Award,
-  BarChart2,
-  FileText,
-  Folder,
+  Trophy,
+  BarChart3,
+  FilePlus2,
+  ClipboardList,
   LogOut,
-  Search,
+  GalleryHorizontal,
   LayoutDashboard,
 } from "lucide-react"
 import { getRouteState } from "@/lib/navigation-state"
@@ -36,11 +36,11 @@ import { cn } from "@/lib/utils"
 
 const iconMap: Record<NavIconKey, typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
-  gallery: Search,
-  submit: FileText,
-  "my-use-cases": Folder,
-  metrics: BarChart2,
-  champion: Award,
+  gallery: GalleryHorizontal,
+  submit: FilePlus2,
+  "my-use-cases": ClipboardList,
+  metrics: BarChart3,
+  champion: Trophy,
 }
 
 const extraMatches: Record<string, string[]> = {
@@ -63,7 +63,13 @@ const extraMatches: Record<string, string[]> = {
   ],
 }
 
-export function AppSidebar() {
+export function AppSidebar({
+  isChampionUser = false,
+  isChampionLoading = true,
+}: {
+  isChampionUser?: boolean
+  isChampionLoading?: boolean
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const { instance, accounts } = useMsal()
@@ -80,6 +86,7 @@ export function AppSidebar() {
         console.error("Logout error:", error)
       })
   }
+
 
   const isActive = (path: string) => {
     if (pathname === path || pathname.startsWith(`${path}/`)) {
@@ -118,6 +125,11 @@ export function AppSidebar() {
   const email = accounts[0]?.username || ""
   const isCollapsed = state === "collapsed"
 
+  const visibleNavItems = React.useMemo(() => {
+    if (isChampionLoading) return navItems
+    return navItems.filter((item) => (item.id === "champion" ? isChampionUser : true))
+  }, [navItems, isChampionLoading, isChampionUser])
+
   return (
     <>
       <UISidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -137,10 +149,10 @@ export function AppSidebar() {
 
         <SidebarContent className="pt-0">
           <SidebarGroup>
-            <SidebarGroupLabel>Main Navigation</SidebarGroupLabel>
+            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navItems.map((item) => {
+                {visibleNavItems.map((item) => {
                   const active = isActive(item.path)
                   const Icon = iconMap[item.icon]
                   return (

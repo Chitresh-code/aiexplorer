@@ -52,8 +52,6 @@ export function ChartAreaInteractive() {
     "90d",
   )
 
-  console.log("Chart timeline data:", timeline);
-
   const filteredData = React.useMemo(() => {
     if (!timeline.length) return [];
 

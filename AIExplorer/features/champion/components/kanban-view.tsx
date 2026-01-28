@@ -183,7 +183,12 @@ const KanbanView = ({ data: initialData, navigate, sourceScreen = 'champion', ph
                                     style={{
                                         borderLeftColor: phaseColor.border
                                     }}
-                                    onClick={() => navigate(`/use-case-details/${uc.id}`, { state: { useCaseTitle: uc.title, sourceScreen: sourceScreen } })}
+                                    onClick={() => {
+                                        const userType = sourceScreen === "champion" ? "champion" : "owner";
+                                        const defaultTab = "info";
+                                        const detailsUrl = `/use-case-details/${uc.id}?user=${userType}&tab=${defaultTab}`;
+                                        navigate(detailsUrl, { state: { useCaseTitle: uc.title, sourceScreen: sourceScreen } });
+                                    }}
                                 >
                                     <div className="flex flex-col gap-2 pointer-events-none">
                                         {/* Line 1: Title */}

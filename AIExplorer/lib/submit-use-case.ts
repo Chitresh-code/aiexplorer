@@ -325,6 +325,24 @@ export const getMappingUnitOfMeasure = async (): Promise<any> => {
     }
 };
 
+export const getMappingRice = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/rice');
+    } catch (error) {
+        console.error('Error fetching RICE mappings:', error);
+        throw error;
+    }
+};
+
+export const getMappingReportingFrequency = async (): Promise<any> => {
+    try {
+        return await requestJson('/api/mappings/reporting-frequency');
+    } catch (error) {
+        console.error('Error fetching reporting frequency mappings:', error);
+        throw error;
+    }
+};
+
 /**
  * Create a new use case
  * @param {Object} useCaseData - The use case data

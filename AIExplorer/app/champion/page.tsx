@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@/lib/router";
 import { useMsal } from "@azure/msal-react";
-import { LayoutGrid, List, Plus, Search, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { LayoutGrid, List, Plus, Search, Layers3, CheckCircle2, Clock3, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DataTable } from "@/features/my-use-cases/components/data-table";
@@ -331,46 +330,11 @@ const ChampionUseCaseScreen = () => {
             if (implementedPhaseId !== null && useCase.phaseId === implementedPhaseId) return true;
             return String(useCase.phase ?? "").toLowerCase() === "implemented";
         }).length;
-        const completionRate = totalUseCases > 0 ? Math.round((implemented / totalUseCases) * 100) : 0;
-
-        const now = new Date();
-        const currentStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        const previousStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-        let currentCount = 0;
-        let previousCount = 0;
-
-        useCases.forEach((useCase) => {
-            const dateValue = String(
-                (useCase as Record<string, unknown>)["created"] ??
-                (useCase as Record<string, unknown>)["Created"] ??
-                (useCase as Record<string, unknown>)["modified"] ??
-                (useCase as Record<string, unknown>)["Modified"] ??
-                "",
-            );
-            if (!dateValue) return;
-            const parsed = new Date(dateValue);
-            if (Number.isNaN(parsed.getTime())) return;
-            if (parsed >= currentStart && parsed <= now) {
-                currentCount += 1;
-            } else if (parsed >= previousStart && parsed < currentStart) {
-                previousCount += 1;
-            }
-        });
-
-        let trending = 0;
-        if (currentCount === 0 && previousCount === 0) {
-            trending = 0;
-        } else if (previousCount === 0) {
-            trending = currentCount > 0 ? 100 : 0;
-        } else {
-            trending = Math.round(((currentCount - previousCount) / previousCount) * 100);
-        }
-
         return {
             totalUseCases,
             implemented,
-            completionRate,
-            trending,
+            approvalPending: 0,
+            prioritized: 0,
         };
     }, [normalizedUseCases, phaseColumns, useCases]);
 
@@ -432,88 +396,57 @@ const ChampionUseCaseScreen = () => {
                         <Card>
                             <CardHeader className="relative">
                                 <CardDescription>Total Use Cases</CardDescription>
+                                <div className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-teal-50 text-teal-700">
+                                    <Layers3 className="h-4 w-4" />
+                                </div>
                                 <CardTitle className="text-3xl font-semibold tabular-nums">
                                     {kpiData.totalUseCases}
                                 </CardTitle>
-                                <div className="absolute right-4 top-4">
-                                    <Badge
-                                        variant="outline"
-                                        className={`flex gap-1 rounded-lg text-xs ${kpiData.trending >= 0 ? "text-green-600" : "text-red-600"}`}
-                                    >
-                                        <TrendingIcon isPositive={kpiData.trending >= 0} className="size-3" />
-                                        {kpiData.trending >= 0 ? "+" : ""}{kpiData.trending}%
-                                    </Badge>
-                                </div>
                             </CardHeader>
                             <CardFooter className="flex-col items-start gap-1 text-sm">
-                                <div className="line-clamp-1 flex gap-2 font-medium">
-                                    Trending {kpiData.trending >= 0 ? "up" : "down"} this month{" "}
-                                    <TrendingIcon isPositive={kpiData.trending >= 0} className="size-4" />
-                                </div>
-                                <div className="text-muted-foreground">Champion use cases submitted</div>
+                                <div className="text-muted-foreground">Use cases where you are a champion</div>
                             </CardFooter>
                         </Card>
                         <Card>
                             <CardHeader className="relative">
                                 <CardDescription>Implemented</CardDescription>
+                                <div className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                </div>
                                 <CardTitle className="text-3xl font-semibold tabular-nums">
                                     {kpiData.implemented}
                                 </CardTitle>
-                                <div className="absolute right-4 top-4">
-                                    <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-                                        <TrendingUpIcon className="size-3" />
-                                        {kpiData.completionRate}%
-                                    </Badge>
-                                </div>
                             </CardHeader>
                             <CardFooter className="flex-col items-start gap-1 text-sm">
-                                <div className="line-clamp-1 flex gap-2 font-medium">
-                                    Completion rate <TrendingUpIcon className="size-4" />
-                                </div>
-                                <div className="text-muted-foreground">Use cases implemented</div>
+                                <div className="text-muted-foreground">In the Implemented phase</div>
                             </CardFooter>
                         </Card>
                         <Card>
                             <CardHeader className="relative">
-                                <CardDescription>Completion Rate</CardDescription>
-                                <CardTitle className="text-3xl font-semibold tabular-nums">
-                                    {kpiData.completionRate}%
-                                </CardTitle>
-                                <div className="absolute right-4 top-4">
-                                    <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
-                                        <TrendingUpIcon className="size-3" />
-                                        Target: 100%
-                                    </Badge>
+                                <CardDescription>Approval Pending</CardDescription>
+                                <div className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-amber-50 text-amber-700">
+                                    <Clock3 className="h-4 w-4" />
                                 </div>
+                                <CardTitle className="text-3xl font-semibold tabular-nums">
+                                    {kpiData.approvalPending}
+                                </CardTitle>
                             </CardHeader>
                             <CardFooter className="flex-col items-start gap-1 text-sm">
-                                <div className="line-clamp-1 flex gap-2 font-medium">
-                                    Progress tracking <TrendingUpIcon className="size-4" />
-                                </div>
-                                <div className="text-muted-foreground">Percentage of completed use cases</div>
+                                <div className="text-muted-foreground">Awaiting your approval</div>
                             </CardFooter>
                         </Card>
                         <Card>
                             <CardHeader className="relative">
-                                <CardDescription>Trending</CardDescription>
-                                <CardTitle className="text-3xl font-semibold tabular-nums">
-                                    {kpiData.trending >= 0 ? "+" : ""}{kpiData.trending}%
-                                </CardTitle>
-                                <div className="absolute right-4 top-4">
-                                    <Badge
-                                        variant="outline"
-                                        className={`flex gap-1 rounded-lg text-xs ${kpiData.trending >= 0 ? "text-green-600" : "text-red-600"}`}
-                                    >
-                                        <TrendingIcon isPositive={kpiData.trending >= 0} className="size-3" />
-                                        Monthly change
-                                    </Badge>
+                                <CardDescription>Prioritized</CardDescription>
+                                <div className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-50 text-indigo-700">
+                                    <Flag className="h-4 w-4" />
                                 </div>
+                                <CardTitle className="text-3xl font-semibold tabular-nums">
+                                    {kpiData.prioritized}
+                                </CardTitle>
                             </CardHeader>
                             <CardFooter className="flex-col items-start gap-1 text-sm">
-                                <div className="line-clamp-1 flex gap-2 font-medium">
-                                    Growth indicator <TrendingIcon isPositive={kpiData.trending >= 0} className="size-4" />
-                                </div>
-                                <div className="text-muted-foreground">Champion use case trend</div>
+                                <div className="text-muted-foreground">Marked as prioritized</div>
                             </CardFooter>
                         </Card>
                     </>

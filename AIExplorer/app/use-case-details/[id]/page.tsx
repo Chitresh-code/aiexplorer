@@ -34,6 +34,9 @@ import { fetchUseCaseMetricsDetails, updateUseCaseInfo, updateUseCaseMetrics } f
 import {
     getMappingMetricCategories,
     getMappingPhases,
+    getMappingImplementationTimespans,
+    getMappingReportingFrequency,
+    getMappingRice,
     getMappingRoles,
     getMappingStatus,
     getMappingThemes,
@@ -329,7 +332,8 @@ const UseCaseDetails = () => {
     const { data: useCaseDetails, loading, error } = useUseCaseDetails(
         typeof id === "string" ? id : undefined,
     );
-    const { state } = useLocation<{ useCaseTitle: string; sourceScreen?: string }>();
+    const location = useLocation<{ useCaseTitle: string; sourceScreen?: string }>();
+    const { state } = location;
     const { accounts } = useMsal();
     
     // Fetch agent library data
@@ -357,11 +361,25 @@ const UseCaseDetails = () => {
             editorEmail: String((raw as any).editor_email ?? (raw as any).editorEmail ?? ""),
         };
     }, [useCaseDetails, id, state?.useCaseTitle]);
+    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const userParam = String(searchParams.get("user") ?? "").toLowerCase();
+    const tabParam = String(searchParams.get("tab") ?? "").toLowerCase();
+    const isChampionView = userParam === "champion" || state?.sourceScreen === "champion";
+    const resolvedTab = useMemo(() => {
+        const ownerTabs = new Set(["info", "update", "library", "metrics", "status"]);
+        const championTabs = new Set(["info", "update", "reprioritize", "metrics", "status"]);
+        const allowedTabs = isChampionView ? championTabs : ownerTabs;
+        if (tabParam && allowedTabs.has(tabParam)) {
+            return tabParam;
+        }
+        return "info";
+    }, [isChampionView, tabParam]);
+
     const [selectedStatus, setSelectedStatus] = useState(useCase.statusName || 'Active');
     const showChangeStatusCard = false;
     const [phaseDates, setPhaseDates] = useState<Record<string, { start?: Date; end?: Date }>>({});
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState('info');
+    const [activeTab, setActiveTab] = useState(resolvedTab);
     const [selectedMetricIdsForReporting, setSelectedMetricIdsForReporting] = useState<string[]>([]);
     const [stakeholderName, setStakeholderName] = useState('');
     const [stakeholderRole, setStakeholderRole] = useState('');
@@ -408,6 +426,7 @@ const UseCaseDetails = () => {
     const [isDeleteMetricDialogOpen, setIsDeleteMetricDialogOpen] = useState(false);
     const [pendingDeleteMetricId, setPendingDeleteMetricId] = useState<number | null>(null);
     const [isMetricsEditing, setIsMetricsEditing] = useState(false);
+    const [isReprioritizeEditing, setIsReprioritizeEditing] = useState(false);
     const metricsSnapshotRef = useRef<{
         metrics: Metric[];
         reportedMetrics: Metric[];
@@ -416,11 +435,21 @@ const UseCaseDetails = () => {
 
     const [themeOptions, setThemeOptions] = useState<{ label: string; value: string }[]>([]);
     const [statusOptions, setStatusOptions] = useState<string[]>([]);
+
+    useEffect(() => {
+        setActiveTab(resolvedTab);
+    }, [resolvedTab, location.search]);
     const [metricCategoryOptions, setMetricCategoryOptions] = useState<string[]>([]);
     const [metricCategoryMap, setMetricCategoryMap] = useState<Map<number, string>>(new Map());
     const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState<string[]>([]);
     const [unitOfMeasureMap, setUnitOfMeasureMap] = useState<Map<number, string>>(new Map());
     const [phaseMappings, setPhaseMappings] = useState<{ id: number; name: string; stage?: string }[]>([]);
+    const [riceImpactOptions, setRiceImpactOptions] = useState<{ label: string; value: string }[]>([]);
+    const [riceConfidenceOptions, setRiceConfidenceOptions] = useState<{ label: string; value: string }[]>([]);
+    const [deliveryOptions, setDeliveryOptions] = useState<{ label: string; value: string }[]>([]);
+    const [reportingFrequencyOptions, setReportingFrequencyOptions] = useState<{ label: string; value: string }[]>([]);
+    const [deliveryIdMap, setDeliveryIdMap] = useState<Map<string, number>>(new Map());
+    const [reportingFrequencyIdMap, setReportingFrequencyIdMap] = useState<Map<string, number>>(new Map());
 
     // AI Configuration state
     const [personaOptions, setPersonaOptions] = useState<{ label: string; value: string }[]>([]);
@@ -480,6 +509,7 @@ const UseCaseDetails = () => {
         sltReporting: false,
         reportingFrequency: ''
     });
+    const reprioritizeSnapshotRef = useRef<typeof formData | null>(null);
 
     const [isEditing, setIsEditing] = useState(false);
     const [editableTitle, setEditableTitle] = useState(useCase.title);
@@ -570,7 +600,19 @@ const UseCaseDetails = () => {
     useEffect(() => {
         const fetchDropdownData = async () => {
             try {
-                const [themes, statuses, metricCategories, unitOfMeasure, phases, personas, vendorModels, knowledgeSources] = await Promise.all([
+                const [
+                    themes,
+                    statuses,
+                    metricCategories,
+                    unitOfMeasure,
+                    phases,
+                    personas,
+                    vendorModels,
+                    knowledgeSources,
+                    riceMappings,
+                    timespans,
+                    reportingFrequencies,
+                ] = await Promise.all([
                     getMappingThemes(),
                     getMappingStatus(),
                     getMappingMetricCategories(),
@@ -579,6 +621,9 @@ const UseCaseDetails = () => {
                     getMappingPersonas(),
                     getMappingVendorModels(),
                     getMappingKnowledgeSources(),
+                    getMappingRice(),
+                    getMappingImplementationTimespans(),
+                    getMappingReportingFrequency(),
                 ]);
                 setThemeOptions(
                     (themes?.items ?? [])
@@ -693,6 +738,66 @@ const UseCaseDetails = () => {
                         .filter((x: any) => x.label && x.value)
                         .sort((a: any, b: any) => a.label.localeCompare(b.label)),
                 );
+
+                const riceItems = Array.isArray(riceMappings?.items) ? riceMappings.items : [];
+                const impactOptions = riceItems
+                    .filter((item: any) => String(item.categoryHeader ?? "").toLowerCase().includes("impact"))
+                    .map((item: any) => ({
+                        label: String(item.categoryDisplay ?? "").trim(),
+                        value: String(item.categoryValue ?? "").trim(),
+                    }))
+                    .filter((item: any) => item.label && item.value);
+                const confidenceOptions = riceItems
+                    .filter((item: any) => String(item.categoryHeader ?? "").toLowerCase().includes("confidence"))
+                    .map((item: any) => ({
+                        label: String(item.categoryDisplay ?? "").trim(),
+                        value: String(item.categoryValue ?? "").trim(),
+                    }))
+                    .filter((item: any) => item.label && item.value);
+                setRiceImpactOptions(impactOptions);
+                setRiceConfidenceOptions(confidenceOptions);
+
+                setDeliveryOptions(
+                    (timespans?.items ?? [])
+                        .map((item: any) => ({
+                            id: Number(item.id),
+                            value: String(item.timespan ?? "").trim(),
+                        }))
+                        .filter((item: any) => item.value && Number.isFinite(item.id))
+                        .map((item: any) => ({ value: item.value, label: item.value })),
+                );
+                setDeliveryIdMap(() => {
+                    const next = new Map<string, number>();
+                    (timespans?.items ?? []).forEach((item: any) => {
+                        const value = String(item.timespan ?? "").trim();
+                        const id = Number(item.id);
+                        if (value && Number.isFinite(id)) {
+                            next.set(value, id);
+                        }
+                    });
+                    return next;
+                });
+
+                setReportingFrequencyOptions(
+                    (reportingFrequencies?.items ?? [])
+                        .map((item: any) => ({
+                            id: Number(item.id),
+                            value: String(item.frequency ?? "").trim(),
+                        }))
+                        .filter((item: any) => item.value && Number.isFinite(item.id))
+                        .map((item: any) => ({ value: item.value, label: item.value })),
+                );
+                setReportingFrequencyIdMap(() => {
+                    const next = new Map<string, number>();
+                    (reportingFrequencies?.items ?? []).forEach((item: any) => {
+                        const value = String(item.frequency ?? "").trim();
+                        const id = Number(item.id);
+                        if (value && Number.isFinite(id)) {
+                            next.set(value, id);
+                        }
+                    });
+                    return next;
+                });
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
             }
@@ -955,6 +1060,161 @@ const UseCaseDetails = () => {
         }));
     };
 
+    const handleStartReprioritizeEdit = useCallback(() => {
+        reprioritizeSnapshotRef.current = { ...formData };
+        setIsReprioritizeEditing(true);
+    }, [formData]);
+
+    const handleCancelReprioritizeEdit = useCallback(() => {
+        if (reprioritizeSnapshotRef.current) {
+            setFormData(reprioritizeSnapshotRef.current);
+        }
+        reprioritizeSnapshotRef.current = null;
+        setIsReprioritizeEditing(false);
+    }, []);
+
+    const handleApplyReprioritizeChanges = useCallback(async () => {
+        const previous = reprioritizeSnapshotRef.current;
+        const current = formData;
+        const hasChanged = (prevValue: string, nextValue: string) => prevValue !== nextValue;
+
+        const payload: Record<string, unknown> = {
+            editorEmail: accounts[0]?.username ?? "",
+        };
+
+        if (!previous || hasChanged(previous.reach, current.reach)) payload.reach = current.reach || null;
+        if (!previous || hasChanged(previous.impact, current.impact)) payload.impact = current.impact || null;
+        if (!previous || hasChanged(previous.confidence, current.confidence)) payload.confidence = current.confidence || null;
+        if (!previous || hasChanged(previous.effort, current.effort)) payload.effort = current.effort || null;
+        if (!previous || hasChanged(previous.riceScore, current.riceScore)) payload.riceScore = current.riceScore || null;
+        if (!previous || hasChanged(previous.priority, current.priority)) payload.priority = current.priority || null;
+        if (!previous || hasChanged(previous.totalUserBase, current.totalUserBase)) {
+            payload.totalUserBase = current.totalUserBase || null;
+        }
+        if (!previous || previous.displayInGallery !== current.displayInGallery) {
+            payload.displayInGallery = current.displayInGallery;
+        }
+        if (!previous || previous.sltReporting !== current.sltReporting) {
+            payload.sltReporting = current.sltReporting;
+        }
+        if (!previous || hasChanged(previous.delivery, current.delivery)) {
+            payload.timespanId = current.delivery ? deliveryIdMap.get(current.delivery) ?? null : null;
+        }
+        if (!previous || hasChanged(previous.reportingFrequency, current.reportingFrequency)) {
+            payload.reportingFrequencyId = current.reportingFrequency
+                ? reportingFrequencyIdMap.get(current.reportingFrequency) ?? null
+                : null;
+        }
+
+        const payloadKeys = Object.keys(payload).filter((key) => key !== "editorEmail");
+        if (payloadKeys.length === 0) {
+            setIsReprioritizeEditing(false);
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/usecases/${id}/prioritize`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                const details = await response.text().catch(() => "");
+                throw new Error(details || "Failed to update prioritization.");
+            }
+            toast.success("Prioritization updated.");
+            reprioritizeSnapshotRef.current = null;
+            setIsReprioritizeEditing(false);
+        } catch (error) {
+            console.error("Failed to update prioritization:", error);
+            toast.error("Failed to update prioritization.");
+        }
+    }, [
+        accounts,
+        deliveryIdMap,
+        formData,
+        id,
+        reportingFrequencyIdMap,
+    ]);
+
+    const parseBool = (value: unknown) => {
+        const normalized = String(value ?? "").trim().toLowerCase();
+        if (!normalized) return false;
+        return ["true", "1", "yes", "y"].includes(normalized);
+    };
+
+    useEffect(() => {
+        if (activeTab !== "reprioritize" || !id) return;
+        if (isReprioritizeEditing) return;
+
+        let isMounted = true;
+        const controller = new AbortController();
+
+        const loadPrioritize = async () => {
+            try {
+                const response = await fetch(`/api/usecases/${id}/prioritize`, {
+                    signal: controller.signal,
+                });
+                if (!response.ok) return;
+                const data = await response.json().catch(() => null);
+                if (!isMounted) return;
+                const item = data?.item;
+                if (!item) return;
+
+                const deliveryValue = Array.from(deliveryIdMap.entries()).find(
+                    ([, value]) => value === Number(item.timespanid),
+                )?.[0] ?? "";
+                const reportingValue = Array.from(reportingFrequencyIdMap.entries()).find(
+                    ([, value]) => value === Number(item.reportingfrequencyid),
+                )?.[0] ?? "";
+
+                setFormData({
+                    reach: String(item.reach ?? "").trim(),
+                    impact: String(item.impact ?? "").trim(),
+                    confidence: String(item.confidence ?? "").trim(),
+                    effort: String(item.effort ?? "").trim(),
+                    riceScore: String(item.ricescore ?? "").trim(),
+                    priority: String(item.priority ?? "").trim(),
+                    delivery: deliveryValue,
+                    totalUserBase: String(item.totaluserbase ?? "").trim(),
+                    displayInGallery: parseBool(item.aigallerydisplay),
+                    sltReporting: parseBool(item.sltreporting),
+                    reportingFrequency: reportingValue,
+                });
+            } catch (error) {
+                console.error("Failed to load prioritization data:", error);
+            }
+        };
+
+        loadPrioritize();
+        return () => {
+            isMounted = false;
+            controller.abort();
+        };
+    }, [activeTab, id, deliveryIdMap, reportingFrequencyIdMap, isReprioritizeEditing]);
+
+    const riceScoreValue = useMemo(() => {
+        const reach = Number(formData.reach);
+        const impact = Number(formData.impact);
+        const confidence = Number(formData.confidence);
+        const effort = Number(formData.effort);
+        if (!Number.isFinite(reach) || reach <= 0) return "";
+        if (!Number.isFinite(impact) || impact <= 0) return "";
+        if (!Number.isFinite(confidence) || confidence <= 0) return "";
+        if (!Number.isFinite(effort) || effort <= 0) return "";
+        const score = (reach * impact * confidence) / effort;
+        if (!Number.isFinite(score)) return "";
+        const rounded = Math.round(score * 100) / 100;
+        return String(rounded);
+    }, [formData.reach, formData.impact, formData.confidence, formData.effort]);
+
+    useEffect(() => {
+        if (!riceScoreValue && !isReprioritizeEditing) return;
+        setFormData((prev) =>
+            prev.riceScore === riceScoreValue ? prev : { ...prev, riceScore: riceScoreValue },
+        );
+    }, [riceScoreValue, isReprioritizeEditing]);
+
     const handleToggle = (field: keyof typeof formData) => {
         if (field === 'sltReporting') {
             setFormData(prev => ({
@@ -988,7 +1248,6 @@ const UseCaseDetails = () => {
 
 
     const handleApprovalSubmit = () => {
-        console.log('Decision:', decision, 'Comments:', comments);
         toast.success('Decision submitted successfully');
     };
 
@@ -1719,7 +1978,16 @@ const UseCaseDetails = () => {
                 applyLabel: "Apply Changes",
             };
         }
-        if (activeTab === 'agent-library') {
+        if (activeTab === 'reprioritize') {
+            return {
+                isEditing: isReprioritizeEditing,
+                onStart: handleStartReprioritizeEdit,
+                onCancel: handleCancelReprioritizeEdit,
+                onApply: handleApplyReprioritizeChanges,
+                applyLabel: "Apply Changes",
+            };
+        }
+        if (activeTab === 'library') {
             return {
                 isEditing: isAgentLibraryEditing,
                 onStart: handleStartAgentLibraryEdit,
@@ -1741,10 +2009,14 @@ const UseCaseDetails = () => {
     }, [
         activeTab,
         isEditing,
+        isReprioritizeEditing,
         isAgentLibraryEditing,
         isMetricsEditing,
         handleCancelEdit,
         handleApplyChanges,
+        handleStartReprioritizeEdit,
+        handleCancelReprioritizeEdit,
+        handleApplyReprioritizeChanges,
         handleStartAgentLibraryEdit,
         handleCancelAgentLibraryEdit,
         handleApplyAgentLibraryChanges,
@@ -1753,7 +2025,7 @@ const UseCaseDetails = () => {
         handleApplyMetricsEdit,
     ]);
 
-    const isAnyEditing = isEditing || isAgentLibraryEditing || isMetricsEditing;
+    const isAnyEditing = isEditing || isAgentLibraryEditing || isMetricsEditing || isReprioritizeEditing;
 
     useEffect(() => {
         if (!id || typeof id !== "string") {
@@ -2319,8 +2591,9 @@ const UseCaseDetails = () => {
                 onValueChange={(val) => {
                     if (
                         (isEditing && val !== 'info') ||
-                        (isAgentLibraryEditing && val !== 'agent-library') ||
-                        (isMetricsEditing && val !== 'metrics')
+                        (isAgentLibraryEditing && val !== 'library') ||
+                        (isMetricsEditing && val !== 'metrics') ||
+                        (isReprioritizeEditing && val !== 'reprioritize')
                     ) {
                         return;
                     }
@@ -2352,7 +2625,7 @@ const UseCaseDetails = () => {
                             >
                                 Update
                             </TabsTrigger>
-                            {state?.sourceScreen === 'champion' ? (
+                            {isChampionView ? (
                                 <TabsTrigger
                                     value="reprioritize"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
@@ -2362,11 +2635,11 @@ const UseCaseDetails = () => {
                                 </TabsTrigger>
                             ) : (
                                 <TabsTrigger
-                                    value="agent-library"
+                                    value="library"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
                                     disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
                                 >
-                                    Agent Library
+                                    Library
                                 </TabsTrigger>
                             )}
                             <TabsTrigger
@@ -2381,7 +2654,7 @@ const UseCaseDetails = () => {
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
                                 disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
                             >
-                                {state?.sourceScreen === 'champion' ? 'Approvals' : 'Actions'}
+                                {isChampionView ? 'Approvals' : 'Actions'}
                             </TabsTrigger>
                         </TabsList>
 
@@ -2470,10 +2743,15 @@ const UseCaseDetails = () => {
                         formData={formData}
                         onFormDataChange={(field, value) => handleFormDataChange(field, value)}
                         onToggle={handleToggle}
+                        isEditing={isReprioritizeEditing}
+                        impactOptions={riceImpactOptions}
+                        confidenceOptions={riceConfidenceOptions}
+                        deliveryOptions={deliveryOptions}
+                        reportingFrequencyOptions={reportingFrequencyOptions}
                     />
                 </TabsContent>
 
-                <TabsContent value="agent-library" className="space-y-3">
+                <TabsContent value="library" className="space-y-3">
                     <AgentLibrarySection
                         isEditing={isAgentLibraryEditing}
                         aiThemes={themeOptions}
@@ -2535,7 +2813,7 @@ const UseCaseDetails = () => {
 
                 <TabsContent value="status" className="space-y-8">
                     <ActionsSection
-                        isChampion={state?.sourceScreen === 'champion'}
+                        isChampion={isChampionView}
                         useCaseTitle={useCase.title}
                         submittedBy={useCase.editorEmail || useCase.primaryContact}
                         statusName={useCase.statusName}

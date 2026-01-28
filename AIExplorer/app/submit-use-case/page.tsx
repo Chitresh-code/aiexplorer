@@ -196,6 +196,13 @@ const SubmitUseCase = () => {
         name: "checklistResponses",
     });
 
+    const hasCoreInfo = useMemo(() => {
+        if (!Array.isArray(generatedWatchedValues)) return false;
+        return generatedWatchedValues.every(
+            (value) => String(value ?? "").trim().length > 0,
+        );
+    }, [generatedWatchedValues]);
+
     const showChecklistTab = true;
 
     const aiRequestInFlightRef = useRef(false);
@@ -321,6 +328,8 @@ const SubmitUseCase = () => {
     const [metrics, setMetrics] = useState<Metric[]>([]);
     const [metricSuggestions, setMetricSuggestions] = useState<Omit<Metric, "id">[]>([]);
     const [isMetricSuggestionsLoading, setIsMetricSuggestionsLoading] = useState(false);
+    const [phaseSuggestionStatus, setPhaseSuggestionStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+    const [metricSuggestionStatus, setMetricSuggestionStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
     const [aiGeneratedMetricIds, setAiGeneratedMetricIds] = useState<Record<number, boolean>>({});
     const metricSuggestionsInFlightRef = useRef(false);
     const [editingMetricId, setEditingMetricId] = useState<number | null>(null);
@@ -389,6 +398,13 @@ const SubmitUseCase = () => {
         today.setHours(0, 0, 0, 0);
         return target > baseline && target > today;
     });
+
+    const isAiPrefetchComplete = useMemo(() => {
+        if (!hasCoreInfo) return true;
+        const phaseDone = phaseSuggestionStatus === "done" || phaseSuggestionStatus === "error";
+        const metricsDone = metricSuggestionStatus === "done" || metricSuggestionStatus === "error";
+        return phaseDone && metricsDone;
+    }, [hasCoreInfo, phaseSuggestionStatus, metricSuggestionStatus]);
 
 
     const handleSubmitMetricDates = () => {
@@ -503,12 +519,26 @@ const SubmitUseCase = () => {
     }, [rolesData]);
 
     useEffect(() => {
+        if (!hasCoreInfo) return;
+        if (!prefetchTimeline) {
+            setPrefetchTimeline(true);
+        }
+        if (!prefetchMetrics) {
+            setPrefetchMetrics(true);
+        }
+    }, [hasCoreInfo, prefetchTimeline, prefetchMetrics]);
+
+    useEffect(() => {
         let isMounted = true;
         const generateMetricSuggestions = async () => {
             if (currentStep !== 4 && !prefetchMetrics) return;
             if (metricSuggestionsInFlightRef.current) return;
-            if (metricSuggestions.length > 0) return;
-            if (metrics.length > 0) return;
+            if (metricSuggestions.length > 0 || metrics.length > 0) {
+                if (isMounted && metricSuggestionStatus !== "done") {
+                    setMetricSuggestionStatus("done");
+                }
+                return;
+            }
             if (metricCategories.length === 0 || unitOfMeasurementOptions.length === 0) return;
 
             const businessValue = form.getValues("businessValue");
@@ -516,6 +546,9 @@ const SubmitUseCase = () => {
 
             metricSuggestionsInFlightRef.current = true;
             setIsMetricSuggestionsLoading(true);
+            if (isMounted) {
+                setMetricSuggestionStatus("loading");
+            }
 
             try {
                 const now = new Date();
@@ -577,11 +610,13 @@ const SubmitUseCase = () => {
 
                 if (isMounted) {
                     setMetricSuggestions(nextSuggestions);
+                    setMetricSuggestionStatus("done");
                 }
             } catch (error) {
                 console.error("Metric suggestions failed", error);
                 if (isMounted) {
                     setMetricSuggestions([]);
+                    setMetricSuggestionStatus("error");
                 }
             } finally {
                 metricSuggestionsInFlightRef.current = false;
@@ -1064,8 +1099,12 @@ const SubmitUseCase = () => {
             if (currentStep !== 3 && !prefetchTimeline) return;
             if (phasesData.length === 0) return;
             if (timelineRequestInFlightRef.current) return;
-            if (Object.keys(aiGeneratedPhases).length > 0) return;
-            if (Object.keys(timelineSuggestions).length > 0) return;
+            if (Object.keys(aiGeneratedPhases).length > 0 || Object.keys(timelineSuggestions).length > 0) {
+                if (isMounted && phaseSuggestionStatus !== "done") {
+                    setPhaseSuggestionStatus("done");
+                }
+                return;
+            }
 
             const [useCaseTitle, headline, opportunity, businessValue] = form.getValues([
                 "useCaseTitle",
@@ -1102,6 +1141,9 @@ const SubmitUseCase = () => {
 
             timelineRequestInFlightRef.current = true;
             setIsTimelineGenerating(true);
+            if (isMounted) {
+                setPhaseSuggestionStatus("loading");
+            }
 
             try {
                 const response = await fetch("/api/ai/suggestions/phase", {
@@ -1142,10 +1184,14 @@ const SubmitUseCase = () => {
 
                 if (isMounted) {
                     setTimelineSuggestions(nextSuggestions);
+                    setPhaseSuggestionStatus("done");
                 }
             } catch (error) {
                 console.error("Timeline generation failed", error);
                 toast.error("Timeline generation is unavailable right now.");
+                if (isMounted) {
+                    setPhaseSuggestionStatus("error");
+                }
             } finally {
                 timelineRequestInFlightRef.current = false;
                 if (isMounted) {
@@ -1493,11 +1539,12 @@ const SubmitUseCase = () => {
                     toast.error("Failed to send approvals to champions.");
                 }
                 if (useCaseId) {
-                    setRouteState(`/use-case-details/${useCaseId}`, {
+                    const detailsUrl = `/use-case-details/${useCaseId}?user=owner&tab=info`;
+                    setRouteState(detailsUrl, {
                         useCaseTitle: values.useCaseTitle?.trim() || "",
                         sourceScreen: "my-use-cases",
                     });
-                    navigate(`/use-case-details/${useCaseId}`);
+                    navigate(detailsUrl);
                 } else {
                     navigate('/my-use-cases');
                 }
@@ -1766,6 +1813,7 @@ const SubmitUseCase = () => {
                             (currentStep === 1 && !isStep1Valid) ||
                             (currentStep === 3 && !isStep2Valid) ||
                             (currentStep === 4 && (!isMetricsFormValid || metrics.length === 0)) ||
+                            (currentStep === 1 && !isAiPrefetchComplete) ||
                             isSubmitting
                         }
                     >

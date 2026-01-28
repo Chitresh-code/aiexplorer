@@ -60,6 +60,7 @@ export const buildResponsesRequest = (
           { role: "system", content: options.systemPrompt },
           { role: "user", content: JSON.stringify(options.payload) },
         ],
+        reasoning_effort: "low",
         response_format: {
           type: "json_schema",
           json_schema: {

@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import { useRouter } from 'next/navigation';
 import { getRouteState } from '@/lib/navigation-state';
+import { fetchChampionStatus } from '@/lib/champion';
 
 import { AppSidebar } from '@/features/navigation/components/AppSidebar';
 import {
@@ -24,14 +25,17 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function ProtectedLayout({ children }: { children: ReactNode }) {
   const isAuthenticated = useIsAuthenticated();
-  const { inProgress } = useMsal();
+  const { inProgress, accounts } = useMsal();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isChampionUser, setIsChampionUser] = useState(false);
+  const [isChampionLoading, setIsChampionLoading] = useState(true);
 
   const breadcrumbItems = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean);
@@ -145,6 +149,37 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
   }, [isAuthenticated, inProgress, router]);
 
   useEffect(() => {
+    let isMounted = true;
+    const email = accounts[0]?.username ?? '';
+    if (!email) {
+      setIsChampionUser(false);
+      setIsChampionLoading(false);
+      return;
+    }
+    const loadChampion = async () => {
+      try {
+        const isChampion = await fetchChampionStatus(email);
+        if (isMounted) {
+          setIsChampionUser(isChampion);
+        }
+      } catch (error) {
+        console.error('Champion check failed:', error);
+        if (isMounted) {
+          setIsChampionUser(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsChampionLoading(false);
+        }
+      }
+    };
+    loadChampion();
+    return () => {
+      isMounted = false;
+    };
+  }, [accounts]);
+
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 0);
     };
@@ -161,9 +196,32 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  if (isChampionLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <div className="w-64 border-r border-gray-200 bg-white p-4">
+          <Skeleton className="h-8 w-32 mb-6" />
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <Skeleton key={`nav-skel-${idx}`} className="h-8 w-full" />
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 p-6">
+          <Skeleton className="h-8 w-64 mb-6" />
+          <div className="space-y-4">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <Skeleton key={`page-skel-${idx}`} className="h-20 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider style={{ '--sidebar-width-icon': '4rem' } as CSSProperties}>
-      <AppSidebar />
+      <AppSidebar isChampionUser={isChampionUser} isChampionLoading={isChampionLoading} />
       <SidebarInset className="min-w-0">
         <AppHeader breadcrumbItems={breadcrumbItems} isScrolled={isScrolled} />
         <div className="flex min-h-screen flex-col bg-gray-50">
