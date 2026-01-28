@@ -54,6 +54,7 @@ type UpdateSectionProps = {
   onOpenStakeholderDialog: () => void;
   onEditStakeholder: (index: number) => void;
   onDeleteStakeholder: (index: number) => void;
+  canAddStakeholder?: boolean;
   updateText: string;
   onUpdateTextChange: (value: string) => void;
   onPostUpdate: () => void;
@@ -77,6 +78,7 @@ export const UpdateSection = ({
   onOpenStakeholderDialog,
   onEditStakeholder,
   onDeleteStakeholder,
+  canAddStakeholder = true,
   updateText,
   onUpdateTextChange,
   onPostUpdate,
@@ -198,14 +200,16 @@ export const UpdateSection = ({
                 <Users className="w-4 h-4 text-teal-600" />
                 Stakeholders
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-teal-600 hover:bg-teal-50"
-                onClick={onOpenStakeholderDialog}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+              {canAddStakeholder ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-teal-600 hover:bg-teal-50"
+                  onClick={onOpenStakeholderDialog}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              ) : null}
             </CardHeader>
             <CardContent className="pt-2">
               <ScrollArea className="h-48">

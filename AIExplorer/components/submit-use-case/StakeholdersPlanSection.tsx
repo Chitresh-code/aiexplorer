@@ -28,6 +28,7 @@ type StakeholdersPlanSectionProps = {
     isLoading: boolean;
     phases: Array<{ id?: number | null; name?: string | null; stage?: string | null }>;
     addedStakeholders: Stakeholder[];
+    canAddStakeholder?: boolean;
     onAddStakeholder: () => void;
     onEditStakeholder: (index: number) => void;
     onRemoveStakeholder: (index: number) => void;
@@ -69,6 +70,7 @@ export const StakeholdersPlanSection = ({
     isLoading,
     phases,
     addedStakeholders,
+    canAddStakeholder = true,
     onAddStakeholder,
     onEditStakeholder,
     onRemoveStakeholder,
@@ -96,14 +98,16 @@ export const StakeholdersPlanSection = ({
                         <Users className="w-4 h-4 text-teal-600" />
                         Stakeholders
                     </CardTitle>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-teal-600 hover:bg-teal-50"
-                        onClick={onAddStakeholder}
-                    >
-                        <Plus className="w-4 h-4" />
-                    </Button>
+                    {canAddStakeholder ? (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-teal-600 hover:bg-teal-50"
+                            onClick={onAddStakeholder}
+                        >
+                            <Plus className="w-4 h-4" />
+                        </Button>
+                    ) : null}
                 </CardHeader>
                 <CardContent className="pt-2 flex-1">
                     <ScrollArea className="h-[470px]">

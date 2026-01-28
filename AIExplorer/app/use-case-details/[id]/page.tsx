@@ -491,14 +491,17 @@ const UseCaseDetails = () => {
 
     const roleSelectOptions = useMemo(
         () =>
-            roleOptions.filter(
-                (role) =>
-                    String(role.roleType ?? "").trim() === "2" &&
-                    !isOwnerRole(role.name) &&
-                    !isChampionDelegateRole(role.name),
-            ),
+            roleOptions.filter((role) => {
+                if (String(role.roleType ?? "").trim() !== "2") return false;
+                const roleId = Number(role.id);
+                if (Number.isFinite(roleId) && roleId === 13) return false;
+                if (isOwnerRole(role.name)) return false;
+                return true;
+            }),
         [roleOptions],
     );
+
+    const canAddStakeholder = useMemo(() => roleSelectOptions.length > 0, [roleSelectOptions]);
 
     // Sync editable fields when useCase updates
     useEffect(() => {
@@ -2452,6 +2455,7 @@ const UseCaseDetails = () => {
                         onToggleTimelineEdit={handleToggleTimelineEdit}
                         onSaveTimeline={handleSaveTimeline}
                         stakeholders={stakeholders}
+                        canAddStakeholder={canAddStakeholder}
                         onOpenStakeholderDialog={() => setIsDialogOpen(true)}
                         onEditStakeholder={handleEditStakeholder}
                         onDeleteStakeholder={handleDeleteStakeholder}

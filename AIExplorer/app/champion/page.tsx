@@ -1,22 +1,33 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from '@/lib/router';
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@/lib/router";
+import { useMsal } from "@azure/msal-react";
+import { LayoutGrid, List, Plus, Search, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, List, Search } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { DataTable } from "@/features/champion/components/data-table";
-import { createColumns, UseCase } from "@/features/champion/components/columns";
+import { DataTable } from "@/features/my-use-cases/components/data-table";
+import { createColumns } from "@/features/my-use-cases/components/columns";
 import KanbanView from "@/features/champion/components/kanban-view";
-import { getBusinessStructure, getBusinessUnitsFromData, getSubTeamsForTeam, getTeamsForBusinessUnit } from '@/lib/submit-use-case';
-import { SectionCards } from "@/features/dashboard/components/SectionCards";
+import {
+    getMappingBusinessUnits,
+    getMappingImplementationTimespans,
+    getMappingPhases,
+    getMappingStatus,
+} from "@/lib/submit-use-case";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChampionPhaseCombobox } from "./phase-combobox";
-import { ChampionBusinessUnitCombobox } from "./business-unit-combobox";
-import { ChampionTeamCombobox } from "./team-combobox";
-import { ChampionSubTeamCombobox } from "./sub-team-combobox";
+import { FilterCombobox } from "@/components/my-use-cases/filter-combobox";
+import {
+    Empty,
+    EmptyContent,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from "@/components/ui/empty";
 
 const UseCaseSkeleton = () => (
     <div className="space-y-4">
@@ -32,139 +43,487 @@ const UseCaseSkeleton = () => (
     </div>
 );
 
+type BusinessUnitMapping = {
+    businessUnitName?: string;
+    teams?: { teamName?: string }[];
+};
+
+type PhaseMapping = {
+    id?: number | string;
+    name?: string;
+    stage?: string;
+};
+
+type StatusMapping = {
+    id?: number | string;
+    name?: string;
+    color?: string;
+};
+
+type TimespanMapping = {
+    id?: number | string;
+    timespan?: string;
+    name?: string;
+};
+
+type BackendUseCase = {
+    id?: number | string;
+    ID?: number | string;
+    title?: string;
+    Title?: string;
+    UseCase?: string;
+    phase?: string;
+    Phase?: string;
+    phaseId?: number | string | null;
+    PhaseId?: number | string | null;
+    phaseid?: number | string | null;
+    statusName?: string;
+    Status?: string;
+    statusColor?: string;
+    StatusColor?: string;
+    businessUnitName?: string;
+    BusinessUnit?: string;
+    BusinessUnitName?: string;
+    teamName?: string;
+    TeamName?: string;
+    deliveryTimespan?: string;
+    Delivery?: string;
+    priority?: number | string | null;
+    Priority?: number | string | null;
+    currentPhaseStartDate?: string;
+    CurrentPhaseStartDate?: string;
+    currentPhaseEndDate?: string;
+    CurrentPhaseEndDate?: string;
+};
+
+type NormalizedUseCase = {
+    id: string;
+    title: string;
+    delivery: string;
+    priority: number | null;
+    status: string;
+    statusColor: string;
+    teamName: string;
+    businessUnit: string;
+    phase: string;
+    phaseId: number | null;
+    currentPhaseDisplay: string;
+    [key: string]: string | number | null;
+};
+
+const TrendingIcon = ({ isPositive, className }: { isPositive: boolean; className?: string }) => {
+    const Icon = isPositive ? TrendingUpIcon : TrendingDownIcon;
+    return <Icon className={className} />;
+};
+
 const ChampionUseCaseScreen = () => {
     const navigate = useNavigate();
-    const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-    const [sortOption, setSortOption] = useState<string[]>([]);
-    const [searchUseCase, setSearchUseCase] = useState('');
-    const [searchPhase, setSearchPhase] = useState<string[]>([]);
-    const [searchTeams, setSearchTeams] = useState<string[]>([]);
-    const [searchSubTeams, setSearchSubTeams] = useState<string[]>([]);
-    const [businessStructureData, setBusinessStructureData] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const { accounts } = useMsal();
+    const userEmail = accounts[0]?.username ?? "";
 
-    // Fetch business structure data on mount
+    const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
+    const [searchUseCase, setSearchUseCase] = useState("");
+    const [searchPhase, setSearchPhase] = useState<string[]>([]);
+    const [searchBusinessUnit, setSearchBusinessUnit] = useState<string[]>([]);
+    const [searchStatus, setSearchStatus] = useState<string[]>([]);
+    const [businessUnitsData, setBusinessUnitsData] = useState<{ items?: BusinessUnitMapping[] } | null>(null);
+    const [phasesData, setPhasesData] = useState<PhaseMapping[]>([]);
+    const [statusData, setStatusData] = useState<StatusMapping[]>([]);
+    const [timespansData, setTimespansData] = useState<TimespanMapping[]>([]);
+    const [useCases, setUseCases] = useState<BackendUseCase[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
-        const fetchBusinessStructure = async () => {
-            setIsLoading(true);
+        const fetchMappings = async () => {
             try {
-                const data = await getBusinessStructure();
-                setBusinessStructureData(data);
+                const [businessUnits, phases, statuses, timespans] = await Promise.all([
+                    getMappingBusinessUnits(),
+                    getMappingPhases(),
+                    getMappingStatus(),
+                    getMappingImplementationTimespans(),
+                ]);
+                setBusinessUnitsData(businessUnits);
+                setPhasesData(phases?.items ?? []);
+                setStatusData(statuses?.items ?? []);
+                setTimespansData(timespans?.items ?? []);
             } catch (error) {
-                console.error('Error fetching business structure:', error);
-            } finally {
-                setIsLoading(false);
+                console.error("Error fetching mappings:", error);
             }
         };
-        fetchBusinessStructure();
+        fetchMappings();
     }, []);
 
+    useEffect(() => {
+        let active = true;
+
+        const loadUseCases = async () => {
+            if (!userEmail.trim()) {
+                if (active) {
+                    setUseCases([]);
+                    setError(null);
+                }
+                return;
+            }
+            setLoading(true);
+            try {
+                const response = await fetch(
+                    `/api/usecases/champion?email=${encodeURIComponent(userEmail)}`,
+                    { headers: { Accept: "application/json" } },
+                );
+                if (!response.ok) {
+                    const details = await response.text().catch(() => "");
+                    throw new Error(details || "Failed to load champion use cases.");
+                }
+                const data = await response.json();
+                if (active) {
+                    setUseCases(Array.isArray(data?.items) ? data.items : []);
+                    setError(null);
+                }
+            } catch (err) {
+                console.error("Failed to load champion use cases", err);
+                if (active) {
+                    setError(err instanceof Error ? err.message : "Unknown error");
+                }
+            } finally {
+                if (active) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        void loadUseCases();
+        return () => {
+            active = false;
+        };
+    }, [userEmail]);
+
     const businessUnits = useMemo(() => {
-        return getBusinessUnitsFromData(businessStructureData);
-    }, [businessStructureData]);
+        const items = businessUnitsData?.items ?? [];
+        return items
+            .map((unit) => String(unit.businessUnitName ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b));
+    }, [businessUnitsData]);
 
-    const selectedBusinessUnits = useMemo(() => {
-        const filteredUnits = sortOption.filter((unit) => unit !== "all");
-        return filteredUnits.length ? filteredUnits : businessUnits;
-    }, [sortOption, businessUnits]);
+    const phaseOptions = useMemo(() => {
+        return phasesData
+            .map((item) => String(item.name ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b))
+            .map((name: string) => ({ label: name, value: name }));
+    }, [phasesData]);
 
-    const teams = useMemo(() => {
-        if (!businessStructureData) return [];
-        const teamSet = new Set<string>();
-        selectedBusinessUnits.forEach((unit) => {
-            getTeamsForBusinessUnit(businessStructureData, unit).forEach((team) => teamSet.add(team));
-        });
-        return Array.from(teamSet).sort().map((name) => ({ label: name, value: name }));
-    }, [businessStructureData, selectedBusinessUnits]);
+    const statusOptions = useMemo(() => {
+        return statusData
+            .map((item) => String(item.name ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b))
+            .map((name: string) => ({ label: name, value: name }));
+    }, [statusData]);
 
-    const subTeams = useMemo(() => {
-        if (!businessStructureData) return [];
-        const selectedTeams = searchTeams.filter((team) => team !== "all");
-        const teamCandidates = selectedTeams.length ? selectedTeams : teams.map((team) => team.value);
-        const subTeamSet = new Set<string>();
-        selectedBusinessUnits.forEach((unit) => {
-            const teamsForUnit = getTeamsForBusinessUnit(businessStructureData, unit);
-            const teamsToUse = teamCandidates.length
-                ? teamCandidates.filter((team) => teamsForUnit.includes(team))
-                : teamsForUnit;
-            teamsToUse.forEach((team) => {
-                getSubTeamsForTeam(businessStructureData, unit, team).forEach((subTeam) => subTeamSet.add(subTeam));
+    const phaseColumns = useMemo(() => {
+        return phasesData
+            .map((item) => ({
+                id: Number(item.id),
+                name: String(item.name ?? "").trim(),
+                stage: String(item.stage ?? "").trim(),
+            }))
+            .filter((item) => item.name && Number.isFinite(item.id))
+            .sort((a, b) => {
+                if (a.id !== b.id) return a.id - b.id;
+                return a.name.localeCompare(b.name);
             });
-        });
-        return Array.from(subTeamSet).sort().map((name) => ({ label: name, value: name }));
-    }, [businessStructureData, selectedBusinessUnits, searchTeams, teams]);
+    }, [phasesData]);
 
-    const useCases: UseCase[] = [
-        { id: 1, title: 'AchmanTest', idea: 'completed', diagnose: '11/21/25 - 11/26/25', design: 'Not Set', implemented: 'Not Set', delivery: 'FY25Q04', priority: 1, status: 'On-Track' },
-        { id: 2, title: 'AchmanTest1', idea: '10/04/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: 'FY26Q01', priority: 2, status: 'At Risk' },
-        { id: 3, title: 'AchmanTest3', idea: '10/03/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: 'FY25Q04', priority: 2, status: 'Completed' },
-        { id: 4, title: 'AchmanTest4', idea: '10/03/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'Help Needed' },
-        { id: 5, title: 'AchmanTest5', idea: '10/07/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'No Updates' },
-        { id: 6, title: 'Test Uc123', idea: '10/23/25 - 10/28/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'Not Started' },
-        { id: 7, title: 'Test UC Stakeholder Error', idea: '10/23/25 - 10/23/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'Parked' },
-        { id: 8, title: 'Test UC Stakeholder Error 2', idea: '10/25/25 - 10/27/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'Rejected' },
-        { id: 9, title: 'Actest', idea: '10/17/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: 'FY25Q04', priority: 2, status: 'On-Track' },
-        { id: 10, title: 'test', idea: '10/22/25 - 10/31/25', diagnose: 'Not Set', design: 'Not Set', implemented: 'Not Set', delivery: '', priority: null, status: 'At Risk' },
-    ];
+    const deliveryOptions = useMemo(() => {
+        return timespansData
+            .map((item) => String(item.timespan ?? item.name ?? "").trim())
+            .filter(Boolean)
+            .sort((a: string, b: string) => a.localeCompare(b))
+            .map((name: string) => ({ label: name, value: name }));
+    }, [timespansData]);
 
-    const phaseOptions = [
-        { label: "Idea", value: "Idea" },
-        { label: "Diagnose", value: "Diagnose" },
-        { label: "Design", value: "Design" },
-        { label: "Implemented", value: "Implemented" },
-    ];
-
-    const businessUnitOptions = [
+    const businessUnitOptions = useMemo(() => [
         { label: "All Units", value: "all" },
-        { label: "Communications", value: "Communications" },
-        { label: "Customer Experience", value: "Customer Experience" },
-        { label: "Engineering Product Innovation Cloud", value: "Engineering Product Innovation Cloud" },
-        { label: "Global Business Operations", value: "Global Business Operations" },
-        { label: "Go-to-Market", value: "Go-to-Market" },
-        { label: "Legal", value: "Legal" },
-        { label: "People", value: "People" },
-    ];
+        ...businessUnits.map((unit) => ({ label: unit, value: unit })),
+    ], [businessUnits]);
 
-    const finalTeams = useMemo(() => [
-        { label: "All Teams", value: "all" },
-        ...teams
-    ], [teams]);
+    const normalizedUseCases = useMemo<NormalizedUseCase[]>(() => {
+        if (!useCases || useCases.length === 0) return [];
 
-    const finalSubTeams = useMemo(() => [
-        { label: "All Sub Teams", value: "all" },
-        ...subTeams
-    ], [subTeams]);
+        const formatDate = (value: string): string => {
+            if (!value) return "";
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return "";
+            const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+            const day = String(parsed.getUTCDate()).padStart(2, "0");
+            const year = String(parsed.getUTCFullYear());
+            return `${month}-${day}-${year}`;
+        };
 
-    // Basic filtering logic (Client-side for this demo)
-    const filteredData = useCases.filter(uc => {
-        if (searchUseCase && !uc.title.toLowerCase().includes(searchUseCase.toLowerCase())) return false;
+        return useCases.flatMap((raw) => {
+            const uc = raw as BackendUseCase;
+            const legacy = uc as Record<string, unknown>;
+            const phaseName = String(uc.phase || uc.Phase || "").trim();
+            const phaseId = Number(uc.phaseId ?? uc.PhaseId ?? uc.phaseid);
+            const status = String(uc.statusName || uc.Status || "In Progress").trim();
+            const startRaw = String(uc.currentPhaseStartDate ?? uc.CurrentPhaseStartDate ?? "");
+            const endRaw = String(uc.currentPhaseEndDate ?? uc.CurrentPhaseEndDate ?? "");
+            const start = formatDate(startRaw);
+            const end = formatDate(endRaw);
+            const currentPhaseDisplay = start && end ? `${start} - ${end}` : status;
 
-        if (searchPhase.length > 0 && !searchPhase.includes('all')) {
-            const phase = uc.idea !== 'Not Set' && uc.idea !== 'completed' ? 'Idea' :
-                uc.diagnose !== 'Not Set' ? 'Diagnose' :
-                    uc.design !== 'Not Set' ? 'Design' :
-                        uc.implemented !== 'Not Set' ? 'Implemented' : '';
-            if (!searchPhase.includes(phase)) return false;
+            const phaseValues: Record<string, string> = {};
+            phaseColumns.forEach((phase) => {
+                const key = `phase_${phase.id}`;
+                if (!Number.isFinite(phaseId)) {
+                    phaseValues[key] = "Not Set";
+                    return;
+                }
+                if (phase.id < phaseId) {
+                    phaseValues[key] = "completed";
+                    return;
+                }
+                if (phase.id > phaseId) {
+                    phaseValues[key] = "Not Started";
+                    return;
+                }
+                phaseValues[key] = currentPhaseDisplay;
+            });
+
+            const rawId = uc.id ?? uc.ID;
+            if (rawId == null) return [];
+
+            return [{
+                id: String(rawId),
+                title: uc.title || uc.Title || uc.UseCase || "Untitled",
+                delivery: uc.deliveryTimespan || uc.Delivery || "",
+                priority: Number(uc.priority ?? uc.Priority) || null,
+                status,
+                statusColor: uc.statusColor || uc.StatusColor || "",
+                teamName: uc.teamName || uc.TeamName || String(legacy["Team Name"] ?? "") || "",
+                businessUnit: uc.businessUnitName || uc.BusinessUnit || uc.BusinessUnitName || String(legacy["Business Unit"] ?? "") || "",
+                phase: phaseName,
+                phaseId: Number.isFinite(phaseId) ? phaseId : null,
+                currentPhaseDisplay,
+                ...phaseValues,
+            }];
+        });
+    }, [useCases, phaseColumns]);
+
+    const idOptions = useMemo(() => {
+        const uniqueIds = new Set<string>();
+        normalizedUseCases.forEach((useCase) => {
+            const value = String(useCase.id ?? "").trim();
+            if (value) uniqueIds.add(value);
+        });
+        return Array.from(uniqueIds)
+            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+            .map((value) => ({ label: value, value }));
+    }, [normalizedUseCases]);
+
+    const kpiData = useMemo(() => {
+        const totalUseCases = normalizedUseCases.length;
+        const implementedPhase = phaseColumns.find((phase) => phase.name.toLowerCase() === "implemented");
+        const implementedPhaseId = implementedPhase?.id ?? null;
+        const implemented = normalizedUseCases.filter((useCase) => {
+            if (implementedPhaseId !== null && useCase.phaseId === implementedPhaseId) return true;
+            return String(useCase.phase ?? "").toLowerCase() === "implemented";
+        }).length;
+        const completionRate = totalUseCases > 0 ? Math.round((implemented / totalUseCases) * 100) : 0;
+
+        const now = new Date();
+        const currentStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const previousStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+        let currentCount = 0;
+        let previousCount = 0;
+
+        useCases.forEach((useCase) => {
+            const dateValue = String(
+                (useCase as Record<string, unknown>)["created"] ??
+                (useCase as Record<string, unknown>)["Created"] ??
+                (useCase as Record<string, unknown>)["modified"] ??
+                (useCase as Record<string, unknown>)["Modified"] ??
+                "",
+            );
+            if (!dateValue) return;
+            const parsed = new Date(dateValue);
+            if (Number.isNaN(parsed.getTime())) return;
+            if (parsed >= currentStart && parsed <= now) {
+                currentCount += 1;
+            } else if (parsed >= previousStart && parsed < currentStart) {
+                previousCount += 1;
+            }
+        });
+
+        let trending = 0;
+        if (currentCount === 0 && previousCount === 0) {
+            trending = 0;
+        } else if (previousCount === 0) {
+            trending = currentCount > 0 ? 100 : 0;
+        } else {
+            trending = Math.round(((currentCount - previousCount) / previousCount) * 100);
         }
-        return true;
-    });
 
-    // Sorting logic can be handled by DataTable, but "Sort By Business Unit" is specific.
-    // Since Business Unit is not in the data model shown, we will just keep the dropdown for UI fidelity
-    // but it won't functionally sort unless we add that field.
+        return {
+            totalUseCases,
+            implemented,
+            completionRate,
+            trending,
+        };
+    }, [normalizedUseCases, phaseColumns, useCases]);
+
+    const displayUseCases = useMemo(() => {
+        if (!normalizedUseCases.length) return [];
+
+        let mapped = normalizedUseCases.slice();
+
+        mapped = mapped.filter((uc) => {
+            if (searchUseCase && !uc.title.toLowerCase().includes(searchUseCase.toLowerCase())) return false;
+
+            if (searchPhase.length > 0 && !searchPhase.includes("all")) {
+                const phaseValue = String(uc.phase || "").toLowerCase();
+                if (!searchPhase.some((phase) => phase.toLowerCase() === phaseValue)) return false;
+            }
+
+            if (searchStatus.length > 0 && !searchStatus.includes("all")) {
+                const statusValue = (uc.status || "").toLowerCase();
+                if (!searchStatus.some((status) => status.toLowerCase() === statusValue)) return false;
+            }
+
+            if (searchBusinessUnit.length > 0 && !searchBusinessUnit.includes("all")) {
+                const unitValue = (uc.businessUnit || "").toLowerCase();
+                if (!searchBusinessUnit.some((unit) => unit.toLowerCase() === unitValue)) return false;
+            }
+
+            return true;
+        });
+
+        return mapped;
+    }, [normalizedUseCases, searchUseCase, searchPhase, searchStatus, searchBusinessUnit]);
+
+    const columns = useMemo(
+        () => createColumns(navigate, phaseColumns, deliveryOptions, idOptions, "champion"),
+        [navigate, phaseColumns, deliveryOptions, idOptions],
+    );
 
     return (
         <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-            {/* KPI Dashboard Section */}
-            <div className="w-full">
-                <SectionCards />
+            <div className="grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {loading ? (
+                    [...Array(4)].map((_, i) => (
+                        <Card key={i} className="shadow-sm border-none ring-1 ring-gray-200">
+                            <CardHeader className="relative space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-10 w-16" />
+                                <div className="absolute right-4 top-4">
+                                    <Skeleton className="h-5 w-12 rounded-lg" />
+                                </div>
+                            </CardHeader>
+                            <CardFooter className="flex-col items-start gap-2 text-sm pt-0">
+                                <Skeleton className="h-4 w-32" />
+                                <Skeleton className="h-3 w-48" />
+                            </CardFooter>
+                        </Card>
+                    ))
+                ) : (
+                    <>
+                        <Card>
+                            <CardHeader className="relative">
+                                <CardDescription>Total Use Cases</CardDescription>
+                                <CardTitle className="text-3xl font-semibold tabular-nums">
+                                    {kpiData.totalUseCases}
+                                </CardTitle>
+                                <div className="absolute right-4 top-4">
+                                    <Badge
+                                        variant="outline"
+                                        className={`flex gap-1 rounded-lg text-xs ${kpiData.trending >= 0 ? "text-green-600" : "text-red-600"}`}
+                                    >
+                                        <TrendingIcon isPositive={kpiData.trending >= 0} className="size-3" />
+                                        {kpiData.trending >= 0 ? "+" : ""}{kpiData.trending}%
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardFooter className="flex-col items-start gap-1 text-sm">
+                                <div className="line-clamp-1 flex gap-2 font-medium">
+                                    Trending {kpiData.trending >= 0 ? "up" : "down"} this month{" "}
+                                    <TrendingIcon isPositive={kpiData.trending >= 0} className="size-4" />
+                                </div>
+                                <div className="text-muted-foreground">Champion use cases submitted</div>
+                            </CardFooter>
+                        </Card>
+                        <Card>
+                            <CardHeader className="relative">
+                                <CardDescription>Implemented</CardDescription>
+                                <CardTitle className="text-3xl font-semibold tabular-nums">
+                                    {kpiData.implemented}
+                                </CardTitle>
+                                <div className="absolute right-4 top-4">
+                                    <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                                        <TrendingUpIcon className="size-3" />
+                                        {kpiData.completionRate}%
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardFooter className="flex-col items-start gap-1 text-sm">
+                                <div className="line-clamp-1 flex gap-2 font-medium">
+                                    Completion rate <TrendingUpIcon className="size-4" />
+                                </div>
+                                <div className="text-muted-foreground">Use cases implemented</div>
+                            </CardFooter>
+                        </Card>
+                        <Card>
+                            <CardHeader className="relative">
+                                <CardDescription>Completion Rate</CardDescription>
+                                <CardTitle className="text-3xl font-semibold tabular-nums">
+                                    {kpiData.completionRate}%
+                                </CardTitle>
+                                <div className="absolute right-4 top-4">
+                                    <Badge variant="outline" className="flex gap-1 rounded-lg text-xs">
+                                        <TrendingUpIcon className="size-3" />
+                                        Target: 100%
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardFooter className="flex-col items-start gap-1 text-sm">
+                                <div className="line-clamp-1 flex gap-2 font-medium">
+                                    Progress tracking <TrendingUpIcon className="size-4" />
+                                </div>
+                                <div className="text-muted-foreground">Percentage of completed use cases</div>
+                            </CardFooter>
+                        </Card>
+                        <Card>
+                            <CardHeader className="relative">
+                                <CardDescription>Trending</CardDescription>
+                                <CardTitle className="text-3xl font-semibold tabular-nums">
+                                    {kpiData.trending >= 0 ? "+" : ""}{kpiData.trending}%
+                                </CardTitle>
+                                <div className="absolute right-4 top-4">
+                                    <Badge
+                                        variant="outline"
+                                        className={`flex gap-1 rounded-lg text-xs ${kpiData.trending >= 0 ? "text-green-600" : "text-red-600"}`}
+                                    >
+                                        <TrendingIcon isPositive={kpiData.trending >= 0} className="size-3" />
+                                        Monthly change
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardFooter className="flex-col items-start gap-1 text-sm">
+                                <div className="line-clamp-1 flex gap-2 font-medium">
+                                    Growth indicator <TrendingIcon isPositive={kpiData.trending >= 0} className="size-4" />
+                                </div>
+                                <div className="text-muted-foreground">Champion use case trend</div>
+                            </CardFooter>
+                        </Card>
+                    </>
+                )}
             </div>
-
             {/* Filters Card */}
             <Card className="shadow-sm">
                 <CardContent className="pt-6">
                     <div className="w-full overflow-x-auto">
-                        <div className="grid min-w-[1120px] grid-cols-[auto_minmax(220px,1fr)_repeat(4,minmax(180px,1fr))_auto] items-center gap-4">
+                        <div className="grid min-w-[940px] grid-cols-[auto_minmax(220px,1fr)_repeat(3,minmax(180px,1fr))_auto] items-center gap-4">
                             <Tabs value={viewMode} onValueChange={(val: any) => setViewMode(val)}>
                                 <TabsList className="bg-gray-100/80 p-1 rounded-lg border border-gray-200 h-10">
                                     <TabsTrigger
@@ -185,49 +544,45 @@ const ChampionUseCaseScreen = () => {
                             </Tabs>
 
                             <div className="relative min-w-[200px]">
-                                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Filter use cases..."
                                     value={searchUseCase}
                                     onChange={(e) => setSearchUseCase(e.target.value)}
-                                    className="h-10 w-full pl-10 bg-white text-sm"
+                                    className="h-8 w-full pl-9 bg-white text-sm"
                                 />
                             </div>
 
-                            <ChampionPhaseCombobox
-                                options={phaseOptions}
+                            <FilterCombobox
+                                label="Phase"
+                                options={[{ label: "All Phases", value: "all" }, ...phaseOptions]}
                                 value={searchPhase}
                                 onChange={setSearchPhase}
                             />
 
-                            <ChampionBusinessUnitCombobox
+                            <FilterCombobox
+                                label="Status"
+                                options={[{ label: "All Statuses", value: "all" }, ...statusOptions]}
+                                value={searchStatus}
+                                onChange={setSearchStatus}
+                            />
+
+                            <FilterCombobox
+                                label="Business Unit"
                                 options={businessUnitOptions}
-                                value={sortOption}
-                                onChange={setSortOption}
+                                value={searchBusinessUnit}
+                                onChange={setSearchBusinessUnit}
                             />
 
-                            <ChampionTeamCombobox
-                                options={finalTeams}
-                                value={searchTeams}
-                                onChange={setSearchTeams}
-                            />
-
-                            <ChampionSubTeamCombobox
-                                options={finalSubTeams}
-                                value={searchSubTeams}
-                                onChange={setSearchSubTeams}
-                            />
-
-                            {(searchUseCase || searchPhase.length > 0 || sortOption.length > 0 || searchTeams.length > 0 || searchSubTeams.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || searchStatus.length > 0 || searchBusinessUnit.length > 0) && (
                                 <Button
                                     variant="ghost"
-                                    className="h-10 px-3 text-sm justify-self-end"
+                                    className="h-8 px-3 text-sm justify-self-end"
                                     onClick={() => {
-                                        setSearchUseCase('');
+                                        setSearchUseCase("");
                                         setSearchPhase([]);
-                                        setSortOption([]);
-                                        setSearchTeams([]);
-                                        setSearchSubTeams([]);
+                                        setSearchStatus([]);
+                                        setSearchBusinessUnit([]);
                                     }}
                                 >
                                     Reset
@@ -241,13 +596,41 @@ const ChampionUseCaseScreen = () => {
             {/* Content Card */}
             <Card className="shadow-sm">
                 <CardContent className="pt-6">
-                    {isLoading ? (
-                        <UseCaseSkeleton />
-                    ) : (
-                        viewMode === 'table' ? (
-                            <DataTable columns={createColumns(navigate)} data={filteredData} />
+                    {loading && <UseCaseSkeleton />}
+                    {error && <div className="text-center py-8 text-red-600">Error loading use cases: {error}</div>}
+                    {!loading && !error && displayUseCases.length === 0 && (
+                        <Empty className="mt-8 border border-dashed border-gray-200 bg-white/70">
+                            <EmptyHeader>
+                                <EmptyMedia variant="icon">
+                                    <Plus className="size-5 text-gray-600" />
+                                </EmptyMedia>
+                                <EmptyTitle>No use cases yet</EmptyTitle>
+                                <EmptyDescription>
+                                    Start by submitting a new use case to populate this list.
+                                </EmptyDescription>
+                            </EmptyHeader>
+                            <EmptyContent>
+                                <button
+                                    className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                                    onClick={() => navigate("/submit-use-case")}
+                                >
+                                    Submit a Use Case
+                                </button>
+                            </EmptyContent>
+                        </Empty>
+                    )}
+
+                    {!loading && !error && displayUseCases.length > 0 && (
+                        viewMode === "table" ? (
+                            <DataTable columns={columns} data={displayUseCases} />
                         ) : (
-                            <KanbanView data={filteredData} navigate={navigate} />
+                            // @ts-ignore
+                            <KanbanView
+                                data={displayUseCases}
+                                navigate={navigate}
+                                sourceScreen="champion"
+                                phases={phaseColumns}
+                            />
                         )
                     )}
                 </CardContent>

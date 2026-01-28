@@ -58,6 +58,7 @@ export const createColumns = (
     phases: PhaseColumn[],
     deliveryOptions?: { label: string; value: string }[],
     idOptions?: { label: string; value: string }[],
+    sourceScreen: string = "my-use-cases",
 ): ColumnDef<UseCase>[] => {
     const phaseColumns: ColumnDef<UseCase>[] = phases.map((phase) => {
         const key = `phase_${phase.id}`;
@@ -136,12 +137,12 @@ export const createColumns = (
 
                 return (
                     <div
-                        className="font-medium text-gray-900 cursor-pointer hover:underline whitespace-normal break-words"
-                        onClick={() => {
-                            setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen: 'my-use-cases' });
-                            navigate(`/use-case-details/${useCase.id}`);
-                        }}
-                    >
+                    className="font-medium text-gray-900 cursor-pointer hover:underline whitespace-normal break-words"
+                    onClick={() => {
+                        setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen });
+                        navigate(`/use-case-details/${useCase.id}`);
+                    }}
+                >
                         {useCase.title}
                     </div>
                 )

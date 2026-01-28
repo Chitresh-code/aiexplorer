@@ -79,8 +79,6 @@ export const POST = async (req: Request): Promise<NextResponse> => {
       chatText ||
       "";
 
-    console.info("[ai][metric] raw response text", outputText);
-
     const parsed = outputText ? JSON.parse(outputText) : { items: [] };
 
     return NextResponse.json(parsed, {

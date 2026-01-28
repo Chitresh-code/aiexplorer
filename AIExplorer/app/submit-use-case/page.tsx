@@ -3,6 +3,7 @@
 'use client';
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "@/lib/router";
+import { setRouteState } from "@/lib/navigation-state";
 import { useMsal } from "@azure/msal-react";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -796,7 +797,12 @@ const SubmitUseCase = () => {
         if (!Array.isArray(rolesData)) return [];
         const seen = new Set();
         return rolesData
-            .filter((role) => String(role.roleType ?? "").trim() === "2")
+            .filter((role) => {
+                if (String(role.roleType ?? "").trim() !== "2") return false;
+                const roleId = Number(role.id);
+                if (Number.isFinite(roleId) && roleId === 13) return false;
+                return true;
+            })
             .map((role) => String(role.name ?? "").trim())
             .filter((name) => {
                 const key = name.toLowerCase();
@@ -1476,13 +1482,25 @@ const SubmitUseCase = () => {
 
                 const createdUseCase = await createUseCase(useCaseData);
                 const useCaseId = createdUseCase?.id ?? createdUseCase?.ID ?? null;
+                const approvalsSucceeded = createdUseCase?.approvals !== false;
 
                 toast.success(
                     useCaseId
                         ? `Your record has been submitted successfully with ID: ${useCaseId}`
                         : "Your record has been submitted successfully.",
                 );
-                navigate('/champion');
+                if (!approvalsSucceeded) {
+                    toast.error("Failed to send approvals to champions.");
+                }
+                if (useCaseId) {
+                    setRouteState(`/use-case-details/${useCaseId}`, {
+                        useCaseTitle: values.useCaseTitle?.trim() || "",
+                        sourceScreen: "my-use-cases",
+                    });
+                    navigate(`/use-case-details/${useCaseId}`);
+                } else {
+                    navigate('/my-use-cases');
+                }
 
             } catch (error) {
                 console.error('Error submitting use case:', error);
@@ -1701,6 +1719,7 @@ const SubmitUseCase = () => {
                                 onAcceptTimelineSuggestions={handleAcceptTimelineSuggestions}
                                 onRejectTimelineSuggestions={handleRejectTimelineSuggestions}
                                 addedStakeholders={addedStakeholders}
+                                canAddStakeholder={roles.length > 0}
                                 onAddStakeholder={() => setIsDialogOpen(true)}
                                 onEditStakeholder={handleEditStakeholder}
                                 onRemoveStakeholder={handleRemoveStakeholder}

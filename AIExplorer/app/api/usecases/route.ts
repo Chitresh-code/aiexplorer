@@ -168,6 +168,28 @@ type CreateUseCasePayload = {
   metrics?: UseCaseMetricItem[];
 };
 
+const APPROVAL_FLOW_URL =
+  process.env.POWER_AUTOMATE_APPROVAL_FLOW_URL?.trim() ?? "";
+
+const toTitleCase = (value: string) => {
+  if (!value) return "";
+  const lower = value.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+};
+
+const buildStakeholderName = (email?: string | null) => {
+  if (!email) return "";
+  const localPart = email.split("@")[0] ?? email;
+  const rawParts = localPart.split(".").filter(Boolean);
+  if (!rawParts.length) return "";
+  const alphaParts = rawParts.filter((part) => /[a-zA-Z]/.test(part));
+  const firstPart = alphaParts[0] ?? rawParts[0];
+  const lastPart =
+    alphaParts.length > 1 ? alphaParts[alphaParts.length - 1] : rawParts.length > 1 ? rawParts[rawParts.length - 1] : "";
+  const nameParts = [firstPart, lastPart].filter(Boolean).map((part) => toTitleCase(part));
+  return nameParts.join(" ").trim();
+};
+
 export const POST = async (request: Request): Promise<NextResponse> => {
   try {
     const payload = (await request.json()) as CreateUseCasePayload;
@@ -214,11 +236,123 @@ export const POST = async (request: Request): Promise<NextResponse> => {
         payload.metrics?.length ? JSON.stringify(payload.metrics) : null,
       )
       .execute("dbo.CreateUseCase");
+    const useCaseRecord = result.recordset?.[0] ?? {};
+    const useCaseId =
+      useCaseRecord?.UseCaseId ??
+      useCaseRecord?.useCaseId ??
+      useCaseRecord?.id ??
+      null;
+    let approvals = false;
 
-    const useCaseId = result.recordset?.[0]?.id ?? null;
+    if (useCaseId) {
+      let phaseName = String(useCaseRecord?.Phase ?? useCaseRecord?.phase ?? "").trim();
+      const phaseId =
+        Number(useCaseRecord?.Phaseid ?? useCaseRecord?.phaseId ?? payload.phaseId ?? 0) || 0;
+      if (!phaseName && phaseId) {
+        try {
+          const phaseResult = await pool
+            .request()
+            .input("PhaseId", phaseId)
+            .query("SELECT Phase FROM phasemapping WHERE id = @PhaseId");
+          phaseName = String(phaseResult.recordset?.[0]?.Phase ?? "").trim();
+        } catch (error) {
+          logErrorTrace("Phase lookup failed", error);
+        }
+      }
+
+      let stakeholderRows: Array<{
+        StakeholderID?: number;
+        StakeholderRoleID?: number;
+        StakeholderRole?: string;
+        StakeholderEmail?: string;
+        ReviewFlag?: string | number | null;
+        ReviewerType?: string;
+      }> = [];
+
+      const recordsets = Array.isArray(result.recordsets) ? result.recordsets : [];
+      if (recordsets.length > 1) {
+        stakeholderRows = (recordsets[1] ?? []).map((row: any) => ({
+          StakeholderID: row.StakeholderID ?? row.id,
+          StakeholderRoleID: row.StakeholderRoleID ?? row.roleid,
+          StakeholderRole: row.StakeholderRole ?? row.role,
+          StakeholderEmail: row.StakeholderEmail ?? row.stakeholder_email,
+          ReviewFlag: row.ReviewFlag ?? row.reviewflag,
+          ReviewerType: row.ReviewerType ?? row.role,
+        }));
+      } else {
+        try {
+          const stakeholderResult = await pool
+            .request()
+            .input("UseCaseId", useCaseId)
+            .query(`
+              SELECT
+                s.id AS StakeholderID,
+                s.roleid AS StakeholderRoleID,
+                s.role AS StakeholderRole,
+                s.stakeholder_email AS StakeholderEmail,
+                rm.reviewflag AS ReviewFlag
+              FROM dbo.stakeholder s
+              LEFT JOIN dbo.rolemapping rm ON rm.id = s.roleid
+              WHERE s.usecaseid = @UseCaseId
+            `);
+          stakeholderRows = (stakeholderResult.recordset ?? []).map((row: any) => ({
+            StakeholderID: row.StakeholderID,
+            StakeholderRoleID: row.StakeholderRoleID,
+            StakeholderRole: row.StakeholderRole,
+            StakeholderEmail: row.StakeholderEmail,
+            ReviewFlag: row.ReviewFlag,
+            ReviewerType: row.StakeholderRole,
+          }));
+        } catch (error) {
+          logErrorTrace("Stakeholder lookup failed", error);
+          stakeholderRows = [];
+        }
+      }
+
+      const stakeholderDetails = stakeholderRows
+        .filter((row) => String(row.ReviewFlag ?? "").trim() === "1")
+        .map((row) => {
+          const email = String(row.StakeholderEmail ?? "").trim();
+          return {
+            ReviewerType: String(row.ReviewFlag ?? "").trim(),
+            StakeholderEmail: email,
+            StakeholderName: buildStakeholderName(email),
+            StakeholderRole: row.StakeholderRole ?? "",
+            StakeholderRoleID: Number.isFinite(Number(row.StakeholderRoleID))
+              ? Number(row.StakeholderRoleID)
+              : 0,
+            StakeholderID: Number.isFinite(Number(row.StakeholderID))
+              ? Number(row.StakeholderID)
+              : 0,
+          };
+        });
+      try {
+        if (!APPROVAL_FLOW_URL) {
+          approvals = false;
+          return NextResponse.json(
+            { id: useCaseId, approvals },
+            { status: 201, headers: { "cache-control": "no-store" } },
+          );
+        }
+        const approvalResponse = await fetch(APPROVAL_FLOW_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            StakeholderDetails: stakeholderDetails,
+            UseCaseId: Number(useCaseId),
+            Phase: phaseName || String(phaseId || ""),
+            Phaseid: Number(phaseId ?? 0),
+          }),
+        });
+        approvals = approvalResponse.ok;
+      } catch (error) {
+        approvals = false;
+        logErrorTrace("Approval flow failed", error);
+      }
+    }
 
     return NextResponse.json(
-      { id: useCaseId },
+      { id: useCaseId, approvals },
       { status: 201, headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
