@@ -37,10 +37,10 @@ export function UnitOfMeasurementSelect({
     value,
     onSelect,
     options,
-    sideOffset = 70,
-    alignOffset = 150, // Default for Unit of Measurement (shifted more right)
+    sideOffset = 4,
+    alignOffset = 0,
     placeholder = "Select",
-    width = "w-[220px]",
+    width = "w-[var(--radix-select-trigger-width)]",
     className,
     align = "start"
 }: UnitOfMeasurementSelectProps) {
@@ -58,7 +58,7 @@ export function UnitOfMeasurementSelect({
             >
                 <SelectValue placeholder={placeholder} />
             </SelectTrigger>
-            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset} avoidCollisions={false}>
+            <SelectContent className={width} align={align} sideOffset={sideOffset} alignOffset={alignOffset}>
                 <SelectItem value=" " className="text-muted-foreground">{placeholder}</SelectItem>
                 {resolvedOptions.map((option) => (
                     <SelectItem key={option} value={option}>

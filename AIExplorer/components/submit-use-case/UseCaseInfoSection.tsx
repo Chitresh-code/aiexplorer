@@ -9,7 +9,7 @@ import { Combobox } from "@/components/ui/combobox";
 import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
 import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -96,7 +96,7 @@ export const UseCaseInfoSection = ({
                                     </TooltipProvider>
                                 </FieldLabel>
                                 <FieldContent>
-                                    <Textarea
+                                    <AutoTextarea
                                         rows={3}
                                         placeholder="What process is AI Automating? (ie. Agent Purpose)"
                                         {...field}
@@ -260,7 +260,7 @@ export const UseCaseInfoSection = ({
                                     )}
                                 </FieldLabel>
                                 <FieldContent>
-                                    <Textarea
+                                    <AutoTextarea
                                         rows={3}
                                         placeholder="Supporting Evidence of how this agent benifits UKG? (ie. Productivity, Adoption, Risk Mitigation, Cost Reduction, Sustainability, etc.)"
                                         {...field}

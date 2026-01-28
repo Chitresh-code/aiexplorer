@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -217,12 +217,12 @@ export const InfoSection = ({
                     Headline - One line Executive Headline
                   </CardTitle>
                   {isEditing ? (
-                    <Textarea
+                    <AutoTextarea
                       value={editableHeadline}
                       onChange={(e) => onHeadlineChange(e.target.value)}
                       className={cn(
                         "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                        "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y",
+                        "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-none",
                       )}
                     />
                   ) : (
@@ -235,12 +235,12 @@ export const InfoSection = ({
                     Opportunity - What is the idea for which AI is being used?
                   </CardTitle>
                   {isEditing ? (
-                    <Textarea
+                    <AutoTextarea
                       value={editableOpportunity}
                       onChange={(e) => onOpportunityChange(e.target.value)}
                       className={cn(
                         "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                        "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y",
+                        "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-none",
                       )}
                     />
                   ) : (
@@ -253,12 +253,12 @@ export const InfoSection = ({
                     Business Value
                   </CardTitle>
                   {isEditing ? (
-                    <Textarea
+                    <AutoTextarea
                       value={editableEvidence}
                       onChange={(e) => onEvidenceChange(e.target.value)}
                       className={cn(
                         "text-gray-700 leading-relaxed bg-transparent border-none shadow-none focus-visible:ring-0 p-0 min-h-0 h-auto resize-none overflow-hidden",
-                        "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-y",
+                        "bg-gray-50 border-gray-200 px-3 py-2 shadow-sm focus-visible:ring-1 min-h-[60px] resize-none",
                       )}
                     />
                   ) : (

@@ -20,7 +20,7 @@ export const PhaseTimelineRow = ({
   isEditable = false,
 }: PhaseTimelineRowProps) => {
   const formatDate = (value?: Date) =>
-    value ? format(value, "dd-MM-yyyy") : "";
+    value ? format(value, "MM-dd-yyyy") : "";
 
   return (
     <div className="grid grid-cols-[140px_1fr_1fr] gap-2 items-center p-4 bg-gray-50/50 rounded-lg border border-gray-100">

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { Input } from "@/components/ui/input";
 import { Field, FieldLabel, FieldContent } from "@/components/ui/field";
 import { MultiCombobox } from "@/components/ui/multi-combobox";
@@ -78,7 +78,7 @@ export const AgentLibrarySection = ({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="w-[95%] mx-auto space-y-6">
       {/* AI Configuration section */}
       <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200">
         <CardHeader className="pb-3 border-b border-gray-100">
@@ -318,7 +318,7 @@ export const AgentLibrarySection = ({
           {isEditing ? (
             <div className="space-y-3">
               <Label className="text-xs font-semibold text-gray-500 uppercase">Agent Instructions / Prompt</Label>
-              <Textarea
+              <AutoTextarea
                 placeholder="Enter agent instructions or prompt..."
                 rows={8}
                 value={instructions}

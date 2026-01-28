@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
+import { AutoTextarea } from "@/components/ui/auto-textarea";
 import { PhaseTimelineRow } from "@/components/use-case-details/PhaseTimelineRow";
 import { Calendar as CalendarIcon, CheckCircle2, ChevronDown, Clock, Edit, Plus, Save, Trash2, Users } from "lucide-react";
 
@@ -280,7 +280,7 @@ export const UpdateSection = ({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="relative">
-                <Textarea
+                <AutoTextarea
                   placeholder="What's the latest on this use case?"
                   value={updateText}
                   onChange={(e) => onUpdateTextChange(e.target.value)}

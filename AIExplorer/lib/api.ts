@@ -49,6 +49,77 @@ export const updateUseCase = async (id: string | number, payload: unknown) => {
   return response.data;
 };
 
+export const updateUseCaseInfo = async (
+  id: string | number,
+  payload: {
+    title?: string;
+    headlines?: string;
+    opportunity?: string;
+    businessValue?: string;
+    editorEmail?: string;
+  },
+) => {
+  const response = await fetch(`/api/usecases/${id}/info`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    throw new Error(details || "Failed to update use case info.");
+  }
+  return response.json();
+};
+
+export const updateUseCaseMetrics = async (
+  id: string | number,
+  payload: {
+    newMetrics?: Array<{
+      metricTypeId: number | null;
+      unitOfMeasureId: number | null;
+      primarySuccessMetricName: string;
+      baselineValue?: string | number | null;
+      baselineDate?: string | null;
+      targetValue?: string | number | null;
+      targetDate?: string | null;
+    }>;
+    updateMetrics?: Array<{
+      id: number;
+      metricTypeId?: number | null;
+      unitOfMeasureId?: number | null;
+      primarySuccessMetricName?: string | null;
+      baselineValue?: string | number | null;
+      baselineDate?: string | null;
+      targetValue?: string | number | null;
+      targetDate?: string | null;
+    }>;
+    deleteMetricIds?: number[];
+    newReportedMetrics?: Array<{
+      metricId: number;
+      reportedValue?: string | number | null;
+      reportedDate?: string | null;
+    }>;
+    updateReportedMetrics?: Array<{
+      id: number;
+      reportedValue?: string | number | null;
+      reportedDate?: string | null;
+    }>;
+    deleteReportedMetricIds?: number[];
+    editorEmail?: string;
+  },
+) => {
+  const response = await fetch(`/api/usecases/${id}/metrics`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    throw new Error(details || "Failed to update use case metrics.");
+  }
+  return response.json();
+};
+
 export const deleteUseCase = async (id: string | number) => {
   await apiClient.delete(`/api/usecases/${id}`);
 };

@@ -29,7 +29,7 @@ export function UnitOfMeasurementSelect({
     sideOffset = 4,
     alignOffset = 0,
     placeholder = "Select",
-    width = "w-[180px]",
+    width = "w-[var(--radix-select-trigger-width)]",
     className,
     align = "start"
 }: UnitOfMeasurementSelectProps) {

@@ -82,7 +82,7 @@ export const createColumns = (
             cell: ({ row }) => {
                 const value = String(row.getValue(key) ?? "");
                 const isCompleted = value === "completed";
-                const isNotSet = value === "Not Set" || value === "";
+                const isNotSet = value === "Not Set" || value === "Not Started" || value === "";
 
                 return (
                     <div
@@ -102,16 +102,17 @@ export const createColumns = (
         {
             accessorKey: "id",
             header: ({ column }) => (
-                <div className="w-[80px] flex justify-center mx-auto">
+                <div className="w-[80px] flex items-start justify-start">
                     <IdHeaderFilter column={column} options={idOptions} />
                 </div>
             ),
             cell: ({ row }) => (
-                <div className="text-gray-700">
+                <div className="w-[80px] pl-4 text-gray-700 text-left">
                     {row.getValue("id")}
                 </div>
             ),
             filterFn: (row, id, value) => {
+                if (!value || !Array.isArray(value) || value.length === 0) return true;
                 const rowValue = String(row.getValue(id) ?? "");
                 return value.includes(rowValue);
             },
@@ -135,7 +136,7 @@ export const createColumns = (
 
                 return (
                     <div
-                        className="font-medium text-gray-900 cursor-pointer hover:underline"
+                        className="font-medium text-gray-900 cursor-pointer hover:underline whitespace-normal break-words"
                         onClick={() => {
                             setRouteState(`/use-case-details/${useCase.id}`, { useCaseTitle: useCase.title, sourceScreen: 'my-use-cases' });
                             navigate(`/use-case-details/${useCase.id}`);

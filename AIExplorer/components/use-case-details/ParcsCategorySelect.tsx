@@ -26,10 +26,10 @@ export function ParcsCategorySelect({
     value,
     onSelect,
     options,
-    sideOffset = 70,
-    alignOffset = 110, // Default for PARCS
+    sideOffset = 4,
+    alignOffset = 0,
     placeholder = "Select",
-    width = "w-[220px]",
+    width = "w-[var(--radix-select-trigger-width)]",
     className,
     align = "start"
 }: ParcsCategorySelectProps) {

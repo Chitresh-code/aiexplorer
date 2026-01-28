@@ -1,10 +1,9 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -27,10 +26,10 @@ import { useMsal } from '@azure/msal-react';
 import { Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
 import { useUseCaseDetails } from '@/hooks/use-usecase-details';
 import { useAgentLibrary } from '@/hooks/use-agent-library';
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { fetchUseCaseMetricsDetails } from '@/lib/api';
+import { fetchUseCaseMetricsDetails, updateUseCaseInfo, updateUseCaseMetrics } from '@/lib/api';
 
 import {
     getMappingMetricCategories,
@@ -43,71 +42,74 @@ import {
     getMappingVendorModels,
     getMappingKnowledgeSources,
 } from '@/lib/submit-use-case';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import { useReactTable, getCoreRowModel, flexRender, type ColumnDef } from '@tanstack/react-table';
+import { useReactTable, getCoreRowModel, type ColumnDef } from '@tanstack/react-table';
 import { Skeleton } from "@/components/ui/skeleton";
 
 const UseCaseDetailsSkeleton = () => (
     <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-        {/* KPI Dashboard Skeleton */}
-        <div className="w-full">
-            <div className="grid auto-rows-min gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
-                    <Card key={i} className="shadow-sm border-none ring-1 ring-gray-200">
-                        <CardHeader className="relative space-y-2">
-                            <Skeleton className="h-4 w-24" />
-                            <Skeleton className="h-8 w-16" />
-                        </CardHeader>
-                        <CardFooter className="flex-col items-start gap-2 pt-0 pb-4">
-                            <Skeleton className="h-4 w-32" />
-                            <Skeleton className="h-3 w-48" />
-                        </CardFooter>
-                    </Card>
-                ))}
+        {/* Tabs + Actions bar */}
+        <div className="bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100">
+            <div className="w-[95%] mx-auto flex items-center justify-between">
+                <Skeleton className="h-10 w-[520px] rounded-lg" />
+                <Skeleton className="h-9 w-32 rounded-md" />
             </div>
         </div>
 
-        {/* Tabs and Actions Skeleton */}
-        <Card className="shadow-sm">
-            <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-6">
-                    <Skeleton className="h-10 w-[600px] rounded-lg" />
-                    <Skeleton className="h-10 w-32" />
+        {/* Info layout skeleton (2 cards) */}
+        <div className="w-[95%] mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6">
+                <div className="flex-1 max-w-xl space-y-2">
+                    <Skeleton className="h-8 w-72" />
+                    <Skeleton className="h-5 w-24" />
                 </div>
-                <div className="space-y-6">
-                    <div className="flex items-center gap-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                            <Skeleton className="h-6 w-64" />
-                            <Skeleton className="h-4 w-32" />
-                        </div>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
+            </div>
 
-        {/* Form Content Skeleton */}
-        <Card className="shadow-sm">
-            <CardHeader className="border-b">
-                <Skeleton className="h-6 w-32 mb-2" />
-                <Skeleton className="h-4 w-64" />
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                ))}
-            </CardContent>
-        </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(80vh-150px)]">
+                <Card
+                    className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col"
+                    style={{ backgroundColor: "#c7e7e7" }}
+                >
+                    <CardContent className="p-8 flex-1">
+                        <div className="flex h-full flex-col gap-6">
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-6 w-full" />
+                                <div className="flex gap-2">
+                                    <Skeleton className="h-6 w-20" />
+                                    <Skeleton className="h-6 w-24" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-28" />
+                                <Skeleton className="h-5 w-52" />
+                                <Skeleton className="h-4 w-32" />
+                            </div>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-5 w-48" />
+                                <Skeleton className="h-5 w-40" />
+                            </div>
+                            <div className="mt-auto pt-2">
+                                <Skeleton className="h-9 w-32 rounded-md" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col">
+                    <CardContent className="pt-6 flex-1">
+                        <div className="space-y-8 h-full">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="space-y-2">
+                                    <Skeleton className="h-4 w-72" />
+                                    <Skeleton className="h-16 w-full" />
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
     </div>
 );
 
@@ -259,6 +261,54 @@ const MetricDatePicker = ({
     );
 };
 
+const ReportedDatePickerCell = ({
+    value,
+    onChange,
+}: {
+    value?: string;
+    onChange: (date: string) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+    const dateValue = useMemo(() => {
+        if (!value) return undefined;
+        const parts = value.split('-');
+        if (parts.length === 3) {
+            return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+        return undefined;
+    }, [value]);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn(
+                        "w-full justify-start text-left font-normal h-9 px-2 text-xs",
+                        !value && "text-muted-foreground"
+                    )}
+                >
+                    <CalendarIcon className="mr-2 h-3 w-3" />
+                    {dateValue ? format(dateValue, "dd-MM-yyyy") : <span>Pick date</span>}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                    mode="single"
+                    selected={dateValue}
+                    onSelect={(date) => {
+                        if (date) {
+                            onChange(format(date, "yyyy-MM-dd"));
+                            setOpen(false);
+                        }
+                    }}
+                    initialFocus
+                />
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 const normalizeRoleName = (value: string) => value.trim().toLowerCase();
 
 const isOwnerRole = (value: string) => normalizeRoleName(value) === "owner";
@@ -312,7 +362,7 @@ const UseCaseDetails = () => {
     const [phaseDates, setPhaseDates] = useState<Record<string, { start?: Date; end?: Date }>>({});
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('info');
-    const [selectedMetricIdForReporting, setSelectedMetricIdForReporting] = useState<string>("");
+    const [selectedMetricIdsForReporting, setSelectedMetricIdsForReporting] = useState<string[]>([]);
     const [stakeholderName, setStakeholderName] = useState('');
     const [stakeholderRole, setStakeholderRole] = useState('');
     const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -355,6 +405,14 @@ const UseCaseDetails = () => {
     const [tempBaselineDate, setTempBaselineDate] = useState<Date | undefined>(undefined);
     const [tempTargetDate, setTempTargetDate] = useState<Date | undefined>(undefined);
     const [isMetricSelectDialogOpen, setIsMetricSelectDialogOpen] = useState(false);
+    const [isDeleteMetricDialogOpen, setIsDeleteMetricDialogOpen] = useState(false);
+    const [pendingDeleteMetricId, setPendingDeleteMetricId] = useState<number | null>(null);
+    const [isMetricsEditing, setIsMetricsEditing] = useState(false);
+    const metricsSnapshotRef = useRef<{
+        metrics: Metric[];
+        reportedMetrics: Metric[];
+        reportedHistory: ReportedHistoryRow[];
+    } | null>(null);
 
     const [themeOptions, setThemeOptions] = useState<{ label: string; value: string }[]>([]);
     const [statusOptions, setStatusOptions] = useState<string[]>([]);
@@ -377,6 +435,16 @@ const UseCaseDetails = () => {
     const [isAgentLibraryEditing, setIsAgentLibraryEditing] = useState(false);
     const [metricDetailRows, setMetricDetailRows] = useState<MetricDetailRow[]>([]);
     const [reportedMetricRows, setReportedMetricRows] = useState<ReportedMetricDetailRow[]>([]);
+    const agentLibrarySnapshotRef = useRef<{
+        selectedAIThemes: string[];
+        selectedPersonas: string[];
+        selectedVendor: string;
+        selectedModel: string;
+        agentId: string;
+        agentLink: string;
+        selectedKnowledgeSources: string[];
+        instructions: string;
+    } | null>(null);
 
     const agentBadgeLabel = useMemo(() => {
         const detailItem = useCaseDetails?.agentLibrary?.[0];
@@ -1106,16 +1174,28 @@ const UseCaseDetails = () => {
         useCaseDetails?.themes,
     ]);
 
-    const handleApplyChanges = () => {
-        // TODO: wire to update API
-        toast.success('Changes saved');
-        setIsEditing(false);
-    };
+    const handleApplyChanges = useCallback(async () => {
+        try {
+            const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            await updateUseCaseInfo(id, {
+                title: editableTitle,
+                headlines: editableHeadline,
+                opportunity: editableOpportunity,
+                businessValue: editableEvidence,
+                editorEmail,
+            });
+            toast.success('Changes saved');
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Failed to update use case info:", error);
+            toast.error("Failed to save changes.");
+        }
+    }, [accounts, editableTitle, editableHeadline, editableOpportunity, editableEvidence, id]);
 
-    const handleCancelEdit = () => {
+    const handleCancelEdit = useCallback(() => {
         resetEditableFields();
         setIsEditing(false);
-    };
+    }, [resetEditableFields]);
 
     const resetAgentLibraryFields = useCallback(() => {
         if (agentLibraryItems.length > 0) {
@@ -1131,12 +1211,64 @@ const UseCaseDetails = () => {
         }
     }, [agentLibraryItems]);
 
-    const handleCancelAgentLibraryEdit = () => {
-        resetAgentLibraryFields();
-        setIsAgentLibraryEditing(false);
-    };
+    const handleStartAgentLibraryEdit = useCallback(() => {
+        agentLibrarySnapshotRef.current = {
+            selectedAIThemes: [...editableAITheme],
+            selectedPersonas: [...selectedPersonas],
+            selectedVendor: selectedVendor || "",
+            selectedModel: selectedModel || "",
+            agentId: agentId || "",
+            agentLink: agentLink || "",
+            selectedKnowledgeSources: [...selectedKnowledgeSources],
+            instructions: instructions || "",
+        };
+        setIsAgentLibraryEditing(true);
+    }, [
+        editableAITheme,
+        selectedPersonas,
+        selectedVendor,
+        selectedModel,
+        agentId,
+        agentLink,
+        selectedKnowledgeSources,
+        instructions,
+    ]);
 
-    const handleApplyAgentLibraryChanges = async () => {
+    const handleCancelAgentLibraryEdit = useCallback(() => {
+        if (agentLibrarySnapshotRef.current) {
+            setEditableAITheme(agentLibrarySnapshotRef.current.selectedAIThemes);
+            setSelectedPersonas(agentLibrarySnapshotRef.current.selectedPersonas);
+            setSelectedVendor(agentLibrarySnapshotRef.current.selectedVendor);
+            setSelectedModel(agentLibrarySnapshotRef.current.selectedModel);
+            setAgentId(agentLibrarySnapshotRef.current.agentId);
+            setAgentLink(agentLibrarySnapshotRef.current.agentLink);
+            setSelectedKnowledgeSources(agentLibrarySnapshotRef.current.selectedKnowledgeSources);
+            setInstructions(agentLibrarySnapshotRef.current.instructions);
+        } else {
+            resetAgentLibraryFields();
+        }
+        setIsAgentLibraryEditing(false);
+    }, [resetAgentLibraryFields]);
+
+    const handleStartMetricsEdit = useCallback(() => {
+        metricsSnapshotRef.current = {
+            metrics: metrics.map((metric) => ({ ...metric })),
+            reportedMetrics: reportedMetrics.map((metric) => ({ ...metric })),
+            reportedHistory: reportedHistory.map((item) => ({ ...item })),
+        };
+        setIsMetricsEditing(true);
+    }, [metrics, reportedMetrics, reportedHistory]);
+
+    const handleCancelMetricsEdit = useCallback(() => {
+        if (metricsSnapshotRef.current) {
+            setMetrics(metricsSnapshotRef.current.metrics);
+            setReportedMetrics(metricsSnapshotRef.current.reportedMetrics);
+            setReportedHistory(metricsSnapshotRef.current.reportedHistory);
+        }
+        setIsMetricsEditing(false);
+    }, []);
+
+    const handleApplyAgentLibraryChanges = useCallback(async () => {
         try {
             // Get the first agent library item ID if it exists
             const agentLibraryId = agentLibraryItems.length > 0 ? agentLibraryItems[0].id : null;
@@ -1188,7 +1320,18 @@ const UseCaseDetails = () => {
             console.error('Error updating agent library:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to save agent library changes');
         }
-    };
+    }, [
+        accounts,
+        agentId,
+        agentLibraryItems,
+        agentLink,
+        editableAITheme,
+        id,
+        instructions,
+        selectedKnowledgeSources,
+        selectedModel,
+        selectedPersonas,
+    ]);
 
     const handleOpenDateDialog = (phase: string) => {
         if (!isTimelineEditing) return;
@@ -1291,42 +1434,51 @@ const UseCaseDetails = () => {
         setMetrics(prev => [...prev, newMetric]);
     }, []);
 
-    const handleInputChange = useCallback((id: number, field: string, value: string) => {
+    const handleInputChange = useCallback((id: number | string, field: string, value: string) => {
         // Update main metrics state
         setMetrics(prev => prev.map(metric =>
-            metric.id === id ? { ...metric, [field]: value } : metric
+            String(metric.id) === String(id) ? { ...metric, [field]: value } : metric
         ));
     }, []);
 
-    const handleDeleteMetric = useCallback((id: number) => {
-        setMetrics(prev => prev.filter(metric => metric.id !== id));
+    const handleDeleteMetric = useCallback((id: number | string) => {
+        setMetrics(prev => prev.filter(metric => String(metric.id) !== String(id)));
+        setReportedMetrics(prev => prev.filter(metric => String(metric.id) !== String(id)));
+        setReportedHistory(prev => prev.filter(metric => String(metric.metricId) !== String(id)));
         toast.success('Metric deleted successfully');
     }, []);
 
-    const handleDeleteReportedMetric = useCallback((id: number) => {
-        setReportedMetrics(prev => prev.filter(metric => metric.id !== id));
+    const handleRequestDeleteMetric = useCallback((id: number | string) => {
+        setPendingDeleteMetricId(Number(id));
+        setIsDeleteMetricDialogOpen(true);
+    }, []);
+
+    const handleConfirmDeleteMetric = useCallback(() => {
+        if (pendingDeleteMetricId == null) {
+            setIsDeleteMetricDialogOpen(false);
+            return;
+        }
+        handleDeleteMetric(pendingDeleteMetricId);
+        setPendingDeleteMetricId(null);
+        setIsDeleteMetricDialogOpen(false);
+    }, [handleDeleteMetric, pendingDeleteMetricId]);
+
+    const handleCancelDeleteMetric = useCallback(() => {
+        setPendingDeleteMetricId(null);
+        setIsDeleteMetricDialogOpen(false);
+    }, []);
+
+    const handleDeleteReportedMetric = useCallback((id: number | string) => {
+        setReportedMetrics(prev => prev.filter(metric => String(metric.id) !== String(id)));
+        setReportedHistory(prev => prev.filter(metric => String(metric.metricId) !== String(id)));
         toast.success('Metric removed from reporting');
     }, []);
 
-    const handleReportedInputChange = useCallback((id: number, field: string, value: string) => {
-        // Update reported metrics state
+    const handleReportedInputChange = useCallback((id: number | string, field: string, value: string) => {
         setReportedMetrics(prev => prev.map(metric =>
-            metric.id === id ? { ...metric, [field]: value } : metric
+            String(metric.id) === String(id) ? { ...metric, [field]: value } : metric
         ));
     }, []);
-
-
-
-
-    const isMetricsFormValid = metrics.length > 0 && metrics.filter(m => !m.isSubmitted).every(metric =>
-        metric.primarySuccessValue &&
-        metric.parcsCategory &&
-        metric.unitOfMeasurement &&
-        metric.baselineValue &&
-        metric.baselineDate &&
-        metric.targetValue &&
-        metric.targetDate
-    );
 
     const handleSubmitMetrics = () => {
         const unsubmittedMetrics = metrics.filter(m => !m.isSubmitted);
@@ -1351,6 +1503,254 @@ const UseCaseDetails = () => {
     const handleSaveReportedMetrics = () => {
         toast.success('Reported metrics saved successfully');
     };
+
+    const handleApplyMetricsEdit = useCallback(async () => {
+        if (!isMetricsFormValid) {
+            toast.error("Fill all metric fields and ensure target dates are after baseline and today.");
+            return;
+        }
+        if (!id) {
+            toast.error("Missing use case id.");
+            return;
+        }
+        const snapshot = metricsSnapshotRef.current;
+        if (!snapshot) {
+            setIsMetricsEditing(false);
+            return;
+        }
+
+        const metricTypeIdByName = new Map<string, number>();
+        metricCategoryMap.forEach((label, key) => {
+            metricTypeIdByName.set(label, key);
+        });
+        const unitIdByName = new Map<string, number>();
+        unitOfMeasureMap.forEach((label, key) => {
+            unitIdByName.set(label, key);
+        });
+
+        const normalize = (value: string | number | null | undefined) =>
+            String(value ?? "").trim();
+
+        const snapshotMetricsById = new Map<number, Metric>();
+        snapshot.metrics.forEach((metric) => snapshotMetricsById.set(metric.id, metric));
+        const currentMetricsById = new Map<number, Metric>();
+        metrics.forEach((metric) => currentMetricsById.set(metric.id, metric));
+
+        const deleteMetricIds = snapshot.metrics
+            .filter((metric) => !currentMetricsById.has(metric.id))
+            .map((metric) => metric.id);
+
+        const newMetrics = metrics
+            .filter((metric) => !snapshotMetricsById.has(metric.id))
+            .map((metric) => {
+                const metricTypeId = metricTypeIdByName.get(metric.parcsCategory) ?? null;
+                const unitOfMeasureId = unitIdByName.get(metric.unitOfMeasurement) ?? null;
+                return {
+                    metricTypeId,
+                    unitOfMeasureId,
+                    primarySuccessMetricName: metric.primarySuccessValue,
+                    baselineValue: metric.baselineValue || null,
+                    baselineDate: metric.baselineDate || null,
+                    targetValue: metric.targetValue || null,
+                    targetDate: metric.targetDate || null,
+                };
+            });
+
+        const updateMetrics = metrics.reduce<{ id: number }[]>((acc, metric) => {
+            const previous = snapshotMetricsById.get(metric.id);
+            if (!previous) return acc;
+            const patch: Record<string, unknown> = { id: metric.id };
+            let hasChanges = false;
+
+            if (normalize(metric.primarySuccessValue) !== normalize(previous.primarySuccessValue)) {
+                patch.primarySuccessMetricName = metric.primarySuccessValue;
+                hasChanges = true;
+            }
+            if (normalize(metric.parcsCategory) !== normalize(previous.parcsCategory)) {
+                patch.metricTypeId = metric.parcsCategory
+                    ? metricTypeIdByName.get(metric.parcsCategory) ?? null
+                    : null;
+                hasChanges = true;
+            }
+            if (normalize(metric.unitOfMeasurement) !== normalize(previous.unitOfMeasurement)) {
+                patch.unitOfMeasureId = metric.unitOfMeasurement
+                    ? unitIdByName.get(metric.unitOfMeasurement) ?? null
+                    : null;
+                hasChanges = true;
+            }
+            if (normalize(metric.baselineValue) !== normalize(previous.baselineValue)) {
+                patch.baselineValue = metric.baselineValue || null;
+                hasChanges = true;
+            }
+            if (normalize(metric.baselineDate) !== normalize(previous.baselineDate)) {
+                patch.baselineDate = metric.baselineDate || null;
+                hasChanges = true;
+            }
+            if (normalize(metric.targetValue) !== normalize(previous.targetValue)) {
+                patch.targetValue = metric.targetValue || null;
+                hasChanges = true;
+            }
+            if (normalize(metric.targetDate) !== normalize(previous.targetDate)) {
+                patch.targetDate = metric.targetDate || null;
+                hasChanges = true;
+            }
+
+            if (hasChanges) {
+                acc.push(patch as { id: number });
+            }
+            return acc;
+        }, []);
+
+        const latestReportIdByMetricId = new Map<number, number>();
+        reportedMetricRows.forEach((row) => {
+            const metricId = Number(row.metricid);
+            const reportId = Number(row.id);
+            if (!Number.isFinite(metricId) || !Number.isFinite(reportId)) return;
+            const current = latestReportIdByMetricId.get(metricId);
+            if (!current) {
+                latestReportIdByMetricId.set(metricId, reportId);
+                return;
+            }
+            const currentRow = reportedMetricRows.find((item) => Number(item.id) === current);
+            const currentTime = currentRow
+                ? new Date(String(currentRow.reporteddate ?? currentRow.modified ?? currentRow.created ?? "")).getTime()
+                : -1;
+            const nextTime = new Date(String(row.reporteddate ?? row.modified ?? row.created ?? "")).getTime();
+            if (!Number.isFinite(currentTime) || (Number.isFinite(nextTime) && nextTime >= currentTime)) {
+                latestReportIdByMetricId.set(metricId, reportId);
+            }
+        });
+
+        const snapshotReportedByMetricId = new Map<number, Metric>();
+        snapshot.reportedMetrics.forEach((metric) => snapshotReportedByMetricId.set(metric.id, metric));
+        const currentReportedByMetricId = new Map<number, Metric>();
+        reportedMetrics.forEach((metric) => currentReportedByMetricId.set(metric.id, metric));
+
+        const deleteReportedMetricIds = snapshot.reportedMetrics
+            .filter((metric) => !currentReportedByMetricId.has(metric.id))
+            .map((metric) => latestReportIdByMetricId.get(metric.id))
+            .filter((value): value is number => Number.isFinite(value as number));
+
+        const updateReportedMetrics = reportedMetrics.reduce<{ id: number }[]>((acc, metric) => {
+            const previous = snapshotReportedByMetricId.get(metric.id);
+            if (!previous) return acc;
+            const reportId = latestReportIdByMetricId.get(metric.id);
+            if (!reportId) return acc;
+            const patch: Record<string, unknown> = { id: reportId };
+            let hasChanges = false;
+
+            if (normalize(metric.reportedValue) !== normalize(previous.reportedValue)) {
+                patch.reportedValue = metric.reportedValue || null;
+                hasChanges = true;
+            }
+            if (normalize(metric.reportedDate) !== normalize(previous.reportedDate)) {
+                patch.reportedDate = metric.reportedDate || null;
+                hasChanges = true;
+            }
+            if (hasChanges) {
+                acc.push(patch as { id: number });
+            }
+            return acc;
+        }, []);
+
+        const newReportedMetrics = reportedMetrics
+            .filter((metric) => !latestReportIdByMetricId.has(metric.id))
+            .filter((metric) => normalize(metric.reportedValue) || normalize(metric.reportedDate))
+            .map((metric) => ({
+                metricId: metric.id,
+                reportedValue: metric.reportedValue || null,
+                reportedDate: metric.reportedDate || null,
+            }));
+
+        const hasChanges =
+            newMetrics.length ||
+            updateMetrics.length ||
+            deleteMetricIds.length ||
+            newReportedMetrics.length ||
+            updateReportedMetrics.length ||
+            deleteReportedMetricIds.length;
+
+        if (!hasChanges) {
+            setIsMetricsEditing(false);
+            return;
+        }
+
+        try {
+            const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            await updateUseCaseMetrics(id, {
+                newMetrics,
+                updateMetrics,
+                deleteMetricIds,
+                newReportedMetrics,
+                updateReportedMetrics,
+                deleteReportedMetricIds,
+                editorEmail,
+            });
+            const payload = await fetchUseCaseMetricsDetails(id);
+            setMetricDetailRows(payload?.metrics ?? []);
+            setReportedMetricRows(payload?.reportedMetrics ?? []);
+            metricsSnapshotRef.current = null;
+            toast.success("Metrics updated successfully");
+            setIsMetricsEditing(false);
+        } catch (error) {
+            console.error("Failed to update metrics:", error);
+            toast.error("Failed to update metrics.");
+        }
+    }, [
+        accounts,
+        id,
+        metricCategoryMap,
+        metrics,
+        reportedMetrics,
+        reportedMetricRows,
+        unitOfMeasureMap,
+    ]);
+
+    const editActions = useMemo(() => {
+        if (activeTab === 'info') {
+            return {
+                isEditing: isEditing,
+                onStart: () => setIsEditing(true),
+                onCancel: handleCancelEdit,
+                onApply: handleApplyChanges,
+                applyLabel: "Apply Changes",
+            };
+        }
+        if (activeTab === 'agent-library') {
+            return {
+                isEditing: isAgentLibraryEditing,
+                onStart: handleStartAgentLibraryEdit,
+                onCancel: handleCancelAgentLibraryEdit,
+                onApply: handleApplyAgentLibraryChanges,
+                applyLabel: "Apply Changes",
+            };
+        }
+        if (activeTab === 'metrics') {
+            return {
+                isEditing: isMetricsEditing,
+                onStart: handleStartMetricsEdit,
+                onCancel: handleCancelMetricsEdit,
+                onApply: handleApplyMetricsEdit,
+                applyLabel: "Apply Changes",
+            };
+        }
+        return null;
+    }, [
+        activeTab,
+        isEditing,
+        isAgentLibraryEditing,
+        isMetricsEditing,
+        handleCancelEdit,
+        handleApplyChanges,
+        handleStartAgentLibraryEdit,
+        handleCancelAgentLibraryEdit,
+        handleApplyAgentLibraryChanges,
+        handleStartMetricsEdit,
+        handleCancelMetricsEdit,
+        handleApplyMetricsEdit,
+    ]);
+
+    const isAnyEditing = isEditing || isAgentLibraryEditing || isMetricsEditing;
 
     useEffect(() => {
         if (!id || typeof id !== "string") {
@@ -1386,6 +1786,7 @@ const UseCaseDetails = () => {
     }, [id]);
 
     useEffect(() => {
+        if (isMetricsEditing) return;
         if (!metricDetailRows.length && !reportedMetricRows.length) {
             setMetrics([]);
             setReportedMetrics([]);
@@ -1465,168 +1866,244 @@ const UseCaseDetails = () => {
         setMetrics(mappedMetrics);
         setReportedMetrics(nextReportedMetrics);
         setReportedHistory(nextHistory);
-    }, [metricDetailRows, reportedMetricRows, metricCategoryMap, unitOfMeasureMap]);
+    }, [metricDetailRows, reportedMetricRows, metricCategoryMap, unitOfMeasureMap, isMetricsEditing]);
 
     const reportableMetrics = useMemo(() => {
         const submitted = reportedMetrics.filter((metric) => metric.isSubmitted);
         return submitted.length > 0 ? submitted : reportedMetrics;
     }, [reportedMetrics]);
 
+    useEffect(() => {
+        const availableIds = new Set(reportableMetrics.map((metric) => metric.id.toString()));
+        setSelectedMetricIdsForReporting((prev) => {
+            if (prev.length === 0) return prev;
+            const next = prev.filter((id) => availableIds.has(id));
+            if (next.length === prev.length && next.every((id, idx) => id === prev[idx])) {
+                return prev;
+            }
+            return next;
+        });
+    }, [reportableMetrics]);
+
     const reportedHistoryMetrics = useMemo(
         () => reportedMetrics.filter((metric) => metric.reportedValue || metric.reportedDate),
         [reportedMetrics]
     );
 
-    const selectedMetricForReporting = useMemo(
-        () => reportedMetrics.find((metric) => metric.id.toString() === selectedMetricIdForReporting),
-        [reportedMetrics, selectedMetricIdForReporting]
+    const selectedMetricsForReporting = useMemo(
+        () => {
+            if (selectedMetricIdsForReporting.length === 0) return [];
+            const selectedSet = new Set(selectedMetricIdsForReporting);
+            return reportedMetrics.filter((metric) => selectedSet.has(metric.id.toString()));
+        },
+        [reportedMetrics, selectedMetricIdsForReporting]
     );
 
     const reportedMetricsForDisplay = useMemo(() => {
-        if (!selectedMetricForReporting) {
+        if (selectedMetricsForReporting.length === 0) {
             return reportedHistoryMetrics;
         }
-        const alreadyListed = reportedHistoryMetrics.some(
-            (metric) => metric.id === selectedMetricForReporting.id
-        );
-        return alreadyListed
-            ? reportedHistoryMetrics
-            : [...reportedHistoryMetrics, selectedMetricForReporting];
-    }, [reportedHistoryMetrics, selectedMetricForReporting]);
+        const merged = [...reportedHistoryMetrics];
+        const existingIds = new Set(reportedHistoryMetrics.map((metric) => metric.id));
+        selectedMetricsForReporting.forEach((metric) => {
+            if (!existingIds.has(metric.id)) {
+                merged.push(metric);
+            }
+        });
+        return merged;
+    }, [reportedHistoryMetrics, selectedMetricsForReporting]);
 
     const hasReportedMetrics = reportedHistoryMetrics.length > 0;
-    const shouldShowReportedTable = Boolean(selectedMetricForReporting) || hasReportedMetrics;
+    const shouldShowReportedTable = selectedMetricsForReporting.length > 0 || hasReportedMetrics;
 
-    const reportedColumns = useMemo<ColumnDef<Metric>[]>(() => [
-        {
-            accessorKey: 'primarySuccessValue',
-            header: 'Primary Success Value',
-            cell: ({ row }) => (
-                <span className="whitespace-normal break-words">
-                    {row.original.primarySuccessValue}
-                </span>
-            ),
-            size: metricColumnSizes.primarySuccessValue,
-        },
-        {
-            accessorKey: 'baselineValue',
-            header: 'Baseline Value',
-            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.baselineValue}</span>,
-            size: metricColumnSizes.baselineValue,
-        },
-        {
-            accessorKey: 'baselineDate',
-            header: 'Baseline Date',
-            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.baselineDate}</span>,
-            size: metricColumnSizes.baselineDate,
-        },
-        {
-            accessorKey: 'targetValue',
-            header: 'Target Value',
-            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.targetValue}</span>,
-            size: metricColumnSizes.targetValue,
-        },
-        {
-            accessorKey: 'targetDate',
-            header: 'Target Date',
-            cell: ({ row }) => <span className="whitespace-normal break-words">{row.original.targetDate}</span>,
-            size: metricColumnSizes.targetDate,
-        },
-        {
-            accessorKey: 'reportedValue',
-            header: 'Reported Value',
-            cell: ({ row }) => (
-                <Input
-                    type="number"
-                    className="number-input-no-spinner h-9"
-                    value={row.original.reportedValue || ''}
-                    onChange={(e) => handleReportedInputChange(row.original.id, 'reportedValue', e.target.value)}
-                />
-            ),
-            size: metricColumnSizes.reportedValue,
-        },
-        {
-            accessorKey: 'reportedDate',
-            header: 'Reported Date',
-            cell: ({ row }) => {
-                const [open, setOpen] = useState(false);
-                const dateValue = useMemo(() => {
-                    if (!row.original.reportedDate) return undefined;
-                    const parts = row.original.reportedDate.split('-');
-                    if (parts.length === 3) {
-                        return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    }
-                    return undefined;
-                }, [row.original.reportedDate]);
+    const isMetricsFormValid = useMemo(() => {
+        if (!isMetricsEditing) return true;
+        if (metrics.length === 0) return false;
 
-                return (
-                    <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal h-9 px-2 text-xs",
-                                    !row.original.reportedDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-3 w-3" />
-                                {dateValue ? format(dateValue, "dd-MM-yyyy") : <span>Pick date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                mode="single"
-                                selected={dateValue}
-                                onSelect={(date) => {
-                                    if (date) {
-                                        handleReportedInputChange(row.original.id, 'reportedDate', format(date, "yyyy-MM-dd"));
-                                        setOpen(false);
-                                    }
-                                }}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                );
+        const hasValue = (value: unknown) => String(value ?? "").trim().length > 0;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const metricsValid = metrics.every((metric) => {
+            if (
+                !hasValue(metric.primarySuccessValue) ||
+                !hasValue(metric.parcsCategory) ||
+                !hasValue(metric.unitOfMeasurement) ||
+                !hasValue(metric.baselineValue) ||
+                !hasValue(metric.baselineDate) ||
+                !hasValue(metric.targetValue) ||
+                !hasValue(metric.targetDate)
+            ) {
+                return false;
+            }
+            const baseline = new Date(`${metric.baselineDate}T00:00:00`);
+            const target = new Date(`${metric.targetDate}T00:00:00`);
+            if (Number.isNaN(baseline.getTime()) || Number.isNaN(target.getTime())) return false;
+            return target > baseline && target > today;
+        });
+
+        if (!metricsValid) return false;
+
+        if (shouldShowReportedTable && reportedMetricsForDisplay.length > 0) {
+            const reportedValid = reportedMetricsForDisplay.every((metric) =>
+                hasValue(metric.reportedValue) && hasValue(metric.reportedDate)
+            );
+            if (!reportedValid) return false;
+        }
+
+        return true;
+    }, [isMetricsEditing, metrics, reportedMetricsForDisplay, shouldShowReportedTable]);
+
+    const metricsById = useMemo(() => {
+        const map = new Map<string, Metric>();
+        metrics.forEach((metric) => {
+            map.set(String(metric.id), metric);
+        });
+        return map;
+    }, [metrics]);
+
+    const reportedMetricsById = useMemo(() => {
+        const map = new Map<string, Metric>();
+        reportedMetricsForDisplay.forEach((metric) => {
+            map.set(String(metric.id), metric);
+        });
+        return map;
+    }, [reportedMetricsForDisplay]);
+
+    const reportedColumns = useMemo<ColumnDef<Metric>[]>(() => {
+        const columns: ColumnDef<Metric>[] = [
+            {
+                accessorKey: 'primarySuccessValue',
+                header: 'Primary Success Value',
+                cell: ({ row }) => (
+                    <span className="whitespace-normal break-words">
+                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).primarySuccessValue}
+                    </span>
+                ),
+                size: metricColumnSizes.primarySuccessValue,
             },
-            size: metricColumnSizes.reportedDate,
-        },
-        {
-            id: 'actions',
-            header: '',
-            cell: ({ row }) => (
-                <div className="flex justify-center">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteReportedMetric(row.original.id)}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-            ),
-            size: metricColumnSizes.actions,
-        },
-    ], [handleReportedInputChange, handleDeleteReportedMetric]);
+            {
+                accessorKey: 'baselineValue',
+                header: 'Baseline Value',
+                cell: ({ row }) => (
+                    <span className="whitespace-normal break-words">
+                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).baselineValue}
+                    </span>
+                ),
+                size: metricColumnSizes.baselineValue,
+            },
+            {
+                accessorKey: 'baselineDate',
+                header: 'Baseline Date',
+                cell: ({ row }) => (
+                    <span className="whitespace-normal break-words">
+                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).baselineDate}
+                    </span>
+                ),
+                size: metricColumnSizes.baselineDate,
+            },
+            {
+                accessorKey: 'targetValue',
+                header: 'Target Value',
+                cell: ({ row }) => (
+                    <span className="whitespace-normal break-words">
+                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).targetValue}
+                    </span>
+                ),
+                size: metricColumnSizes.targetValue,
+            },
+            {
+                accessorKey: 'targetDate',
+                header: 'Target Date',
+                cell: ({ row }) => (
+                    <span className="whitespace-normal break-words">
+                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).targetDate}
+                    </span>
+                ),
+                size: metricColumnSizes.targetDate,
+            },
+            {
+                accessorKey: 'reportedValue',
+                header: 'Reported Value',
+                cell: ({ row }) => {
+                    if (!isMetricsEditing) {
+                        const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
+                        return <span>{metric.reportedValue || "—"}</span>;
+                    }
+                    const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
+                    return (
+                        <Input
+                            type="number"
+                            className="number-input-no-spinner h-9"
+                            value={metric.reportedValue ?? ''}
+                            onChange={(e) => handleReportedInputChange(metric.id, 'reportedValue', e.target.value)}
+                        />
+                    );
+                },
+                size: metricColumnSizes.reportedValue,
+            },
+            {
+                accessorKey: 'reportedDate',
+                header: 'Reported Date',
+                cell: ({ row }) => {
+                    if (!isMetricsEditing) {
+                        const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
+                        return <span>{metric.reportedDate || "—"}</span>;
+                    }
+                    const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
+                    return (
+                        <ReportedDatePickerCell
+                            value={metric.reportedDate}
+                            onChange={(date) => handleReportedInputChange(metric.id, 'reportedDate', date)}
+                        />
+                    );
+                },
+                size: metricColumnSizes.reportedDate,
+            },
+        ];
 
-    const addMetricsColumns = useMemo<ColumnDef<Metric>[]>(() => [
+        if (isMetricsEditing) {
+            columns.push({
+                id: 'actions',
+                header: '',
+                cell: ({ row }) => (
+                    <div className="flex justify-center">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDeleteReportedMetric(row.original.id)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ),
+                size: metricColumnSizes.actions,
+            });
+        }
+
+        return columns;
+    }, [handleReportedInputChange, handleDeleteReportedMetric, isMetricsEditing, reportedMetricsById]);
+
+    const addMetricsColumns = useMemo<ColumnDef<Metric>[]>(() => {
+        const columns: ColumnDef<Metric>[] = [
         {
             accessorKey: 'primarySuccessValue',
             header: 'Primary Success Value',
             cell: ({ row }) => {
-                if (row.original.isSubmitted) {
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                if (!isMetricsEditing) {
                     return (
                         <span className="text-sm px-2 whitespace-normal break-words">
-                            {row.original.primarySuccessValue}
+                            {metric.primarySuccessValue}
                         </span>
                     );
                 }
                 return (
                     <Input
                         type="text"
-                        value={row.original.primarySuccessValue}
-                        onChange={(e) => handleInputChange(row.original.id, 'primarySuccessValue', e.target.value)}
+                        value={metric.primarySuccessValue ?? ""}
+                        onChange={(e) => handleInputChange(metric.id, 'primarySuccessValue', e.target.value)}
                         className="h-9"
                     />
                 );
@@ -1636,46 +2113,53 @@ const UseCaseDetails = () => {
         {
             accessorKey: 'parcsCategory',
             header: 'PARCS Category',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 whitespace-normal break-words">{row.original.parcsCategory}</span>
-            ) : (
-                <ParcsCategorySelect
-                    value={row.original.parcsCategory}
-                    onSelect={(val) => handleInputChange(row.original.id, 'parcsCategory', val)}
-                    className="metric-select"
-                    options={metricCategoryOptions}
-                />
-            ),
+            cell: ({ row }) => {
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                return (!isMetricsEditing) ? (
+                    <span className="text-sm px-2 whitespace-normal break-words">{metric.parcsCategory}</span>
+                ) : (
+                    <ParcsCategorySelect
+                        value={metric.parcsCategory ?? ""}
+                        onSelect={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
+                        className="metric-select"
+                        options={metricCategoryOptions}
+                    />
+                );
+            },
             size: metricColumnSizes.parcsCategory,
         },
         {
             accessorKey: 'unitOfMeasurement',
             header: 'Unit of Measurement',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 whitespace-normal break-words">{row.original.unitOfMeasurement}</span>
-            ) : (
-                <UnitOfMeasurementSelect
-                    value={row.original.unitOfMeasurement}
-                    onSelect={(val) => handleInputChange(row.original.id, 'unitOfMeasurement', val)}
-                    className="metric-select"
-                    options={unitOfMeasureOptions}
-                />
-            ),
+            cell: ({ row }) => {
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                return (!isMetricsEditing) ? (
+                    <span className="text-sm px-2 whitespace-normal break-words">{metric.unitOfMeasurement}</span>
+                ) : (
+                    <UnitOfMeasurementSelect
+                        value={metric.unitOfMeasurement ?? ""}
+                        onSelect={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
+                        className="metric-select"
+                        options={unitOfMeasureOptions}
+                    />
+                );
+            },
             size: metricColumnSizes.unitOfMeasurement,
         },
         {
             accessorKey: 'baselineValue',
             header: 'Baseline Value',
             cell: ({ row }) => {
-                if (row.original.isSubmitted) {
-                    return <span className="text-sm px-2 whitespace-normal break-words">{row.original.baselineValue}</span>;
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                if (!isMetricsEditing) {
+                    return <span className="text-sm px-2 whitespace-normal break-words">{metric.baselineValue}</span>;
                 }
                 return (
                     <Input
                         type="number"
                         className="number-input-no-spinner h-9"
-                        value={row.original.baselineValue}
-                        onChange={(e) => handleInputChange(row.original.id, 'baselineValue', e.target.value)}
+                        value={metric.baselineValue ?? ""}
+                        onChange={(e) => handleInputChange(metric.id, 'baselineValue', e.target.value)}
                     />
                 );
             },
@@ -1684,35 +2168,39 @@ const UseCaseDetails = () => {
         {
             accessorKey: 'baselineDate',
             header: 'Baseline Date',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 whitespace-normal break-words">{row.original.baselineDate}</span>
-            ) : (
-                <MetricDatePicker
-                    value={row.original.baselineDate}
-                    onChange={(date) => handleInputChange(row.original.id, 'baselineDate', date)}
-                    onOpenDialog={() => {
-                        setEditingMetricId(row.original.id);
-                        setTempBaselineDate(row.original.baselineDate ? new Date(row.original.baselineDate + 'T00:00:00') : undefined);
-                        setTempTargetDate(row.original.targetDate ? new Date(row.original.targetDate + 'T00:00:00') : undefined);
-                        setIsMetricDateDialogOpen(true);
-                    }}
-                />
-            ),
+            cell: ({ row }) => {
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                return (!isMetricsEditing) ? (
+                    <span className="text-sm px-2 whitespace-normal break-words">{metric.baselineDate}</span>
+                ) : (
+                    <MetricDatePicker
+                        value={metric.baselineDate ?? ""}
+                        onChange={(date) => handleInputChange(metric.id, 'baselineDate', date)}
+                        onOpenDialog={() => {
+                            setEditingMetricId(metric.id);
+                            setTempBaselineDate(metric.baselineDate ? new Date(metric.baselineDate + 'T00:00:00') : undefined);
+                            setTempTargetDate(metric.targetDate ? new Date(metric.targetDate + 'T00:00:00') : undefined);
+                            setIsMetricDateDialogOpen(true);
+                        }}
+                    />
+                );
+            },
             size: metricColumnSizes.baselineDate,
         },
         {
             accessorKey: 'targetValue',
             header: 'Target Value',
             cell: ({ row }) => {
-                if (row.original.isSubmitted) {
-                    return <span className="text-sm px-2 whitespace-normal break-words">{row.original.targetValue}</span>;
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                if (!isMetricsEditing) {
+                    return <span className="text-sm px-2 whitespace-normal break-words">{metric.targetValue}</span>;
                 }
                 return (
                     <Input
                         type="number"
                         className="number-input-no-spinner h-9"
-                        value={row.original.targetValue}
-                        onChange={(e) => handleInputChange(row.original.id, 'targetValue', e.target.value)}
+                        value={metric.targetValue ?? ""}
+                        onChange={(e) => handleInputChange(metric.id, 'targetValue', e.target.value)}
                     />
                 );
             },
@@ -1721,51 +2209,62 @@ const UseCaseDetails = () => {
         {
             accessorKey: 'targetDate',
             header: 'Target Date',
-            cell: ({ row }) => row.original.isSubmitted ? (
-                <span className="text-sm px-2 whitespace-normal break-words">{row.original.targetDate}</span>
-            ) : (
-                <MetricDatePicker
-                    value={row.original.targetDate}
-                    onChange={(date) => handleInputChange(row.original.id, 'targetDate', date)}
-                    onOpenDialog={() => {
-                        setEditingMetricId(row.original.id);
-                        setTempBaselineDate(row.original.baselineDate ? new Date(row.original.baselineDate + 'T00:00:00') : undefined);
-                        setTempTargetDate(row.original.targetDate ? new Date(row.original.targetDate + 'T00:00:00') : undefined);
-                        setIsMetricDateDialogOpen(true);
-                    }}
-                />
-            ),
+            cell: ({ row }) => {
+                const metric = metricsById.get(String(row.original.id)) ?? row.original;
+                return (!isMetricsEditing) ? (
+                    <span className="text-sm px-2 whitespace-normal break-words">{metric.targetDate}</span>
+                ) : (
+                    <MetricDatePicker
+                        value={metric.targetDate ?? ""}
+                        onChange={(date) => handleInputChange(metric.id, 'targetDate', date)}
+                        onOpenDialog={() => {
+                            setEditingMetricId(metric.id);
+                            setTempBaselineDate(metric.baselineDate ? new Date(metric.baselineDate + 'T00:00:00') : undefined);
+                            setTempTargetDate(metric.targetDate ? new Date(metric.targetDate + 'T00:00:00') : undefined);
+                            setIsMetricDateDialogOpen(true);
+                        }}
+                    />
+                );
+            },
             size: metricColumnSizes.targetDate,
         },
-        {
-            id: 'actions',
-            header: '',
-            cell: ({ row }) => (
-                <div className="flex justify-center">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteMetric(row.original.id)}
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-            ),
-            size: metricColumnSizes.actions,
-        },
-    ], [handleInputChange, handleDeleteMetric]);
+        ];
+
+        if (isMetricsEditing) {
+            columns.push({
+                id: 'actions',
+                header: '',
+                cell: ({ row }) => (
+                    <div className="flex justify-center">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleRequestDeleteMetric(row.original.id)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ),
+                size: metricColumnSizes.actions,
+            });
+        }
+
+        return columns;
+    }, [handleInputChange, handleRequestDeleteMetric, isMetricsEditing, metricsById, metricCategoryOptions, unitOfMeasureOptions]);
 
     const reportedTable = useReactTable({
         data: reportedMetricsForDisplay,
         columns: reportedColumns,
         getCoreRowModel: getCoreRowModel(),
+        getRowId: (row) => String(row.id),
     });
 
     const addMetricsTable = useReactTable({
         data: metrics,
         columns: addMetricsColumns,
         getCoreRowModel: getCoreRowModel(),
+        getRowId: (row) => String(row.id),
     });
 
     const completionSummary = useMemo(() => {
@@ -1815,15 +2314,27 @@ const UseCaseDetails = () => {
             <Tabs
                 value={activeTab}
                 onValueChange={(val) => {
-                    if ((isEditing && val !== 'info') || (isAgentLibraryEditing && val !== 'agent-library')) return;
+                    if (
+                        (isEditing && val !== 'info') ||
+                        (isAgentLibraryEditing && val !== 'agent-library') ||
+                        (isMetricsEditing && val !== 'metrics')
+                    ) {
+                        return;
+                    }
                     setActiveTab(val);
                 }}
                 className="w-full"
             >
                 {/* Tabs and Apply Changes Button on same line */}
-                <div className="bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100 mb-6">
-                    <div className="w-[95%] mx-auto flex items-center justify-between">
-                        <TabsList className="grid w-full grid-cols-5 max-w-[650px] h-10 bg-gray-100/50 p-1 border rounded-lg">
+                <div className="bg-gray-50 -mx-6 px-6 pb-4 border-b border-gray-100 mb-6 justify-center items-center flex">
+                    <div className="w-[90%] flex items-center justify-center gap-4">
+                        <div />
+                        <TabsList
+                            className={cn(
+                                "grid w-full min-w-0 grid-cols-5 h-10 bg-gray-100/50 p-1 border rounded-lg transition-[max-width] justify-center items-center",
+                                isAnyEditing ? "max-w-[900px]" : "max-w-[1600px]"
+                            )}
+                        >
                             <TabsTrigger
                                 value="info"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
@@ -1834,7 +2345,7 @@ const UseCaseDetails = () => {
                             <TabsTrigger
                                 value="update"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing}
+                                disabled={isEditing || isMetricsEditing}
                             >
                                 Update
                             </TabsTrigger>
@@ -1842,7 +2353,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="reprioritize"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                    disabled={isEditing || isAgentLibraryEditing}
+                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
                                 >
                                     Reprioritize
                                 </TabsTrigger>
@@ -1850,7 +2361,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="agent-library"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                    disabled={isEditing || isAgentLibraryEditing}
+                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
                                 >
                                     Agent Library
                                 </TabsTrigger>
@@ -1865,67 +2376,42 @@ const UseCaseDetails = () => {
                             <TabsTrigger
                                 value="status"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing || isAgentLibraryEditing}
+                                disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
                             >
                                 {state?.sourceScreen === 'champion' ? 'Approvals' : 'Actions'}
                             </TabsTrigger>
                         </TabsList>
 
-                        <div className="flex items-center gap-2">
-                            {activeTab === 'info' && !isEditing && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => setIsEditing(true)}
-                                    className="border-teal-600 text-teal-600 hover:bg-teal-50"
-                                >
-                                    <Pencil className="h-4 w-4" />
-                                </Button>
-                            )}
-                            {activeTab === 'info' && isEditing && (
-                                <>
+                        <div className="flex items-center gap-2 shrink-0 justify-end">
+                            {editActions ? (
+                                editActions.isEditing ? (
+                                    <>
+                                        <Button
+                                            variant="outline"
+                                            onClick={editActions.onCancel}
+                                            className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                            onClick={editActions.onApply}
+                                            disabled={activeTab === "metrics" && isMetricsEditing && !isMetricsFormValid}
+                                        >
+                                            {editActions.applyLabel}
+                                        </Button>
+                                    </>
+                                ) : (
                                     <Button
                                         variant="outline"
-                                        onClick={handleCancelEdit}
-                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
+                                        size="icon"
+                                        onClick={editActions.onStart}
+                                        className="border-teal-600 text-teal-600 hover:bg-teal-50"
                                     >
-                                        Cancel
+                                        <Pencil className="h-4 w-4" />
                                     </Button>
-                                    <Button
-                                        className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
-                                        onClick={handleApplyChanges}
-                                    >
-                                        Apply Changes
-                                    </Button>
-                                </>
-                            )}
-                            {activeTab === 'agent-library' && !isAgentLibraryEditing && (
-                                <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => setIsAgentLibraryEditing(true)}
-                                    className="border-teal-600 text-teal-600 hover:bg-teal-50"
-                                >
-                                    <Pencil className="h-4 w-4" />
-                                </Button>
-                            )}
-                            {activeTab === 'agent-library' && isAgentLibraryEditing && (
-                                <>
-                                    <Button
-                                        variant="outline"
-                                        onClick={handleCancelAgentLibraryEdit}
-                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
-                                    >
-                                        Cancel
-                                    </Button>
-                                    <Button
-                                        className="bg-teal-600 hover:bg-teal-700 text-white rounded-lg px-4 py-1.5 h-auto text-sm font-medium"
-                                        onClick={handleApplyAgentLibraryChanges}
-                                    >
-                                        Apply Changes
-                                    </Button>
-                                </>
-                            )}
+                                )
+                            ) : null}
                         </div>
                     </div>
                 </div>
@@ -2013,15 +2499,33 @@ const UseCaseDetails = () => {
                 <TabsContent value="metrics" className="space-y-6">
                     <MetricsSection
                         metrics={metrics}
+                        reportedMetrics={reportedMetricsForDisplay}
                         addMetricsTable={addMetricsTable}
                         reportedTable={reportedTable}
                         shouldShowReportedTable={shouldShowReportedTable}
                         reportedHistory={reportedHistory}
+                        isEditing={isMetricsEditing}
                         isMetricsFormValid={isMetricsFormValid}
+                        metricCategories={metricCategoryOptions}
+                        unitOfMeasurementOptions={unitOfMeasureOptions}
+                        onChangeMetric={handleInputChange}
+                        onChangeReportedMetric={handleReportedInputChange}
+                        onOpenMetricDateDialog={(metric) => {
+                            setEditingMetricId(metric.id);
+                            setTempBaselineDate(
+                                metric.baselineDate ? new Date(`${metric.baselineDate}T00:00:00`) : undefined
+                            );
+                            setTempTargetDate(
+                                metric.targetDate ? new Date(`${metric.targetDate}T00:00:00`) : undefined
+                            );
+                            setIsMetricDateDialogOpen(true);
+                        }}
+                        onDeleteMetric={handleRequestDeleteMetric}
                         onAddMetric={handleAddMetric}
                         onSubmitMetrics={handleSubmitMetrics}
                         onOpenReportMetric={() => setIsMetricSelectDialogOpen(true)}
                         onSaveReportedMetrics={handleSaveReportedMetrics}
+                        onDeleteReportedMetric={handleDeleteReportedMetric}
                     />
                 </TabsContent>
 
@@ -2159,55 +2663,66 @@ const UseCaseDetails = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
-                        {reportableMetrics.length >= 3 ? (
-                            <ScrollArea className="h-64">
-                                <div className="space-y-2 pr-4">
-                                    {reportableMetrics.map((metric) => (
-                                        <Button
-                                            key={metric.id}
-                                            variant="outline"
-                                            className="w-full justify-start h-auto p-3 text-left hover:bg-transparent hover:text-foreground"
-                                            onClick={() => {
-                                                setSelectedMetricIdForReporting(metric.id.toString());
-                                                setIsMetricSelectDialogOpen(false);
-                                            }}
-                                        >
-                                            <div className="flex flex-col items-start">
-                                                <span className="font-medium">{metric.primarySuccessValue}</span>
-                                                {metric.parcsCategory && (
-                                                    <span className="text-sm text-muted-foreground">{metric.parcsCategory}</span>
-                                                )}
-                                            </div>
-                                        </Button>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        ) : (
-                            <div className="space-y-2">
-                                {reportableMetrics.map((metric) => (
+                        <div className="max-h-64 overflow-auto space-y-2 pr-4">
+                            {reportableMetrics.map((metric) => {
+                                const metricId = metric.id.toString();
+                                const isSelected = selectedMetricIdsForReporting.includes(metricId);
+                                return (
                                     <Button
                                         key={metric.id}
                                         variant="outline"
-                                        className="w-full justify-start h-auto p-3 text-left hover:bg-transparent hover:text-foreground"
+                                        className={cn(
+                                            "w-full justify-start h-auto p-3 text-left whitespace-normal break-words overflow-hidden hover:bg-transparent hover:text-foreground",
+                                            isSelected && "border-teal-600 text-teal-700"
+                                        )}
                                         onClick={() => {
-                                            setSelectedMetricIdForReporting(metric.id.toString());
-                                            setIsMetricSelectDialogOpen(false);
+                                            setSelectedMetricIdsForReporting((prev) => {
+                                                if (prev.includes(metricId)) {
+                                                    return prev.filter((id) => id !== metricId);
+                                                }
+                                                return [...prev, metricId];
+                                            });
                                         }}
                                     >
-                                        <div className="flex flex-col items-start">
-                                            <span className="font-medium">{metric.primarySuccessValue}</span>
+                                        <div className="flex flex-col items-start w-full">
+                                            <span className="font-medium whitespace-normal break-words">
+                                                {metric.primarySuccessValue}
+                                            </span>
                                             {metric.parcsCategory && (
-                                                <span className="text-sm text-muted-foreground">{metric.parcsCategory}</span>
+                                                <span className="text-sm text-muted-foreground whitespace-normal break-words">
+                                                    {metric.parcsCategory}
+                                                </span>
                                             )}
                                         </div>
                                     </Button>
-                                ))}
-                            </div>
-                        )}
+                                );
+                            })}
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsMetricSelectDialogOpen(false)}>
+                            Done
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Metric Confirmation Dialog */}
+            <Dialog open={isDeleteMetricDialogOpen} onOpenChange={handleCancelDeleteMetric}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>Delete metric?</DialogTitle>
+                        <DialogDescription>
+                            Deleting this metric will also delete any reported metric entries tied to it.
+                            This action is irreversible.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={handleCancelDeleteMetric}>
                             Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleConfirmDeleteMetric}>
+                            Delete anyway
                         </Button>
                     </DialogFooter>
                 </DialogContent>

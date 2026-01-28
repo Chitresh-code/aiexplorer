@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { Check, PlusCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
     Command,
@@ -39,14 +38,14 @@ export function IdHeaderFilter<TData, TValue>({
     }, [column.getFilterValue()])
 
     const handleSelect = (value: string) => {
-        const newSelectedValues = new Set(selectedValues)
-        if (newSelectedValues.has(value)) {
-            newSelectedValues.delete(value)
+        const next = new Set(selectedValues)
+        if (next.has(value)) {
+            next.delete(value)
         } else {
-            newSelectedValues.add(value)
+            next.add(value)
         }
-        setSelectedValues(newSelectedValues)
-        const filterValues = Array.from(newSelectedValues)
+        setSelectedValues(next)
+        const filterValues = Array.from(next)
         column.setFilterValue(filterValues.length ? filterValues : undefined)
     }
 
@@ -59,13 +58,8 @@ export function IdHeaderFilter<TData, TValue>({
         <div className="flex items-center justify-center w-full">
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="-ml-3 h-8 data-[state=open]:bg-accent">
+                    <Button variant="ghost" size="sm" className="h-8 data-[state=open]:bg-accent">
                         <span className="font-bold text-gray-900">ID</span>
-                        {selectedValues.size > 0 && (
-                            <div className="ml-2 rounded-sm bg-teal-100 px-1 text-[10px] font-medium text-teal-800">
-                                {selectedValues.size}
-                            </div>
-                        )}
                         <PlusCircle className="ml-2 h-4 w-4 text-muted-foreground" />
                     </Button>
                 </PopoverTrigger>
@@ -74,7 +68,7 @@ export function IdHeaderFilter<TData, TValue>({
                         <CommandInput placeholder="ID" />
                         <CommandList>
                             <CommandEmpty>No results found.</CommandEmpty>
-                            {selectedValues.size > 0 && (
+                            {selectedValues.size > 0 ? (
                                 <>
                                     <CommandGroup>
                                         <CommandItem
@@ -86,7 +80,7 @@ export function IdHeaderFilter<TData, TValue>({
                                     </CommandGroup>
                                     <CommandSeparator />
                                 </>
-                            )}
+                            ) : null}
                             <CommandGroup>
                                 {resolvedOptions.length === 0 ? (
                                     <CommandItem disabled className="text-muted-foreground">
@@ -101,17 +95,8 @@ export function IdHeaderFilter<TData, TValue>({
                                                 value={option.value}
                                                 onSelect={() => handleSelect(option.value)}
                                             >
-                                                <div
-                                                    className={cn(
-                                                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                                        isSelected
-                                                            ? "bg-primary text-primary-foreground"
-                                                            : "opacity-50 [&_svg]:invisible"
-                                                    )}
-                                                >
-                                                    <Check className="h-4 w-4" />
-                                                </div>
-                                                <span>{option.label}</span>
+                                                <span className="flex-1">{option.label}</span>
+                                                {isSelected ? <Check className="h-4 w-4 text-teal-600" /> : null}
                                             </CommandItem>
                                         )
                                     })

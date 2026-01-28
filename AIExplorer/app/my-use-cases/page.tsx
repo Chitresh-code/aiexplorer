@@ -205,12 +205,10 @@ const MyUseCases = () => {
             if (!value) return "";
             const parsed = new Date(value);
             if (Number.isNaN(parsed.getTime())) return "";
-            return new Intl.DateTimeFormat("en-US", {
-                timeZone: "America/New_York",
-                month: "short",
-                day: "2-digit",
-                year: "numeric",
-            }).format(parsed);
+            const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+            const day = String(parsed.getUTCDate()).padStart(2, "0");
+            const year = String(parsed.getUTCFullYear());
+            return `${month}-${day}-${year}`;
         };
 
         return backendUseCases.flatMap((raw) => {
@@ -237,7 +235,7 @@ const MyUseCases = () => {
                     return;
                 }
                 if (phase.id > phaseId) {
-                    phaseValues[key] = "Not Set";
+                    phaseValues[key] = "Not Started";
                     return;
                 }
                 phaseValues[key] = currentPhaseDisplay;
