@@ -39,8 +39,8 @@ cd ..
 cd frontend
 docker build --platform linux/amd64 \
   --build-arg VITE_API_URL="https://eai-aihub-backend-dev.happywave-248a4bd8.eastus2.azurecontainerapps.io" \
-  -t frontend:latest .
-docker tag frontend:latest eaihubagent.azurecr.io/aihub-frontend:latest
+  -t aiexplorer:latest .
+docker tag aiexplorer:latest eaihubagent.azurecr.io/aiexplorer:latest
 cd ..
 ```
 
@@ -53,7 +53,7 @@ cd ..
 docker push eaihubagent.azurecr.io/aihub-backend:latest
 
 # Frontend
-docker push eaihubagent.azurecr.io/aihub-frontend:latest
+docker push eaihubagent.azurecr.io/aiexplorer:latest
 ```
 
 ## 5. Verify Upload
