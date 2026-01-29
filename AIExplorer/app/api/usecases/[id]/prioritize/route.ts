@@ -2,25 +2,6 @@ import { NextResponse } from "next/server";
 import { getSqlPool } from "@/lib/azure-sql";
 import { getUiErrorMessage, logErrorTrace } from "@/lib/error-utils";
 
-type PrioritizeRow = {
-  id: number;
-  usecaseid: number;
-  ricescore: string | null;
-  priority: string | null;
-  aigallerydisplay: string | null;
-  sltreporting: string | null;
-  totaluserbase: string | null;
-  reach: string | null;
-  impact: string | null;
-  confidence: string | null;
-  effort: string | null;
-  timespanid: number | null;
-  reportingfrequencyid: number | null;
-  modified: string | null;
-  created: string | null;
-  editor_email: string | null;
-};
-
 type UpdatePrioritizePayload = {
   riceScore?: string | number | null;
   priority?: string | number | null;
@@ -52,61 +33,6 @@ const toDbNumber = (value: unknown) => {
   if (value === null || value === "") return null;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
-};
-
-export const GET = async (
-  _request: Request,
-  context: { params: Promise<{ id: string }> | { id: string } },
-) => {
-  const params = await Promise.resolve(context.params);
-  const rawId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const id = Number(rawId);
-  if (!Number.isFinite(id)) {
-    return NextResponse.json({ message: "Invalid id" }, { status: 400 });
-  }
-
-  try {
-    const pool = await getSqlPool();
-    const result = await pool
-      .request()
-      .input("UseCaseId", id)
-      .query(
-        `
-        SELECT TOP 1
-          id,
-          usecaseid,
-          ricescore,
-          priority,
-          aigallerydisplay,
-          sltreporting,
-          totaluserbase,
-          reach,
-          impact,
-          confidence,
-          effort,
-          timespanid,
-          reportingfrequencyid,
-          modified,
-          created,
-          editor_email
-        FROM dbo.prioritization
-        WHERE usecaseid = @UseCaseId
-        ORDER BY id DESC;
-        `,
-      );
-
-    const row = (result.recordset?.[0] ?? null) as PrioritizeRow | null;
-    return NextResponse.json(
-      { item: row },
-      { headers: { "cache-control": "no-store" } },
-    );
-  } catch (error) {
-    logErrorTrace("Prioritize fetch failed", error);
-    return NextResponse.json(
-      { message: getUiErrorMessage(error, "Failed to load prioritization.") },
-      { status: 500 },
-    );
-  }
 };
 
 export const PATCH = async (

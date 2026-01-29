@@ -25,11 +25,10 @@ import { useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import { Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
 import { useUseCaseDetails } from '@/hooks/use-usecase-details';
-import { useAgentLibrary } from '@/hooks/use-agent-library';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { fetchUseCaseMetricsDetails, updateUseCaseInfo, updateUseCaseMetrics } from '@/lib/api';
+import { updateUseCaseInfo, updateUseCaseMetrics } from '@/lib/api';
 
 import { getMappings } from '@/lib/submit-use-case';
 import { useReactTable, getCoreRowModel, type ColumnDef } from '@tanstack/react-table';
@@ -316,15 +315,27 @@ const UseCaseDetails = () => {
     const params = useParams();
     const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
     const id = idParam ?? "";
-    const { data: useCaseDetails, loading, error } = useUseCaseDetails(
-        typeof id === "string" ? id : undefined,
-    );
     const location = useLocation<{ useCaseTitle: string; sourceScreen?: string }>();
     const { state } = location;
     const { accounts } = useMsal();
+    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const userParam = String(searchParams.get("user") ?? "").toLowerCase();
+    const isChampionView = userParam === "champion" || state?.sourceScreen === "champion";
+    const userEmail = accounts?.[0]?.username ?? "";
+    const detailType = userEmail ? (isChampionView ? "champion" : "owner") : "";
+    const { data: useCaseDetails, loading, error, refetch } = useUseCaseDetails(
+        typeof id === "string" && userEmail ? id : undefined,
+        {
+            type: detailType ? (detailType as "owner" | "champion") : undefined,
+            email: userEmail || undefined,
+            all: Boolean(detailType),
+        },
+    );
     
-    // Fetch agent library data
-    const { items: agentLibraryItems } = useAgentLibrary(typeof id === "string" ? id : undefined);
+    const agentLibraryItems = useMemo(
+        () => (useCaseDetails?.agentLibrary ?? []) as typeof useCaseDetails.agentLibrary,
+        [useCaseDetails?.agentLibrary],
+    );
     
     const useCase = useMemo(() => {
         const raw = useCaseDetails?.useCase ?? {};
@@ -348,10 +359,7 @@ const UseCaseDetails = () => {
             editorEmail: String((raw as any).editor_email ?? (raw as any).editorEmail ?? ""),
         };
     }, [useCaseDetails, id, state?.useCaseTitle]);
-    const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-    const userParam = String(searchParams.get("user") ?? "").toLowerCase();
     const tabParam = String(searchParams.get("tab") ?? "").toLowerCase();
-    const isChampionView = userParam === "champion" || state?.sourceScreen === "champion";
     const resolvedTab = useMemo(() => {
         const ownerTabs = new Set(["info", "update", "library", "metrics", "status"]);
         const championTabs = new Set(["info", "update", "reprioritize", "metrics", "status"]);
@@ -856,96 +864,74 @@ const UseCaseDetails = () => {
     }, [activeTab, roleOptions.length]);
 
     useEffect(() => {
-        if (activeTab !== "update" || !id) return;
+        const planRows = (useCaseDetails?.plan ?? []) as PlanItem[];
+        const stakeholderRows = (useCaseDetails?.stakeholders ?? []) as StakeholderItem[];
+        const updateRows = (useCaseDetails?.updates ?? []) as UpdateItem[];
 
-        let isMounted = true;
-        const controller = new AbortController();
+        setPlanItems(
+            planRows.map((row) => ({
+                ...row,
+                phase: (row as any).phasename ?? row.phase ?? null,
+            })),
+        );
+        setStakeholderItems(
+            stakeholderRows.map((row) => ({
+                ...row,
+                role: (row as any).role_name ?? row.role ?? null,
+            })),
+        );
+        setUpdateItems(
+            updateRows.map((row) => ({
+                ...row,
+                role: (row as any).role_name ?? row.role ?? null,
+                phase: (row as any).phase_name ?? row.phase ?? null,
+                status: (row as any).status_name ?? row.status ?? null,
+                statusColor: (row as any).status_color ?? row.statusColor ?? null,
+            })),
+        );
 
-        const fetchUpdateData = async () => {
-            try {
-                setIsUpdateDataLoading(true);
-                const [planResult, stakeholderResult, updatesResult] = await Promise.allSettled([
-                    fetch(`/api/usecases/${id}/plan`, { signal: controller.signal }),
-                    fetch(`/api/usecases/${id}/stakeholders`, { signal: controller.signal }),
-                    fetch(`/api/usecases/${id}/updates`, { signal: controller.signal }),
-                ]);
-
-                const planData =
-                    planResult.status === "fulfilled" && planResult.value.ok
-                        ? await planResult.value.json()
-                        : null;
-                const stakeholderData =
-                    stakeholderResult.status === "fulfilled" && stakeholderResult.value.ok
-                        ? await stakeholderResult.value.json()
-                        : null;
-                const updatesData =
-                    updatesResult.status === "fulfilled" && updatesResult.value.ok
-                        ? await updatesResult.value.json()
-                        : null;
-
-                if (!isMounted) return;
-
-                const planRows = (planData?.items ?? []) as PlanItem[];
-                const stakeholderRows = (stakeholderData?.items ?? []) as StakeholderItem[];
-                const updateRows = (updatesData?.items ?? []) as UpdateItem[];
-
-                setPlanItems(planRows);
-                setStakeholderItems(stakeholderRows);
-                setUpdateItems(updateRows);
-
-                if (!isTimelineEditing) {
-                    const nextPhaseDates: Record<string, { start?: Date; end?: Date }> = {};
-                    planRows.forEach((row) => {
-                        const phaseName = String(row.phase ?? "").trim();
-                        if (!phaseName) return;
-                        nextPhaseDates[phaseName] = {
-                            start: row.startdate ? new Date(row.startdate) : undefined,
-                            end: row.enddate ? new Date(row.enddate) : undefined,
-                        };
-                    });
-                    if (Object.keys(nextPhaseDates).length > 0) {
-                        setPhaseDates((prev) => ({
-                            ...prev,
-                            ...nextPhaseDates,
-                        }));
-                    }
-                }
-
-                const mappedUpdates = updateRows
-                    .map((row) => {
-                        const created = row.created ?? row.modified;
-                        const timeLabel = created ? format(new Date(created), "MMM d, yyyy") : "";
-                        return {
-                            id: Number(row.id ?? 0),
-                            author: String(row.editor_email ?? "").trim() || "Unknown",
-                            role: String(row.role ?? "").trim(),
-                            phase: String(row.phase ?? "").trim(),
-                            status: String(row.status ?? "").trim(),
-                            statusColor: String(row.statusColor ?? "").trim(),
-                            content: String(row.meaningfulupdate ?? "").trim(),
-                            time: timeLabel,
-                            type: "comment",
-                        };
-                    })
-                    .filter((row) => row.content);
-
-                setUpdates(mappedUpdates);
-            } catch (error) {
-                console.error("Error fetching update data:", error);
-            } finally {
-                if (isMounted) {
-                    setIsUpdateDataLoading(false);
-                }
+        if (!isTimelineEditing) {
+            const nextPhaseDates: Record<string, { start?: Date; end?: Date }> = {};
+            planRows.forEach((row) => {
+                const phaseName = String((row as any).phasename ?? row.phase ?? "").trim();
+                if (!phaseName) return;
+                nextPhaseDates[phaseName] = {
+                    start: row.startdate ? new Date(row.startdate) : undefined,
+                    end: row.enddate ? new Date(row.enddate) : undefined,
+                };
+            });
+            if (Object.keys(nextPhaseDates).length > 0) {
+                setPhaseDates((prev) => ({
+                    ...prev,
+                    ...nextPhaseDates,
+                }));
             }
-        };
+        }
 
-        fetchUpdateData();
-        return () => {
-            isMounted = false;
-            controller.abort();
-            setIsUpdateDataLoading(false);
-        };
-    }, [activeTab, id]);
+        const mappedUpdates = updateRows
+            .map((row) => {
+                const created = row.created ?? row.modified;
+                const timeLabel = created ? format(new Date(created), "MMM d, yyyy") : "";
+                return {
+                    id: Number(row.id ?? 0),
+                    author: String(row.editor_email ?? "").trim() || "Unknown",
+                    role: String((row as any).role_name ?? row.role ?? "").trim(),
+                    phase: String((row as any).phase_name ?? row.phase ?? "").trim(),
+                    status: String((row as any).status_name ?? row.status ?? "").trim(),
+                    statusColor: String((row as any).status_color ?? row.statusColor ?? "").trim(),
+                    content: String(row.meaningfulupdate ?? "").trim(),
+                    time: timeLabel,
+                    type: "comment",
+                };
+            })
+            .filter((row) => row.content);
+
+        setUpdates(mappedUpdates);
+    }, [useCaseDetails?.plan, useCaseDetails?.stakeholders, useCaseDetails?.updates, isTimelineEditing]);
+
+    useEffect(() => {
+        setIsUpdateDataLoading(loading);
+    }, [loading]);
 
     useEffect(() => {
         if (!stakeholderItems.length) {
@@ -1143,54 +1129,32 @@ const UseCaseDetails = () => {
     };
 
     useEffect(() => {
-        if (activeTab !== "reprioritize" || !id) return;
+        if (activeTab !== "reprioritize") return;
         if (isReprioritizeEditing) return;
+        const item = useCaseDetails?.prioritize;
+        if (!item) return;
 
-        let isMounted = true;
-        const controller = new AbortController();
+        const deliveryValue = Array.from(deliveryIdMap.entries()).find(
+            ([, value]) => value === Number((item as any).timespanid),
+        )?.[0] ?? "";
+        const reportingValue = Array.from(reportingFrequencyIdMap.entries()).find(
+            ([, value]) => value === Number((item as any).reportingfrequencyid),
+        )?.[0] ?? "";
 
-        const loadPrioritize = async () => {
-            try {
-                const response = await fetch(`/api/usecases/${id}/prioritize`, {
-                    signal: controller.signal,
-                });
-                if (!response.ok) return;
-                const data = await response.json().catch(() => null);
-                if (!isMounted) return;
-                const item = data?.item;
-                if (!item) return;
-
-                const deliveryValue = Array.from(deliveryIdMap.entries()).find(
-                    ([, value]) => value === Number(item.timespanid),
-                )?.[0] ?? "";
-                const reportingValue = Array.from(reportingFrequencyIdMap.entries()).find(
-                    ([, value]) => value === Number(item.reportingfrequencyid),
-                )?.[0] ?? "";
-
-                setFormData({
-                    reach: String(item.reach ?? "").trim(),
-                    impact: String(item.impact ?? "").trim(),
-                    confidence: String(item.confidence ?? "").trim(),
-                    effort: String(item.effort ?? "").trim(),
-                    riceScore: String(item.ricescore ?? "").trim(),
-                    priority: String(item.priority ?? "").trim(),
-                    delivery: deliveryValue,
-                    totalUserBase: String(item.totaluserbase ?? "").trim(),
-                    displayInGallery: parseBool(item.aigallerydisplay),
-                    sltReporting: parseBool(item.sltreporting),
-                    reportingFrequency: reportingValue,
-                });
-            } catch (error) {
-                console.error("Failed to load prioritization data:", error);
-            }
-        };
-
-        loadPrioritize();
-        return () => {
-            isMounted = false;
-            controller.abort();
-        };
-    }, [activeTab, id, deliveryIdMap, reportingFrequencyIdMap, isReprioritizeEditing]);
+        setFormData({
+            reach: String((item as any).reach ?? "").trim(),
+            impact: String((item as any).impact ?? "").trim(),
+            confidence: String((item as any).confidence ?? "").trim(),
+            effort: String((item as any).effort ?? "").trim(),
+            riceScore: String((item as any).ricescore ?? "").trim(),
+            priority: String((item as any).priority ?? "").trim(),
+            delivery: deliveryValue,
+            totalUserBase: String((item as any).totaluserbase ?? "").trim(),
+            displayInGallery: parseBool((item as any).aigallerydisplay),
+            sltReporting: parseBool((item as any).sltreporting),
+            reportingFrequency: reportingValue,
+        });
+    }, [activeTab, deliveryIdMap, reportingFrequencyIdMap, isReprioritizeEditing, useCaseDetails?.prioritize]);
 
     const riceScoreValue = useMemo(() => {
         const reach = Number(formData.reach);
@@ -1947,9 +1911,7 @@ const UseCaseDetails = () => {
                 deleteReportedMetricIds,
                 editorEmail,
             });
-            const payload = await fetchUseCaseMetricsDetails(id);
-            setMetricDetailRows(payload?.metrics ?? []);
-            setReportedMetricRows(payload?.reportedMetrics ?? []);
+            await refetch();
             metricsSnapshotRef.current = null;
             toast.success("Metrics updated successfully");
             setIsMetricsEditing(false);
@@ -1965,6 +1927,7 @@ const UseCaseDetails = () => {
         reportedMetrics,
         reportedMetricRows,
         unitOfMeasureMap,
+        refetch,
     ]);
 
     const editActions = useMemo(() => {
@@ -2033,31 +1996,18 @@ const UseCaseDetails = () => {
             return;
         }
 
-        let isMounted = true;
-        const controller = new AbortController();
+        const metricsPayload = useCaseDetails?.metrics;
+        if (metricsPayload?.items || metricsPayload?.reported) {
+            setMetricDetailRows((metricsPayload?.items ?? []) as MetricDetailRow[]);
+            setReportedMetricRows((metricsPayload?.reported ?? []) as ReportedMetricDetailRow[]);
+            return;
+        }
 
-        const loadMetrics = async () => {
-            try {
-                const payload = await fetchUseCaseMetricsDetails(id);
-                if (!isMounted) return;
-                setMetricDetailRows(payload?.metrics ?? []);
-                setReportedMetricRows(payload?.reportedMetrics ?? []);
-            } catch (error) {
-                if (isMounted && !(error instanceof Error && error.name === "AbortError")) {
-                    console.error("Error fetching metrics:", error);
-                    setMetricDetailRows([]);
-                    setReportedMetricRows([]);
-                }
-            }
-        };
+        if (loading) return;
 
-        loadMetrics();
-
-        return () => {
-            isMounted = false;
-            controller.abort();
-        };
-    }, [id]);
+        setMetricDetailRows([]);
+        setReportedMetricRows([]);
+    }, [id, useCaseDetails?.metrics, loading]);
 
     useEffect(() => {
         if (isMetricsEditing) return;

@@ -71,9 +71,12 @@ export const GET = async (request: Request) => {
       };
 
       if (view === "full") {
+        const embeddedPlan = parsePhasePlanValue(row.phasePlan ?? row.PhasePlan);
         return {
           ...item,
-          phasePlan: planMap.get(Number(item.id)) ?? [],
+          phasePlan: embeddedPlan.length
+            ? embeddedPlan
+            : planMap.get(Number(item.id)) ?? [],
         };
       }
 
@@ -191,6 +194,19 @@ const buildStakeholderName = (email?: string | null) => {
   return nameParts.join(" ").trim();
 };
 
+const parsePhasePlanValue = (value: unknown) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export const POST = async (request: Request): Promise<NextResponse> => {
   try {
     const payload = (await request.json()) as CreateUseCasePayload;
@@ -270,7 +286,10 @@ export const POST = async (request: Request): Promise<NextResponse> => {
       null;
     let approvals = false;
 
-    if (useCaseId) {
+    // TODO: Remove this businessUnitId gating once testing is complete.
+    const shouldTriggerApprovalFlow = businessUnitId === 38;
+
+    if (useCaseId && shouldTriggerApprovalFlow) {
       let phaseName = String(useCaseRecord?.Phase ?? useCaseRecord?.phase ?? "").trim();
       const phaseId =
         Number(useCaseRecord?.Phaseid ?? useCaseRecord?.phaseId ?? payload.phaseId ?? 0) || 0;

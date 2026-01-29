@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import {
-    fetchUseCaseMetricsDetails,
     updateUseCaseMetrics,
 } from '@/lib/api';
 import { getMappings } from '@/lib/submit-use-case';
@@ -227,7 +226,7 @@ const MetricReporting = () => {
     }, []);
 
     useEffect(() => {
-        if (!selectedUseCaseId) {
+        if (!selectedUseCaseId || !userEmail) {
             setMetricDetailRows([]);
             setReportedMetricRows([]);
             setMetrics([]);
@@ -241,10 +240,20 @@ const MetricReporting = () => {
         let isMounted = true;
         const loadMetrics = async () => {
             try {
-                const payload = await fetchUseCaseMetricsDetails(selectedUseCaseId);
+                const response = await fetch(
+                    `/api/usecases/${selectedUseCaseId}?type=owner&email=${encodeURIComponent(
+                        userEmail,
+                    )}&include=metrics`,
+                );
+                if (!response.ok) {
+                    const details = await response.text().catch(() => "");
+                    throw new Error(details || "Failed to load metrics.");
+                }
+                const payload = await response.json().catch(() => null);
                 if (!isMounted) return;
-                setMetricDetailRows(payload?.metrics ?? []);
-                setReportedMetricRows(payload?.reportedMetrics ?? []);
+                const metricsPayload = payload?.metrics ?? {};
+                setMetricDetailRows(metricsPayload?.items ?? []);
+                setReportedMetricRows(metricsPayload?.reported ?? []);
             } catch (error) {
                 console.error('Failed to load metrics', error);
                 if (isMounted) {
@@ -257,7 +266,7 @@ const MetricReporting = () => {
         return () => {
             isMounted = false;
         };
-    }, [selectedUseCaseId]);
+    }, [selectedUseCaseId, userEmail]);
 
     useEffect(() => {
         if (!metricDetailRows.length && !reportedMetricRows.length) {
@@ -655,9 +664,19 @@ const MetricReporting = () => {
                 deleteReportedMetricIds,
                 editorEmail: userEmail,
             });
-            const payload = await fetchUseCaseMetricsDetails(selectedUseCaseId);
-            setMetricDetailRows(payload?.metrics ?? []);
-            setReportedMetricRows(payload?.reportedMetrics ?? []);
+            const response = await fetch(
+                `/api/usecases/${selectedUseCaseId}?type=owner&email=${encodeURIComponent(
+                    userEmail,
+                )}&include=metrics`,
+            );
+            if (!response.ok) {
+                const details = await response.text().catch(() => "");
+                throw new Error(details || "Failed to reload metrics.");
+            }
+            const payload = await response.json().catch(() => null);
+            const metricsPayload = payload?.metrics ?? {};
+            setMetricDetailRows(metricsPayload?.items ?? []);
+            setReportedMetricRows(metricsPayload?.reported ?? []);
             toast.success('Metrics updated successfully');
             metricsSnapshotRef.current = null;
             setIsEditing(false);

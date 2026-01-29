@@ -3,25 +3,6 @@ import { getSqlPool } from "@/lib/azure-sql";
 import { getUiErrorMessage, logErrorTrace } from "@/lib/error-utils";
 
 /**
- * Raw row returned by dbo.GetUseCaseAgentLibraryDetails
- * Comma-separated ID columns are parsed in the API layer.
- */
-type AgentLibraryRow = {
-  usecaseid: unknown;
-  aiThemeIds: unknown;
-  personaIds: unknown;
-  knowledgeSourceIds: unknown;
-  id: unknown;
-  vendormodelid: unknown;
-  agentid: unknown;
-  agentlink: unknown;
-  prompt: unknown;
-  modified: unknown;
-  created: unknown;
-  editor_email: unknown;
-};
-
-/**
  * Request body for PATCH updates.
  * Arrays are converted to comma-separated strings
  * before being passed to the stored procedure.
@@ -36,79 +17,6 @@ type UpdateRequest = {
   agentLink?: string | null;
   prompt?: string | null;
   editorEmail?: string;
-};
-
-/**
- * Safely parses a comma-separated list of numbers into a number[].
- * Null, undefined, or empty values return an empty array.
- */
-const parseCsvNumbers = (value: unknown): number[] => {
-  if (value === null || value === undefined) return [];
-
-  const str = String(value).trim();
-  if (!str) return [];
-
-  return str
-    .split(",")
-    .map((v) => Number(v))
-    .filter((n) => Number.isFinite(n));
-};
-
-/**
- * GET: Retrieve agent library details for a use case.
- */
-export const GET = async (
-  _request: Request,
-  context: { params: Promise<{ id: string }> | { id: string } },
-) => {
-  const params = await Promise.resolve(context.params);
-  const rawId = Array.isArray((params as any).id)
-    ? (params as any).id[0]
-    : (params as any).id;
-
-  const id = Number(rawId);
-  if (!Number.isFinite(id)) {
-    return NextResponse.json({ message: "Invalid id" }, { status: 400 });
-  }
-
-  try {
-    const pool = await getSqlPool();
-    const result = await pool
-      .request()
-      .input("UseCaseId", id)
-      .execute("dbo.GetUseCaseAgentLibraryDetails");
-
-    const items = (result.recordset ?? []).map((row: AgentLibraryRow) => ({
-      usecaseid: row.usecaseid ?? null,
-      aiThemeIds: parseCsvNumbers(row.aiThemeIds),
-      personaIds: parseCsvNumbers(row.personaIds),
-      knowledgeSourceIds: parseCsvNumbers(row.knowledgeSourceIds),
-      id: row.id ?? null,
-      vendormodelid: row.vendormodelid ?? null,
-      agentid: row.agentid ?? null,
-      agentlink: row.agentlink ?? null,
-      prompt: row.prompt ?? null,
-      modified: row.modified ?? null,
-      created: row.created ?? null,
-      editor_email: row.editor_email ?? null,
-    }));
-
-    return NextResponse.json(
-      { items },
-      { headers: { "cache-control": "no-store" } },
-    );
-  } catch (error) {
-    logErrorTrace("Use case agent library failed", error);
-    return NextResponse.json(
-      {
-        message: getUiErrorMessage(
-          error,
-          "Failed to load use case agent library.",
-        ),
-      },
-      { status: 500 },
-    );
-  }
 };
 
 /**

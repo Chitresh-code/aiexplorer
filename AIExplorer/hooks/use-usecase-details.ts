@@ -50,6 +50,18 @@ type UseCaseDetailsResponse = {
   agentLibrary?: AgentLibraryItem[];
   personas?: PersonaItem[];
   themes?: ThemeItem[];
+  plan?: Record<string, unknown>[];
+  prioritize?: Record<string, unknown> | null;
+  metrics?: { items?: Record<string, unknown>[]; reported?: Record<string, unknown>[] };
+  stakeholders?: Record<string, unknown>[];
+  updates?: Record<string, unknown>[];
+};
+
+type UseCaseDetailsOptions = {
+  type?: "gallery" | "owner" | "champion";
+  include?: string[];
+  all?: boolean;
+  email?: string;
 };
 
 interface UseCaseDetailsState {
@@ -59,7 +71,10 @@ interface UseCaseDetailsState {
   refetch: () => Promise<void>;
 }
 
-export const useUseCaseDetails = (id?: string): UseCaseDetailsState => {
+export const useUseCaseDetails = (
+  id?: string,
+  options?: UseCaseDetailsOptions,
+): UseCaseDetailsState => {
   const [data, setData] = useState<UseCaseDetailsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +87,15 @@ export const useUseCaseDetails = (id?: string): UseCaseDetailsState => {
     }
     setLoading(true);
     try {
-      const response = await fetch(`/api/usecases/${id}`, {
+      const params = new URLSearchParams();
+      if (options?.type) params.set("type", options.type);
+      if (options?.email) params.set("email", options.email);
+      if (options?.all) params.set("all", "true");
+      if (options?.include?.length) {
+        params.set("include", options.include.join(","));
+      }
+      const query = params.toString();
+      const response = await fetch(`/api/usecases/${id}${query ? `?${query}` : ""}`, {
         headers: { Accept: "application/json" },
       });
       if (!response.ok) {
@@ -88,7 +111,7 @@ export const useUseCaseDetails = (id?: string): UseCaseDetailsState => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, options?.all, options?.email, options?.include, options?.type]);
 
   useEffect(() => {
     void loadDetails();

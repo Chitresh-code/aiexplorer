@@ -358,11 +358,14 @@ const ChampionUseCaseScreen = () => {
             if (implementedPhaseId !== null && useCase.phaseId === implementedPhaseId) return true;
             return String(useCase.phase ?? "").toLowerCase() === "implemented";
         }).length;
+        const prioritized = normalizedUseCases.filter((useCase) =>
+            Number.isFinite(useCase.priority),
+        ).length;
         return {
             totalUseCases,
             implemented,
             approvalPending: 0,
-            prioritized: 0,
+            prioritized,
         };
     }, [normalizedUseCases, phaseColumns, useCases]);
 

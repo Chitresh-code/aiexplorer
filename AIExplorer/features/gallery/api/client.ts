@@ -190,8 +190,11 @@ export const fetchUseCase = async (
   id: number,
   signal?: AbortSignal,
 ): Promise<GalleryUseCase> => {
-  // 1. Fetch from the specific ID endpoint to get full details
-  const response = await fetch(`/api/usecases/${id}`, { signal });
+  // 1. Fetch from the specific ID endpoint to get details
+  const response = await fetch(
+    `/api/usecases/${id}?type=gallery&include=usecase,themes`,
+    { signal },
+  );
   if (!response.ok) {
     throw new Error("Failed to load use case.");
   }
@@ -199,7 +202,7 @@ export const fetchUseCase = async (
   const payload = await response.json();
   const item = payload.useCase; // Extract the core use case object
   
-  // 2. Map everything including themes and personas from the response
+  // 2. Map everything including themes and personas when available
   return {
     ...item,
     id: Number(item.id),

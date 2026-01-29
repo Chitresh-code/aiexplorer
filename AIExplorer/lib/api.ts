@@ -130,17 +130,6 @@ export const fetchMetrics = async (useCaseId: string | number) => {
   return response.data;
 };
 
-export const fetchUseCaseMetricsDetails = async (useCaseId: string | number) => {
-  const response = await fetch(`/api/usecases/${useCaseId}/metrics`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    const details = await response.text().catch(() => "");
-    throw new Error(details || "Failed to load use case metrics.");
-  }
-  return response.json();
-};
-
 export const createMetric = async (payload: unknown) => {
   const response = await apiClient.post("/api/metrics", payload);
   return response.data;
