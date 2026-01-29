@@ -29,7 +29,7 @@ export const GET = async (req: Request): Promise<NextResponse> => {
     const items = (result.recordset ?? [])
       .map((row: StakeholderRow) => ({
         id: toNumberValue(pickValue(row, ["id", "Id", "ID"])),
-        buisnessunitid: toNumberValue(
+        businessunitid: toNumberValue(
           pickValue(row, ["buisnessunitid", "BusinessUnitId", "businessunitid"]),
         ),
         businessunit: toStringValue(
