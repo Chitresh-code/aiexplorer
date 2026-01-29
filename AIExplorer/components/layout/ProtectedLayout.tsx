@@ -118,8 +118,24 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
       // Special handling for metadata-reporting page - combine with use case name
       const isMetadataReportingPage = segment === 'metadata-reporting';
       const isUseCaseDetailsPage = segment === 'use-case-details';
+      const isGalleryDetailsPage =
+        segment === 'gallery' &&
+        isLast &&
+        Boolean(useCaseTitle) &&
+        /^\d+$/.test(segments[segments.length - 1] ?? '');
 
-      if (isMetadataReportingPage && isLast && useCaseTitle) {
+      if (isGalleryDetailsPage && useCaseTitle) {
+        items.push({
+          href: accumulatedPath || '/gallery',
+          label: routeLabels[segment] || 'AI Gallery',
+          isCurrent: false,
+        });
+        items.push({
+          href: '',
+          label: useCaseTitle,
+          isCurrent: true,
+        });
+      } else if (isMetadataReportingPage && isLast && useCaseTitle) {
         items.push({
           href: '', // Empty href since this is the current page
           label: `${routeLabels[segment] || segment.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())} - (${useCaseTitle})`,

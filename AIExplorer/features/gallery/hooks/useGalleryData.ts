@@ -47,6 +47,7 @@ export const useGalleryData = ({
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [isFiltersLoading, setIsFiltersLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,6 +100,7 @@ export const useGalleryData = ({
   useEffect(() => {
     const controller = new AbortController();
     setIsLoading(true);
+    setHasLoaded(false);
     const load =
       activeTab === "similar"
         ? fetchSimilarUseCases(searchText, controller.signal)
@@ -111,7 +113,10 @@ export const useGalleryData = ({
         console.error("Failed to load use cases", err);
         setError("Unable to load use cases.");
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+        setHasLoaded(true);
+      });
 
     return () => controller.abort();
   }, [activeTab, query, searchText]);
@@ -120,6 +125,7 @@ export const useGalleryData = ({
     useCases,
     filtersData,
     isLoading,
+    hasLoaded,
     isFiltersLoading,
     error,
   };

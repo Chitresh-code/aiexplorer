@@ -13,12 +13,7 @@ import {
     getTeamsForBusinessUnit,
     getSubTeamsForTeam,
     getStakeholdersForBusinessUnitId,
-    getMappingBusinessUnits,
-    getMappingRoles,
-    getMappingAiProductQuestions,
-    getMappingPhases,
-    getMappingMetricCategories,
-    getMappingUnitOfMeasure,
+    getMappings,
     createUseCase
 } from "@/lib/submit-use-case";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -645,7 +640,7 @@ const SubmitUseCase = () => {
     // Fetch all data on mount with stale-while-revalidate cache
     useEffect(() => {
         let isMounted = true;
-        const cacheKey = "submit-use-case-data-v2";
+        const cacheKey = "submit-use-case-data-v3";
         const cacheTtlMs = 10 * 60 * 1000;
         const uniqueSorted = (values: string[]) =>
             Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -656,6 +651,7 @@ const SubmitUseCase = () => {
             setAiProductQuestionsData(consolidatedData.ai_product_questions ?? []);
             setMetricCategoriesData(consolidatedData.metric_categories ?? []);
             setUnitOfMeasureData(consolidatedData.unit_of_measure ?? []);
+            setPhasesData(consolidatedData.phases ?? []);
         };
 
         const loadFromCache = () => {
@@ -679,43 +675,43 @@ const SubmitUseCase = () => {
                 if (!hasCache) {
                     setIsLoading(true);
                 }
-                const [
-                    businessUnitsResponse,
-                    rolesResponse,
-                    aiQuestionsResponse,
-                    metricCategoriesResponse,
-                    unitOfMeasureResponse,
-                ] = await Promise.all([
-                    getMappingBusinessUnits(),
-                    getMappingRoles(),
-                    getMappingAiProductQuestions(),
-                    getMappingMetricCategories(),
-                    getMappingUnitOfMeasure(),
+                const mappings = await getMappings([
+                    "businessUnits",
+                    "roles",
+                    "aiProductQuestions",
+                    "metricCategories",
+                    "unitOfMeasure",
+                    "phases",
                 ]);
 
-                const businessUnitItems = businessUnitsResponse?.items ?? [];
-                const roleItems = rolesResponse?.items ?? [];
-                const aiQuestionItems = aiQuestionsResponse?.items ?? [];
-                const metricCategoryItems = metricCategoriesResponse?.items ?? [];
-                const unitOfMeasureItems = unitOfMeasureResponse?.items ?? [];
+                const businessUnitItems = mappings.businessUnits?.items ?? [];
+                const roleItems = mappings.roles?.items ?? [];
+                const aiQuestionItems = mappings.aiProductQuestions?.items ?? [];
+                const metricCategoryItems = mappings.metricCategories?.items ?? [];
+                const unitOfMeasureItems = mappings.unitOfMeasure?.items ?? [];
+                const phaseItems = mappings.phases?.items ?? [];
 
                 const business_units: Record<string, Record<string, string[]>> = {};
-                const business_unit_ids: Record<string, number> = {};
+                const business_unit_team_ids: Record<string, Record<string, number>> = {};
                 businessUnitItems.forEach((unit) => {
                     const unitName = String(unit.businessUnitName ?? "").trim();
-                    if (!unitName) return;
-                    const teamMap: Record<string, string[]> = {};
-                    const unitId = Number(unit.businessUnitId);
-                    if (Number.isFinite(unitId)) {
-                        business_unit_ids[unitName] = unitId;
+                    const teamName = String(unit.teamName ?? "").trim();
+                    const teamId = Number(unit.id ?? unit.teamId ?? unit.businessUnitId ?? NaN);
+                    if (!unitName || !teamName) return;
+
+                    if (!business_units[unitName]) {
+                        business_units[unitName] = {};
                     }
-                    const rawTeams = Array.isArray(unit.teams) ? unit.teams : [];
-                    rawTeams.forEach((team) => {
-                        const teamName = String(team).trim();
-                        if (!teamName) return;
-                        teamMap[teamName] = [];
-                    });
-                    business_units[unitName] = teamMap;
+                    if (!business_units[unitName][teamName]) {
+                        business_units[unitName][teamName] = [];
+                    }
+
+                    if (!business_unit_team_ids[unitName]) {
+                        business_unit_team_ids[unitName] = {};
+                    }
+                    if (Number.isFinite(teamId)) {
+                        business_unit_team_ids[unitName][teamName] = teamId;
+                    }
                 });
 
                 const roles = roleItems
@@ -727,11 +723,12 @@ const SubmitUseCase = () => {
                     .filter((role) => role.name.length > 0);
 
                 const consolidatedData = {
-                    business_structure: { business_units, business_unit_ids },
+                    business_structure: { business_units, business_unit_team_ids },
                     roles,
                     ai_product_questions: aiQuestionItems,
                     metric_categories: metricCategoryItems,
                     unit_of_measure: unitOfMeasureItems,
+                    phases: phaseItems,
                 };
                 if (!isMounted) return;
 
@@ -763,10 +760,11 @@ const SubmitUseCase = () => {
     }, []);
 
     const selectedBusinessUnitId = useMemo(() => {
-        if (!selectedBusinessUnit) return null;
-        const id = businessStructureData?.business_unit_ids?.[selectedBusinessUnit];
+        if (!selectedBusinessUnit || !selectedTeam) return null;
+        const id =
+            businessStructureData?.business_unit_team_ids?.[selectedBusinessUnit]?.[selectedTeam];
         return Number.isFinite(id) ? id : null;
-    }, [businessStructureData, selectedBusinessUnit]);
+    }, [businessStructureData, selectedBusinessUnit, selectedTeam]);
 
     useEffect(() => {
         let isMounted = true;
@@ -783,17 +781,21 @@ const SubmitUseCase = () => {
                 const seen = new Set<string>();
                 const normalized = (response?.items ?? [])
                     .map((item: any) => {
-                        const email = String(item?.email ?? "").trim();
+                        const email = String(item?.u_krewer_email ?? item?.email ?? "").trim();
                         const role = String(item?.role ?? "").trim();
-                        const roleId = Number(item?.roleId);
-                        const businessUnitId = Number(item?.businessUnitId);
+                        const roleId = Number(item?.roleid ?? item?.roleId);
+                        const businessUnitId = Number(
+                            item?.buisnessunitid ?? item?.businessUnitId,
+                        );
                         return {
                             id: Number(item?.id),
                             email,
                             role,
                             roleId: Number.isFinite(roleId) ? roleId : null,
                             businessUnitId: Number.isFinite(businessUnitId) ? businessUnitId : null,
-                            businessUnitName: String(item?.businessUnitName ?? "").trim(),
+                            businessUnitName: String(
+                                item?.businessunit ?? item?.businessUnitName ?? "",
+                            ).trim(),
                         };
                     })
                     .filter((item) => item.email)
@@ -1071,9 +1073,9 @@ const SubmitUseCase = () => {
             if (phasesData.length > 0) return;
             setIsPhasesLoading(true);
             try {
-                const response = await getMappingPhases();
+                const response = await getMappings(["phases"]);
                 if (!isMounted) return;
-                setPhasesData(response?.items ?? []);
+                setPhasesData(response?.phases?.items ?? []);
             } catch (error) {
                 console.error("Error fetching phase mappings:", error);
                 if (isMounted) {
@@ -1412,6 +1414,28 @@ const SubmitUseCase = () => {
                     return;
                 }
 
+                const headline = values.headline?.trim() || "";
+                const opportunity = values.opportunity?.trim() || "";
+                const businessValue = values.businessValue?.trim() || "";
+                const eseDependency = values.eseResourceValue?.trim() || "";
+
+                if (!headline) {
+                    toast.error("Headline is required.");
+                    return;
+                }
+                if (!opportunity) {
+                    toast.error("Opportunity is required.");
+                    return;
+                }
+                if (!businessValue) {
+                    toast.error("Business Value is required.");
+                    return;
+                }
+                if (!eseDependency) {
+                    toast.error("ESE Dependency is required.");
+                    return;
+                }
+
                 const normalizeChecklistResponse = (value: unknown) => {
                     if (Array.isArray(value)) {
                         return value.map((entry) => String(entry).trim()).filter(Boolean).join(", ");
@@ -1465,6 +1489,10 @@ const SubmitUseCase = () => {
                     seenStakeholders.add(key);
                     uniqueStakeholders.push(stakeholder);
                 });
+                if (uniqueStakeholders.length === 0) {
+                    toast.error("At least one stakeholder is required.");
+                    return;
+                }
 
                 const formatDate = (date?: Date) => (date ? format(date, "yyyy-MM-dd") : "");
 
@@ -1483,6 +1511,10 @@ const SubmitUseCase = () => {
                         };
                     })
                     .filter(Boolean);
+                if (planPayload.length === 0) {
+                    toast.error("Plan dates are required.");
+                    return;
+                }
 
                 const metricsPayload = metrics
                     .map((metric) => {
@@ -1506,24 +1538,30 @@ const SubmitUseCase = () => {
                         };
                     })
                     .filter(Boolean);
+                if (metricsPayload.length === 0) {
+                    toast.error("At least one metric is required.");
+                    return;
+                }
 
+                const phaseId = 1;
+                const statusId = 6;
                 const useCaseData = {
                     businessUnitId: selectedBusinessUnitId,
-                    phaseId: 1,
-                    statusId: 6,
+                    phaseId,
+                    statusId,
                     title: values.useCaseTitle?.trim(),
-                    headlines: values.headline?.trim() || null,
-                    opportunity: values.opportunity?.trim() || null,
-                    businessValue: values.businessValue?.trim() || null,
+                    headlines: headline,
+                    opportunity,
+                    businessValue,
                     subTeamName: values.selectedSubTeam?.trim() || null,
                     informationUrl: values.infoLink?.trim() || null,
-                    eseDependency: values.eseResourceValue?.trim() || null,
+                    eseDependency,
                     primaryContact,
                     editorEmail: accounts[0]?.username || primaryContact,
                     checklist: checklistEntries.length ? checklistEntries : null,
-                    stakeholders: uniqueStakeholders.length ? uniqueStakeholders : null,
-                    plan: planPayload.length ? planPayload : null,
-                    metrics: metricsPayload.length ? metricsPayload : null,
+                    stakeholders: uniqueStakeholders,
+                    plan: planPayload,
+                    metrics: metricsPayload,
                 };
 
                 const createdUseCase = await createUseCase(useCaseData);

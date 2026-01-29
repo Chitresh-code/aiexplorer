@@ -35,7 +35,7 @@ export const useUseCases = (options?: { email?: string }): UseCasesHookState => 
       }
       if (options?.email) {
         const response = await fetch(
-          `/api/usecases/user?email=${encodeURIComponent(options.email)}`,
+          `/api/usecases?role=owner&email=${encodeURIComponent(options.email)}&view=full`,
           { headers: { Accept: "application/json" } },
         );
         if (!response.ok) {
@@ -43,7 +43,8 @@ export const useUseCases = (options?: { email?: string }): UseCasesHookState => 
           throw new Error(details || "Failed to load user use cases.");
         }
         const data = await response.json();
-        setUseCases(Array.isArray(data?.items) ? data.items : []);
+        const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+        setUseCases(items);
       } else {
         const data = await fetchUseCases();
         setUseCases(Array.isArray(data) ? data : []);

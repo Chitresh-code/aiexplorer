@@ -30,8 +30,9 @@ export const apiClient = axios.create({
 });
 
 export const fetchUseCases = async () => {
-  const response = await apiClient.get("/api/usecases");
-  return response.data;
+  const response = await apiClient.get("/api/usecases?view=list");
+  const data = response.data;
+  return Array.isArray(data?.items) ? data.items : data;
 };
 
 export const fetchUseCase = async (id: string | number) => {
@@ -183,16 +184,9 @@ export const fetchUseCasesWithFilters = async (params?: {
   phase?: string;
   business_unit?: string;
 }) => {
-  const queryParams = new URLSearchParams();
-  if (params?.skip !== undefined) queryParams.append('skip', params.skip.toString());
-  if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
-  if (params?.status) queryParams.append('status', params.status);
-  if (params?.phase) queryParams.append('phase', params.phase);
-  if (params?.business_unit) queryParams.append('business_unit', params.business_unit);
-
-  const url = queryParams.toString() ? `/api/usecases?${queryParams.toString()}` : '/api/usecases';
-  const response = await apiClient.get(url);
-  return response.data;
+  const response = await apiClient.get("/api/usecases?view=list");
+  const data = response.data;
+  return Array.isArray(data?.items) ? data.items : data;
 };
 
 export const fetchPreviousWeekUseCases = async () => {

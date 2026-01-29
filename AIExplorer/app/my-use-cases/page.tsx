@@ -21,10 +21,7 @@ import { DataTable } from '@/features/my-use-cases/components/data-table';
 import { createColumns } from '@/features/my-use-cases/components/columns';
 import KanbanView from '@/features/champion/components/kanban-view';
 import {
-    getMappingBusinessUnits,
-    getMappingImplementationTimespans,
-    getMappingPhases,
-    getMappingStatus,
+    getMappings,
 } from '@/lib/submit-use-case';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FilterCombobox } from "@/components/my-use-cases/filter-combobox";
@@ -44,8 +41,9 @@ const UseCaseSkeleton = () => (
 );
 
 type BusinessUnitMapping = {
+    id?: number | string | null;
     businessUnitName?: string;
-    teams?: { teamName?: string }[];
+    teamName?: string;
 };
 
 type PhaseMapping = {
@@ -94,6 +92,12 @@ type BackendUseCase = {
     CurrentPhaseStartDate?: string;
     currentPhaseEndDate?: string;
     CurrentPhaseEndDate?: string;
+    phasePlan?: Array<{
+        phaseId?: number | string | null;
+        phaseName?: string | null;
+        startDate?: string | null;
+        endDate?: string | null;
+    }> | string | null;
 };
 
 type NormalizedUseCase = {
@@ -130,16 +134,16 @@ const MyUseCases = () => {
     useEffect(() => {
         const fetchMappings = async () => {
             try {
-                const [businessUnits, phases, statuses, timespans] = await Promise.all([
-                    getMappingBusinessUnits(),
-                    getMappingPhases(),
-                    getMappingStatus(),
-                    getMappingImplementationTimespans(),
+                const mappings = await getMappings([
+                    "businessUnits",
+                    "phases",
+                    "status",
+                    "implementationTimespans",
                 ]);
-                setBusinessUnitsData(businessUnits);
-                setPhasesData(phases?.items ?? []);
-                setStatusData(statuses?.items ?? []);
-                setTimespansData(timespans?.items ?? []);
+                setBusinessUnitsData(mappings.businessUnits ?? null);
+                setPhasesData(mappings.phases?.items ?? []);
+                setStatusData(mappings.status?.items ?? []);
+                setTimespansData(mappings.implementationTimespans?.items ?? []);
             } catch (error) {
                 console.error('Error fetching mappings:', error);
             }
@@ -149,10 +153,10 @@ const MyUseCases = () => {
 
     const businessUnits = useMemo(() => {
         const items = businessUnitsData?.items ?? [];
-        return items
-            .map((unit) => String(unit.businessUnitName ?? "").trim())
-            .filter(Boolean)
-            .sort((a: string, b: string) => a.localeCompare(b));
+        const unique = new Set(
+            items.map((unit) => String(unit.businessUnitName ?? "").trim()).filter(Boolean),
+        );
+        return Array.from(unique).sort((a: string, b: string) => a.localeCompare(b));
     }, [businessUnitsData]);
 
     const phaseOptions = useMemo(() => {
@@ -217,8 +221,34 @@ const MyUseCases = () => {
             const phaseName = String(uc.phase || uc.Phase || '').trim();
             const phaseId = Number(uc.phaseId ?? uc.PhaseId ?? uc.phaseid);
             const status = String(uc.statusName || uc.Status || 'In Progress').trim();
-            const startRaw = String(uc.currentPhaseStartDate ?? uc.CurrentPhaseStartDate ?? "");
-            const endRaw = String(uc.currentPhaseEndDate ?? uc.CurrentPhaseEndDate ?? "");
+            const rawPlan = uc.phasePlan as unknown;
+            const parsedPlan = Array.isArray(rawPlan)
+                ? rawPlan
+                : typeof rawPlan === "string"
+                    ? (() => {
+                        try {
+                            const parsed = JSON.parse(rawPlan);
+                            return Array.isArray(parsed) ? parsed : [];
+                        } catch {
+                            return [];
+                        }
+                    })()
+                    : [];
+            const phaseEntry = parsedPlan.find(
+                (entry: any) => Number(entry?.phaseId) === phaseId,
+            );
+            const startRaw = String(
+                phaseEntry?.startDate ??
+                uc.currentPhaseStartDate ??
+                uc.CurrentPhaseStartDate ??
+                "",
+            );
+            const endRaw = String(
+                phaseEntry?.endDate ??
+                uc.currentPhaseEndDate ??
+                uc.CurrentPhaseEndDate ??
+                "",
+            );
             const start = formatDate(startRaw);
             const end = formatDate(endRaw);
             const currentPhaseDisplay = start && end ? `${start} - ${end}` : status;

@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.trim() ?? "";
 
 const resolveUrl = (path: string): string => {
@@ -29,7 +27,21 @@ const requestJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
     return response.json() as Promise<T>;
 };
 
-// ==================== CONSOLIDATED DATA FUNCTIONS ====================
+export const getMappings = async (
+    types: string[],
+): Promise<Record<string, { items: any[] }>> => {
+    const normalized = Array.from(new Set(types.map((type) => type.trim()).filter(Boolean)));
+    if (normalized.length === 0) {
+        throw new Error("At least one mapping type is required.");
+    }
+    const query = encodeURIComponent(normalized.join(","));
+    return requestJson(`/api/mappings?types=${query}`);
+};
+
+const getMapping = async (type: string): Promise<{ items: any[] }> => {
+    const response = await getMappings([type]);
+    return response[type] ?? { items: [] };
+};
 
 /**
  * Get AI models organized by vendor hierarchy
@@ -95,8 +107,6 @@ export const getAllVendors = async (): Promise<any> => {
         throw error;
     }
 };
-
-// ==================== UTILITY FUNCTIONS ====================
 
 /**
  * Get vendors from AI models data
@@ -219,7 +229,7 @@ export const getStakeholdersForBusinessUnitId = async (businessUnitId: number): 
 
 export const getMappingThemes = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/themes');
+        return await getMapping('themes');
     } catch (error) {
         console.error('Error fetching theme mappings:', error);
         throw error;
@@ -228,7 +238,7 @@ export const getMappingThemes = async (): Promise<any> => {
 
 export const getMappingPersonas = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/personas');
+        return await getMapping('personas');
     } catch (error) {
         console.error('Error fetching persona mappings:', error);
         throw error;
@@ -237,7 +247,7 @@ export const getMappingPersonas = async (): Promise<any> => {
 
 export const getMappingStatus = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/status');
+        return await getMapping('status');
     } catch (error) {
         console.error('Error fetching status mappings:', error);
         throw error;
@@ -246,7 +256,7 @@ export const getMappingStatus = async (): Promise<any> => {
 
 export const getMappingVendorModels = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/vendor-models');
+        return await getMapping('vendorModels');
     } catch (error) {
         console.error('Error fetching vendor model mappings:', error);
         throw error;
@@ -255,7 +265,7 @@ export const getMappingVendorModels = async (): Promise<any> => {
 
 export const getMappingKnowledgeSources = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/knowledge-sources');
+        return await getMapping('knowledgeSources');
     } catch (error) {
         console.error('Error fetching knowledge source mappings:', error);
         throw error;
@@ -264,7 +274,7 @@ export const getMappingKnowledgeSources = async (): Promise<any> => {
 
 export const getMappingBusinessUnits = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/business-units');
+        return await getMapping('businessUnits');
     } catch (error) {
         console.error('Error fetching business unit mappings:', error);
         throw error;
@@ -273,7 +283,7 @@ export const getMappingBusinessUnits = async (): Promise<any> => {
 
 export const getMappingRoles = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/roles');
+        return await getMapping('roles');
     } catch (error) {
         console.error('Error fetching role mappings:', error);
         throw error;
@@ -282,7 +292,7 @@ export const getMappingRoles = async (): Promise<any> => {
 
 export const getMappingAiProductQuestions = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/ai-product-questions');
+        return await getMapping('aiProductQuestions');
     } catch (error) {
         console.error('Error fetching AI product questions:', error);
         throw error;
@@ -291,7 +301,7 @@ export const getMappingAiProductQuestions = async (): Promise<any> => {
 
 export const getMappingPhases = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/phases');
+        return await getMapping('phases');
     } catch (error) {
         console.error('Error fetching phase mappings:', error);
         throw error;
@@ -300,7 +310,7 @@ export const getMappingPhases = async (): Promise<any> => {
 
 export const getMappingImplementationTimespans = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/implementation-timespans');
+        return await getMapping('implementationTimespans');
     } catch (error) {
         console.error('Error fetching implementation timespans:', error);
         throw error;
@@ -309,7 +319,7 @@ export const getMappingImplementationTimespans = async (): Promise<any> => {
 
 export const getMappingMetricCategories = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/metric-categories');
+        return await getMapping('metricCategories');
     } catch (error) {
         console.error('Error fetching metric category mappings:', error);
         throw error;
@@ -318,7 +328,7 @@ export const getMappingMetricCategories = async (): Promise<any> => {
 
 export const getMappingUnitOfMeasure = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/unit-of-measure');
+        return await getMapping('unitOfMeasure');
     } catch (error) {
         console.error('Error fetching unit of measure mappings:', error);
         throw error;
@@ -327,7 +337,7 @@ export const getMappingUnitOfMeasure = async (): Promise<any> => {
 
 export const getMappingRice = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/rice');
+        return await getMapping('rice');
     } catch (error) {
         console.error('Error fetching RICE mappings:', error);
         throw error;
@@ -336,7 +346,7 @@ export const getMappingRice = async (): Promise<any> => {
 
 export const getMappingReportingFrequency = async (): Promise<any> => {
     try {
-        return await requestJson('/api/mappings/reporting-frequency');
+        return await getMapping('reportingFrequency');
     } catch (error) {
         console.error('Error fetching reporting frequency mappings:', error);
         throw error;

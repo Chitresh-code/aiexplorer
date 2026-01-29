@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useNavigate } from "@/lib/router";
+import { setRouteState } from "@/lib/navigation-state";
 import { PlusCircle } from "lucide-react";
-//import { SectionCards } from "@/features/dashboard/components/SectionCards";
 import { GallerySearch } from "@/components/gallery/gallery-search";
 import { GalleryFilters, type GalleryFilterConfig } from "@/components/gallery/gallery-filters";
 import { GalleryResults } from "@/components/gallery/gallery-results";
@@ -37,7 +37,7 @@ const AIGallery = () => {
     aiModels: selectedAiModels,
   };
 
-  const { useCases, filtersData, isLoading, isFiltersLoading } = useGalleryData({
+  const { useCases, filtersData, isLoading, hasLoaded, isFiltersLoading } = useGalleryData({
     activeTab,
     searchText: searchUseCase,
     filters: filterState,
@@ -239,8 +239,14 @@ const AIGallery = () => {
     setSelectedAiModels([]);
   };
 
-  const handleExplore = (useCase: { id: number }) => {
-    navigate(`/gallery/${useCase.id}`, { state: { useCase } });
+  const handleExplore = (useCase: { id: number; title?: string }) => {
+    const targetPath = `/gallery/${useCase.id}`;
+    setRouteState(targetPath, {
+      useCase,
+      useCaseTitle: useCase.title ?? "",
+      sourceScreen: "gallery",
+    });
+    navigate(targetPath, { state: { useCase } });
   };
 
   const showReset = Boolean(
@@ -257,10 +263,6 @@ const AIGallery = () => {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 w-full">
-      {/* <div className="w-full">
-        <SectionCards />
-      </div> */}
-
       <GallerySearch
         activeTab={activeTab}
         value={searchUseCase}
@@ -276,7 +278,7 @@ const AIGallery = () => {
       />
 
       <GalleryResults
-        isLoading={isLoading}
+        isLoading={isLoading || !hasLoaded}
         useCases={useCases.items}
         onReset={handleReset}
         onExplore={handleExplore}

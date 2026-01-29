@@ -3,11 +3,8 @@
 import { useEffect } from "react";
 import { useRouter, useParams, usePathname } from "next/navigation";
 import { X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getRouteState } from "@/lib/navigation-state";
 import { useGalleryDetail } from "@/features/gallery/hooks/useGalleryDetail";
@@ -15,8 +12,7 @@ import type {
   GalleryUseCase,
   GalleryUseCaseListItem,
 } from "@/features/gallery/types";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { InfoSection } from "@/components/use-case-details/InfoSection";
 
 const AIGalleryDetail = () => {
   const router = useRouter();
@@ -94,176 +90,39 @@ const AIGalleryDetail = () => {
       </div>
     );
   }
-  const MarkdownBlock = ({ content }: { content: string }) => {
-  if (!content?.trim()) {
-    return <div className="text-gray-400 italic">No content provided.</div>;
-  }
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        p: ({ children }) => (
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap mb-4 last:mb-0">
-            {children}
-          </p>
-        ),
-        ul: ({ children }) => (
-          <ul className="list-disc pl-5 text-gray-700 leading-relaxed space-y-1 mb-4">
-            {children}
-          </ul>
-        ),
-        ol: ({ children }) => (
-          <ol className="list-decimal pl-5 text-gray-700 leading-relaxed space-y-1 mb-4">
-            {children}
-          </ol>
-        ),
-        li: ({ children }) => <li className="text-gray-700">{children}</li>,
-        strong: ({ children }) => (
-          <strong className="font-semibold text-gray-900">{children}</strong>
-        ),
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  );
-};
   if (!useCase || !hasDetails(useCase)) return null;
 
+  const agentBadgeLabel = useCase.aiModel || useCase.vendorName || "";
+  const noop = () => {};
+
   return (
-    <div className="main-content min-h-[calc(100vh-3.5rem)] justify-center overflow-hidden">
-      <div className="w-full">
-        <div className="w-[95%] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(80vh-150px)]">
-            <div className="lg:col-span-1">
-              <Card
-                className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col"
-                style={{ backgroundColor: useCase.bgColor }}
-              >
-                <CardHeader className="relative h-[72px]" />
-                <CardContent className="pt-2p-8 flex-1">
-                  <div className="space-y-6 h-full">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Use Case:
-                      </h3>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Input
-                          value={useCase.title}
-                          readOnly
-                          className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
-                        />
-                        <Badge
-                          variant="secondary"
-                          className="bg-white/80 text-[#13352C] border-none shadow-sm hover:bg-white font-semibold flex-shrink-0"
-                        >
-                          {useCase.phase}
-                        </Badge>
-                        <Badge
-                          variant="secondary"
-                          className="bg-white/80 text-[#13352C] border-none shadow-sm hover:bg-white font-semibold flex-shrink-0"
-                        >
-                          {useCase.status}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Business Unit:
-                      </h3>
-                      <Input
-                        value={useCase.businessUnit}
-                        readOnly
-                        className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
-                      />
-                    </div>
-                      <div>
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Team:
-                      </h3>
-                      <Input
-                        value={useCase.team || "Undefined"}
-                        readOnly
-                        className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        AI Theme:
-                      </h3>
-                      <div className="text-[#13352C] font-medium text-base whitespace-normal break-words">
-                        {useCase.aiThemes.join(", ")}
-                      </div>
-                    </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                      Primary Contact Person:
-                    </h3>
-                    <Input
-                      value={useCase.primaryContact}
-                      readOnly
-                      className="text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto"
-                    />
-                  </div>
-                                      <div className="pt-4">
-                      <Button 
-                        className="bg-[#D2E247] hover:bg-[#C1D136] text-[#13352C] font-bold px-10 py-2 rounded-lg shadow-sm border-none"
-                      >
-                        Explore
-                      </Button>
-                    </div>
-                </div>
-                </CardContent>
-                
-              </Card>
-            </div>
-
-            <div className="lg:col-span-1">
-              <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col">
-                <CardHeader className="relative">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="absolute top-4 right-4"
-                    onClick={() => router.push("/gallery")}
-                  >
-                    <X size={20} />
-                  </Button>
-                </CardHeader>
-                <CardContent className="pt-6 flex-1">
-                  <div className="space-y-8 h-full">
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Opportunity - What is the idea for which AI is being used?
-                      </CardTitle>
-                      <MarkdownBlock
-                        content={useCase.opportunity}
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Headline - One line Executive Headline
-                      </CardTitle>
-                      <MarkdownBlock
-                        content={useCase.headline}
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                        Business Value - What is the impact of this AI agent?
-                      </CardTitle>
-                      <MarkdownBlock
-                        content={useCase.businessValue}
-                      />
-                    </div>                 
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="main-content min-h-[calc(100vh-3.5rem)] justify-center overflow-hidden relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="absolute top-4 right-6 z-10"
+        onClick={() => router.push("/gallery")}
+      >
+        <X size={20} />
+      </Button>
+      <InfoSection
+        id={useCase.id}
+        isEditing={false}
+        editableTitle={useCase.title}
+        onTitleChange={noop}
+        useCasePhase={useCase.phase}
+        agentBadgeLabel={agentBadgeLabel || undefined}
+        businessUnitName={useCase.businessUnit}
+        teamName={useCase.team}
+        aiThemeNames={useCase.aiThemes ?? []}
+        editableHeadline={useCase.headline}
+        onHeadlineChange={noop}
+        editableOpportunity={useCase.opportunity}
+        onOpportunityChange={noop}
+        editableEvidence={useCase.businessValue || useCase.evidence}
+        onEvidenceChange={noop}
+        editableContactPerson={useCase.primaryContact}
+      />
     </div>
   );
 };

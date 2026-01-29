@@ -34,7 +34,7 @@ import {
     fetchUseCaseMetricsDetails,
     updateUseCaseMetrics,
 } from '@/lib/api';
-import { getMappingMetricCategories, getMappingUnitOfMeasure } from '@/lib/submit-use-case';
+import { getMappings } from '@/lib/submit-use-case';
 import { ParcsCategorySelect } from '@/components/use-case-details/ParcsCategorySelect';
 import { UnitOfMeasurementSelect } from '@/components/use-case-details/UnitOfMeasurementSelect';
 
@@ -141,7 +141,9 @@ const MetricReporting = () => {
         const loadUseCases = async () => {
             try {
                 setIsUseCasesLoading(true);
-                const response = await fetch(`/api/usecases/user?email=${encodeURIComponent(userEmail)}`);
+                const response = await fetch(
+                    `/api/usecases?role=owner&email=${encodeURIComponent(userEmail)}&view=full`,
+                );
                 const data = await response.json().catch(() => null);
                 if (!response.ok) {
                     throw new Error(data?.message || 'Failed to load use cases');
@@ -182,11 +184,10 @@ const MetricReporting = () => {
         let isMounted = true;
         const loadMappings = async () => {
             try {
-                const [metricCategories, unitOfMeasure] = await Promise.all([
-                    getMappingMetricCategories(),
-                    getMappingUnitOfMeasure(),
-                ]);
+                const mappings = await getMappings(["metricCategories", "unitOfMeasure"]);
                 if (!isMounted) return;
+                const metricCategories = mappings.metricCategories;
+                const unitOfMeasure = mappings.unitOfMeasure;
                 const categoryOptions = (metricCategories?.items ?? [])
                     .map((item) => String(item.category ?? '').trim())
                     .filter(Boolean);

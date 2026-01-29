@@ -1,118 +1,119 @@
 import { NextResponse } from "next/server";
-import type { UseCaseQuery } from "@/features/gallery/types";
 import { getSqlPool } from "@/lib/azure-sql";
 import { getUiErrorMessage, logErrorTrace } from "@/lib/error-utils";
 
-const splitValues = (value: string) =>
-  value
-    .split(",")
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-const readValues = (params: URLSearchParams, key: string) =>
-  params
-    .getAll(key)
-    .flatMap((value) => splitValues(value))
-    .filter(Boolean);
-
-const readNumber = (params: URLSearchParams, key: string) => {
-  const raw = params.get(key);
-  if (!raw) return undefined;
-  const value = Number(raw);
-  return Number.isFinite(value) ? value : undefined;
-};
-
-const readSortBy = (params: URLSearchParams): UseCaseQuery["sortBy"] => {
-  const sortBy = params.get("sortBy");
-  const allowed = new Set<UseCaseQuery["sortBy"]>([
-    "id",
-    "title",
-    "phase",
-    "status",
-    "businessUnit",
-    "team",
-    "subTeam",
-    "vendorName",
-    "aiModel",
-    "aiThemes",
-    "personas",
-    "bgColor",
-  ]);
-  if (!sortBy) return undefined;
-  return allowed.has(sortBy as UseCaseQuery["sortBy"])
-    ? (sortBy as UseCaseQuery["sortBy"])
-    : undefined;
-};
-
-const normalize = (value: string) => value.trim().toLowerCase();
-
-const matchesFilter = (value: string, filters: string[]) => {
-  if (!filters.length) return true;
-  const hay = normalize(value);
-  return filters.some((entry) => hay.includes(normalize(entry)));
-};
-
 export const GET = async (request: Request) => {
   const { searchParams } = new URL(request.url);
-  const query: UseCaseQuery = {
-    search: searchParams.get("search") ?? undefined,
-    status: readValues(searchParams, "status"),
-    phase: readValues(searchParams, "phase"),
-    businessUnit: readValues(searchParams, "business_unit"),
-    team: readValues(searchParams, "team"),
-    subTeam: readValues(searchParams, "sub_team"),
-    vendor: readValues(searchParams, "vendor"),
-    persona: readValues(searchParams, "persona"),
-    aiTheme: readValues(searchParams, "ai_theme"),
-    aiModel: readValues(searchParams, "ai_model"),
-    sortBy: readSortBy(searchParams),
-    sortDir: searchParams.get("sortDir") === "desc" ? "desc" : "asc",
-    skip: readNumber(searchParams, "skip"),
-    limit: readNumber(searchParams, "limit"),
-    filterKey: readValues(searchParams, "filterKey"),
-    filterValue: readValues(searchParams, "filterValue"),
-  };
+  const role = searchParams.get("role")?.trim().toLowerCase() ?? "";
+  const email = searchParams.get("email")?.trim() ?? "";
+  const view = searchParams.get("view")?.trim().toLowerCase() || "full";
+
+  if ((role === "owner" || role === "champion") && !email) {
+    return NextResponse.json(
+      { message: "email is required when role is provided." },
+      { status: 400 },
+    );
+  }
 
   try {
     const pool = await getSqlPool();
-    const result = await pool.request().query(`
-      SELECT
-        u.id AS ID,
-        u.title AS Title,
-        pm.Phase AS Phase,
-        sm.StatusName AS Status,
-        bu.teamname AS TeamName,
-        u.subteamname AS SubTeamName,
-        bu.businessunitname AS BusinessUnitName
-      FROM usecases AS u
-      LEFT JOIN phasemapping AS pm ON pm.id = u.phaseid
-      LEFT JOIN statusmapping AS sm ON sm.id = u.statusid
-      LEFT JOIN businessunitmapping AS bu ON bu.id = u.businessunitid
-    `);
+    const result = await pool
+      .request()
+      .input("Role", role || null)
+      .input("Email", email || null)
+      .input("View", view || null)
+      .execute("dbo.GetUseCases");
 
-    const rows = (result.recordset ?? []).map((row) => ({
-      ID: row.ID,
-      Title: row.Title,
-      Phase: row.Phase,
-      Status: row.Status,
-      TeamName: row.TeamName,
-      SubTeamName: row.SubTeamName,
-      BusinessUnitName: row.BusinessUnitName,
-    }));
+    const recordsets = Array.isArray(result.recordsets)
+      ? result.recordsets
+      : [];
+    const rows = (recordsets[0] ?? []) as Array<Record<string, unknown>>;
+    const planRows = (recordsets[1] ?? []) as Array<Record<string, unknown>>;
 
-    const filtered = rows.filter((row) => {
-      if (query.search && !matchesFilter(String(row.Title ?? ""), [query.search])) {
-        return false;
+    const planMap = new Map<number, Array<Record<string, unknown>>>();
+    planRows.forEach((row) => {
+      const useCaseId = Number(row.useCaseId ?? row.usecaseid ?? row.UseCaseId);
+      if (!Number.isFinite(useCaseId)) return;
+      const entry = {
+        phaseId: Number(row.phaseId ?? row.usecasephaseid ?? row.PhaseId),
+        phaseName: String(row.phaseName ?? row.phase ?? row.Phase ?? "").trim(),
+        startDate: row.startDate ?? row.startdate ?? null,
+        endDate: row.endDate ?? row.enddate ?? null,
+      };
+      if (!planMap.has(useCaseId)) {
+        planMap.set(useCaseId, []);
       }
-      if (!matchesFilter(String(row.Status ?? ""), query.status ?? [])) return false;
-      if (!matchesFilter(String(row.Phase ?? ""), query.phase ?? [])) return false;
-      if (!matchesFilter(String(row.BusinessUnitName ?? ""), query.businessUnit ?? [])) return false;
-      if (!matchesFilter(String(row.TeamName ?? ""), query.team ?? [])) return false;
-      if (!matchesFilter(String(row.SubTeamName ?? ""), query.subTeam ?? [])) return false;
-      return true;
+      planMap.get(useCaseId)?.push(entry);
     });
 
-    return NextResponse.json(filtered);
+    const normalized = rows.map((row) => {
+      const id = Number(row.id ?? row.ID);
+      const item = {
+        id: Number.isFinite(id) ? id : row.id ?? row.ID ?? null,
+        businessUnitId: row.businessUnitId ?? row.businessunitid ?? row.BusinessUnitId ?? null,
+        phaseId: row.phaseId ?? row.phaseid ?? row.PhaseId ?? null,
+        statusId: row.statusId ?? row.statusid ?? row.StatusId ?? null,
+        title: String(row.title ?? row.Title ?? "").trim(),
+        headlines: String(row.headlines ?? row.Headlines ?? "").trim(),
+        opportunity: String(row.opportunity ?? row.Opportunity ?? "").trim(),
+        businessValue: String(row.businessValue ?? row.business_value ?? "").trim(),
+        informationUrl: String(row.informationUrl ?? row.informationurl ?? "").trim(),
+        primaryContact: String(row.primaryContact ?? row.primarycontact ?? "").trim(),
+        productChecklist: String(row.productChecklist ?? row.productchecklist ?? "").trim(),
+        eseDependency: String(row.eseDependency ?? row.esedependency ?? "").trim(),
+        businessUnitName: String(row.businessUnitName ?? row.businessunitname ?? "").trim(),
+        teamName: String(row.teamName ?? row.teamname ?? "").trim(),
+        phase: String(row.phase ?? row.Phase ?? "").trim(),
+        statusName: String(row.statusName ?? row.StatusName ?? row.Status ?? "").trim(),
+        statusColor: String(row.statusColor ?? row.StatusColor ?? "").trim(),
+        priority: row.priority ?? row.Priority ?? null,
+        deliveryTimespan: row.deliveryTimespan ?? row.DeliveryTimespan ?? null,
+      };
+
+      if (view === "full") {
+        return {
+          ...item,
+          phasePlan: planMap.get(Number(item.id)) ?? [],
+        };
+      }
+
+      if (view === "list") {
+        return {
+          id: item.id,
+          title: item.title,
+          phase: item.phase,
+          status: item.statusName,
+          teamName: item.teamName,
+          businessUnitName: item.businessUnitName,
+        };
+      }
+
+      // gallery view
+      return {
+        id: item.id,
+        businessUnitId: item.businessUnitId,
+        phaseId: item.phaseId,
+        statusId: item.statusId,
+        title: item.title,
+        headlines: item.headlines,
+        opportunity: item.opportunity,
+        businessValue: item.businessValue,
+        informationUrl: item.informationUrl,
+        primaryContact: item.primaryContact,
+        productChecklist: item.productChecklist,
+        eseDependency: item.eseDependency,
+        businessUnitName: item.businessUnitName,
+        teamName: item.teamName,
+        phase: item.phase,
+        statusName: item.statusName,
+        statusColor: item.statusColor,
+      };
+    });
+
+    return NextResponse.json(
+      { items: normalized },
+      { headers: { "cache-control": "no-store" } },
+    );
   } catch (error) {
     logErrorTrace("Usecases failed", error);
     return NextResponse.json(
@@ -150,22 +151,22 @@ type UseCaseMetricItem = {
 };
 
 type CreateUseCasePayload = {
-  businessUnitId?: number | null;
-  phaseId?: number | null;
-  statusId?: number | null;
+  businessUnitId: number;
+  phaseId: number;
+  statusId: number;
   title: string;
-  headlines?: string;
-  opportunity?: string;
-  businessValue?: string;
+  headlines: string;
+  opportunity: string;
+  businessValue: string;
   subTeamName?: string;
   informationUrl?: string;
-  eseDependency?: string;
+  eseDependency: string;
   primaryContact: string;
   editorEmail: string;
   checklist?: UseCaseChecklistItem[];
-  stakeholders?: UseCaseStakeholder[];
-  plan?: UseCasePlanItem[];
-  metrics?: UseCaseMetricItem[];
+  stakeholders: UseCaseStakeholder[];
+  plan: UseCasePlanItem[];
+  metrics: UseCaseMetricItem[];
 };
 
 const APPROVAL_FLOW_URL =
@@ -194,13 +195,44 @@ export const POST = async (request: Request): Promise<NextResponse> => {
   try {
     const payload = (await request.json()) as CreateUseCasePayload;
     const title = payload.title?.trim();
+    const headlines = payload.headlines?.trim();
+    const opportunity = payload.opportunity?.trim();
+    const businessValue = payload.businessValue?.trim();
+    const eseDependency = payload.eseDependency?.trim();
     const primaryContact = payload.primaryContact?.trim();
     const editorEmail = payload.editorEmail?.trim();
+    const businessUnitId = Number(payload.businessUnitId);
+    const phaseId = Number(payload.phaseId);
+    const statusId = Number(payload.statusId);
+    const stakeholders = Array.isArray(payload.stakeholders) ? payload.stakeholders : [];
+    const plan = Array.isArray(payload.plan) ? payload.plan : [];
+    const metrics = Array.isArray(payload.metrics) ? payload.metrics : [];
 
-    if (!title || !primaryContact || !editorEmail) {
+    if (
+      !title ||
+      !primaryContact ||
+      !editorEmail ||
+      !headlines ||
+      !opportunity ||
+      !businessValue ||
+      !eseDependency ||
+      !Number.isFinite(businessUnitId) ||
+      !Number.isFinite(phaseId) ||
+      !Number.isFinite(statusId)
+    ) {
       return NextResponse.json(
         {
-          message: "title, primaryContact, and editorEmail are required.",
+          message:
+            "title, primaryContact, editorEmail, businessUnitId, phaseId, statusId, headlines, opportunity, businessValue, and eseDependency are required.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (!stakeholders.length || !plan.length || !metrics.length) {
+      return NextResponse.json(
+        {
+          message: "stakeholders, plan, and metrics are required and must be non-empty arrays.",
         },
         { status: 400 },
       );
@@ -210,31 +242,25 @@ export const POST = async (request: Request): Promise<NextResponse> => {
 
     const result = await pool
       .request()
-      .input("BusinessUnitId", payload.businessUnitId ?? null)
-      .input("PhaseId", payload.phaseId ?? null)
-      .input("StatusId", payload.statusId ?? null)
+      .input("BusinessUnitId", businessUnitId)
+      .input("PhaseId", phaseId)
+      .input("StatusId", statusId)
       .input("Title", title)
-      .input("Headlines", payload.headlines ?? null)
-      .input("Opportunity", payload.opportunity ?? null)
-      .input("BusinessValue", payload.businessValue ?? null)
+      .input("Headlines", headlines)
+      .input("Opportunity", opportunity)
+      .input("BusinessValue", businessValue)
       .input("SubTeamName", payload.subTeamName ?? null)
       .input("InformationUrl", payload.informationUrl ?? null)
-      .input("EseDependency", payload.eseDependency ?? null)
+      .input("EseDependency", eseDependency)
       .input("PrimaryContact", primaryContact)
       .input("EditorEmail", editorEmail)
       .input(
         "ChecklistJson",
-        payload.checklist?.length ? JSON.stringify(payload.checklist) : null,
+        Array.isArray(payload.checklist) ? JSON.stringify(payload.checklist) : null,
       )
-      .input(
-        "StakeholdersJson",
-        payload.stakeholders?.length ? JSON.stringify(payload.stakeholders) : null,
-      )
-      .input("PlanJson", payload.plan?.length ? JSON.stringify(payload.plan) : null)
-      .input(
-        "MetricsJson",
-        payload.metrics?.length ? JSON.stringify(payload.metrics) : null,
-      )
+      .input("StakeholdersJson", JSON.stringify(stakeholders))
+      .input("PlanJson", JSON.stringify(plan))
+      .input("MetricsJson", JSON.stringify(metrics))
       .execute("dbo.CreateUseCase");
     const useCaseRecord = result.recordset?.[0] ?? {};
     const useCaseId =

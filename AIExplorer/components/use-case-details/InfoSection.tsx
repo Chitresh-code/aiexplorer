@@ -122,8 +122,8 @@ export const InfoSection = ({
             className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col"
             style={{ backgroundColor: "#c7e7e7" }}
           >
-            <CardContent className="p-8 flex-1">
-              <div className="flex h-full flex-col gap-6">
+            <CardContent className="p-8 flex-1 min-h-0 overflow-y-auto">
+              <div className="flex min-h-0 flex-col gap-6">
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
                     Use Case:
@@ -196,7 +196,7 @@ export const InfoSection = ({
                   </div>
                 </div>
 
-                <div className="mt-auto pt-2">
+                <div className="mt-auto pt-2 flex justify-start">
                   <Button
                     className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-8 rounded-md"
                   >
@@ -210,8 +210,8 @@ export const InfoSection = ({
 
         <div className="lg:col-span-1">
           <Card className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col">
-            <CardContent className="pt-6 flex-1">
-              <div className="space-y-8 h-full">
+            <CardContent className="pt-6 flex-1 min-h-0 overflow-y-auto">
+              <div className="space-y-8">
                 <div>
                   <CardTitle className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
                     Headline - One line Executive Headline

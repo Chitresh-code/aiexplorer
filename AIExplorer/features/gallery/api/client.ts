@@ -165,14 +165,14 @@ export const fetchUseCases = async (
   query: UseCaseQuery,
   signal?: AbortSignal,
 ): Promise<GalleryListResponse> => {
-  const response = await fetch("/api/usecases/gallery", {
+  const response = await fetch("/api/usecases?view=gallery", {
     signal,
   });
   if (!response.ok) {
     throw new Error("Failed to load use cases.");
   }
-  const payload = (await response.json()) as { items?: GalleryDbUseCase[] };
-  const rawItems = payload.items ?? [];
+  const payload = (await response.json()) as { items?: GalleryDbUseCase[] } | GalleryDbUseCase[];
+  const rawItems = Array.isArray(payload) ? payload : payload.items ?? [];
   const mappedItems = rawItems
     .filter((item) => item.id !== null)
     .map(toListItem);
@@ -226,20 +226,27 @@ export const fetchUseCase = async (
 export const fetchFilters = async (
   signal?: AbortSignal,
 ): Promise<GalleryFiltersResponse> => {
-  type MappingResponse<T> = { items: T[] };
+  type MappingResponse<T> = { items?: T[] };
   type BusinessUnitMapping = {
-    businessUnitId?: number | null;
-    businessUnitName: string;
-    teams: string[];
+    id?: number | null;
+    businessUnitName?: string | null;
+    teamName?: string | null;
   };
   type VendorModelMapping = {
-    id: number | null;
-    vendorName: string;
-    productName: string;
-    roleId: number | null;
+    id?: number | null;
+    vendorName?: string | null;
+    productName?: string | null;
   };
-  type NameMapping = { id: number | null; name?: string; frequency?: string };
-  type StatusMapping = { id: number | null; name: string };
+  type NameMapping = { id?: number | null; name?: string; frequency?: string };
+  type StatusMapping = { id?: number | null; name?: string };
+  type ConsolidatedMappings = {
+    businessUnits?: MappingResponse<BusinessUnitMapping>;
+    status?: MappingResponse<StatusMapping>;
+    phases?: MappingResponse<NameMapping>;
+    personas?: MappingResponse<NameMapping>;
+    themes?: MappingResponse<NameMapping>;
+    vendorModels?: MappingResponse<VendorModelMapping>;
+  };
 
   const fetchJson = async <T>(
     url: string,
@@ -251,44 +258,32 @@ export const fetchFilters = async (
     return response.json();
   };
 
-  const [
-    statusResponse,
-    phaseResponse,
-    personaResponse,
-    themeResponse,
-    vendorModelResponse,
-    businessUnitResponse,
-  ] = await Promise.all([
-    fetchJson<StatusMapping>("/api/mappings/status"),
-    fetchJson<NameMapping>("/api/mappings/phases"),
-    fetchJson<NameMapping>("/api/mappings/personas"),
-    fetchJson<NameMapping>("/api/mappings/themes"),
-    fetchJson<VendorModelMapping>("/api/mappings/vendor-models"),
-    fetchJson<BusinessUnitMapping>("/api/mappings/business-units"),
-  ]);
+  const mappings = await fetchJson<ConsolidatedMappings>(
+    "/api/mappings?types=businessUnits,status,phases,personas,themes,vendorModels",
+  );
 
-  const statuses = statusResponse.items
+  const statuses = (mappings.status?.items ?? [])
     .map((item) => item.name?.trim())
     .filter(Boolean)
     .sort() as string[];
 
-  const phases = phaseResponse.items
+  const phases = (mappings.phases?.items ?? [])
     .map((item) => item.name?.trim())
     .filter(Boolean)
     .sort() as string[];
 
-  const personas = personaResponse.items
+  const personas = (mappings.personas?.items ?? [])
     .map((item) => item.name?.trim())
     .filter(Boolean)
     .sort() as string[];
 
-  const aiThemes = themeResponse.items
+  const aiThemes = (mappings.themes?.items ?? [])
     .map((item) => item.name?.trim())
     .filter(Boolean)
     .sort() as string[];
 
   const vendorMap = new Map<string, Set<string>>();
-  vendorModelResponse.items.forEach((item) => {
+  (mappings.vendorModels?.items ?? []).forEach((item) => {
     const vendorName = item.vendorName?.trim();
     const productName = item.productName?.trim();
     if (!vendorName) return;
@@ -306,16 +301,25 @@ export const fetchFilters = async (
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const businessUnits = businessUnitResponse.items
-    .map((unit) => ({
-      name: unit.businessUnitName?.trim(),
-      teams: (unit.teams ?? [])
-        .map((team) => team?.trim())
-        .filter(Boolean)
-        .sort() as string[],
+  const unitMap = new Map<string, Set<string>>();
+  (mappings.businessUnits?.items ?? []).forEach((item) => {
+    const unitName = String(item.businessUnitName ?? "").trim();
+    const teamName = String(item.teamName ?? "").trim();
+    if (!unitName) return;
+    if (!unitMap.has(unitName)) {
+      unitMap.set(unitName, new Set());
+    }
+    if (teamName) {
+      unitMap.get(unitName)?.add(teamName);
+    }
+  });
+
+  const businessUnits = Array.from(unitMap.entries())
+    .map(([name, teams]) => ({
+      name,
+      teams: Array.from(teams).sort(),
     }))
-    .filter((unit) => unit.name)
-    .sort((a, b) => a.name!.localeCompare(b.name!)) as GalleryFiltersResponse["businessUnits"];
+    .sort((a, b) => a.name.localeCompare(b.name)) as GalleryFiltersResponse["businessUnits"];
 
   return {
     statuses,

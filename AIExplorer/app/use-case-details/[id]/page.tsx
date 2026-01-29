@@ -31,20 +31,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { fetchUseCaseMetricsDetails, updateUseCaseInfo, updateUseCaseMetrics } from '@/lib/api';
 
-import {
-    getMappingMetricCategories,
-    getMappingPhases,
-    getMappingImplementationTimespans,
-    getMappingReportingFrequency,
-    getMappingRice,
-    getMappingRoles,
-    getMappingStatus,
-    getMappingThemes,
-    getMappingUnitOfMeasure,
-    getMappingPersonas,
-    getMappingVendorModels,
-    getMappingKnowledgeSources,
-} from '@/lib/submit-use-case';
+import { getMappings } from '@/lib/submit-use-case';
 import { useReactTable, getCoreRowModel, type ColumnDef } from '@tanstack/react-table';
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -600,31 +587,32 @@ const UseCaseDetails = () => {
     useEffect(() => {
         const fetchDropdownData = async () => {
             try {
-                const [
-                    themes,
-                    statuses,
-                    metricCategories,
-                    unitOfMeasure,
-                    phases,
-                    personas,
-                    vendorModels,
-                    knowledgeSources,
-                    riceMappings,
-                    timespans,
-                    reportingFrequencies,
-                ] = await Promise.all([
-                    getMappingThemes(),
-                    getMappingStatus(),
-                    getMappingMetricCategories(),
-                    getMappingUnitOfMeasure(),
-                    getMappingPhases(),
-                    getMappingPersonas(),
-                    getMappingVendorModels(),
-                    getMappingKnowledgeSources(),
-                    getMappingRice(),
-                    getMappingImplementationTimespans(),
-                    getMappingReportingFrequency(),
+                const mappings = await getMappings([
+                    "themes",
+                    "status",
+                    "metricCategories",
+                    "unitOfMeasure",
+                    "phases",
+                    "personas",
+                    "vendorModels",
+                    "knowledgeSources",
+                    "rice",
+                    "implementationTimespans",
+                    "reportingFrequency",
+                    "roles",
                 ]);
+                const themes = mappings.themes;
+                const statuses = mappings.status;
+                const metricCategories = mappings.metricCategories;
+                const unitOfMeasure = mappings.unitOfMeasure;
+                const phases = mappings.phases;
+                const personas = mappings.personas;
+                const vendorModels = mappings.vendorModels;
+                const knowledgeSources = mappings.knowledgeSources;
+                const riceMappings = mappings.rice;
+                const timespans = mappings.implementationTimespans;
+                const reportingFrequencies = mappings.reportingFrequency;
+                const roles = mappings.roles;
                 setThemeOptions(
                     (themes?.items ?? [])
                         .filter((item: any) => item.id && item.name)
@@ -798,6 +786,17 @@ const UseCaseDetails = () => {
                     });
                     return next;
                 });
+
+                if (roleOptions.length === 0 && Array.isArray(roles?.items)) {
+                    const items = roles.items
+                        .map((item: any) => ({
+                            id: Number(item.id),
+                            name: String(item.name ?? "").trim(),
+                            roleType: String(item.roleType ?? "").trim(),
+                        }))
+                        .filter((item: RoleOption) => Number.isFinite(item.id) && item.name);
+                    setRoleOptions(items);
+                }
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
             }
@@ -835,9 +834,9 @@ const UseCaseDetails = () => {
 
         const fetchRoles = async () => {
             try {
-                const data = await getMappingRoles();
+                const data = await getMappings(["roles"]);
                 if (!isMounted) return;
-                const items = (data?.items ?? [])
+                const items = (data.roles?.items ?? [])
                     .map((item: any) => ({
                         id: Number(item.id),
                         name: String(item.name ?? "").trim(),
