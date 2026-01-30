@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
-import { Plus, LayoutGrid, List, Search } from 'lucide-react';
+import { Plus, PlusCircle, LayoutGrid, List, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +24,8 @@ import {
     getMappings,
 } from '@/lib/submit-use-case';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FilterCombobox } from "@/components/my-use-cases/filter-combobox";
+import { FilterCombobox } from "@/components/shared/filter-combobox";
+import type { UseCaseSummary } from "@/lib/types/usecase";
 
 const UseCaseSkeleton = () => (
     <div className="space-y-4">
@@ -62,42 +63,6 @@ type TimespanMapping = {
     id?: number | string;
     timespan?: string;
     name?: string;
-};
-
-type BackendUseCase = {
-    id?: number | string;
-    ID?: number | string;
-    title?: string;
-    Title?: string;
-    UseCase?: string;
-    phase?: string;
-    Phase?: string;
-    phaseId?: number | string | null;
-    PhaseId?: number | string | null;
-    phaseid?: number | string | null;
-    statusName?: string;
-    Status?: string;
-    statusColor?: string;
-    StatusColor?: string;
-    businessUnitName?: string;
-    BusinessUnit?: string;
-    BusinessUnitName?: string;
-    teamName?: string;
-    TeamName?: string;
-    deliveryTimespan?: string;
-    Delivery?: string;
-    priority?: number | string | null;
-    Priority?: number | string | null;
-    currentPhaseStartDate?: string;
-    CurrentPhaseStartDate?: string;
-    currentPhaseEndDate?: string;
-    CurrentPhaseEndDate?: string;
-    phasePlan?: Array<{
-        phaseId?: number | string | null;
-        phaseName?: string | null;
-        startDate?: string | null;
-        endDate?: string | null;
-    }> | string | null;
 };
 
 type NormalizedUseCase = {
@@ -215,38 +180,20 @@ const MyUseCases = () => {
             return `${month}-${day}-${year}`;
         };
 
-        return backendUseCases.flatMap((raw) => {
-            const uc = raw as BackendUseCase;
-            const legacy = uc as Record<string, unknown>;
-            const phaseName = String(uc.phase || uc.Phase || '').trim();
-            const phaseId = Number(uc.phaseId ?? uc.PhaseId ?? uc.phaseid);
-            const status = String(uc.statusName || uc.Status || 'In Progress').trim();
-            const rawPlan = uc.phasePlan as unknown;
-            const parsedPlan = Array.isArray(rawPlan)
-                ? rawPlan
-                : typeof rawPlan === "string"
-                    ? (() => {
-                        try {
-                            const parsed = JSON.parse(rawPlan);
-                            return Array.isArray(parsed) ? parsed : [];
-                        } catch {
-                            return [];
-                        }
-                    })()
-                    : [];
+        return backendUseCases.flatMap((uc: UseCaseSummary) => {
+            const phaseName = String(uc.phase ?? '').trim();
+            const phaseId = Number(uc.phaseId ?? NaN);
+            const status = String(uc.statusName ?? 'In Progress').trim();
+            const parsedPlan = Array.isArray(uc.phasePlan) ? uc.phasePlan : [];
             const phaseEntry = parsedPlan.find(
-                (entry: any) => Number(entry?.phaseId) === phaseId,
+                (entry) => Number(entry?.phaseId) === phaseId,
             );
             const startRaw = String(
                 phaseEntry?.startDate ??
-                uc.currentPhaseStartDate ??
-                uc.CurrentPhaseStartDate ??
                 "",
             );
             const endRaw = String(
                 phaseEntry?.endDate ??
-                uc.currentPhaseEndDate ??
-                uc.CurrentPhaseEndDate ??
                 "",
             );
             const start = formatDate(startRaw);
@@ -271,18 +218,18 @@ const MyUseCases = () => {
                 phaseValues[key] = currentPhaseDisplay;
             });
 
-            const rawId = uc.id ?? uc.ID;
+            const rawId = uc.id;
             if (rawId == null) return [];
 
             return [{
                 id: String(rawId),
-                title: uc.title || uc.Title || uc.UseCase || 'Untitled',
-                delivery: uc.deliveryTimespan || uc.Delivery || '',
-                priority: Number(uc.priority ?? uc.Priority) || null,
+                title: uc.title || 'Untitled',
+                delivery: uc.deliveryTimespan || '',
+                priority: Number(uc.priority) || null,
                 status,
-                statusColor: uc.statusColor || uc.StatusColor || '',
-                teamName: uc.teamName || uc.TeamName || String(legacy["Team Name"] ?? '') || '',
-                businessUnit: uc.businessUnitName || uc.BusinessUnit || uc.BusinessUnitName || String(legacy["Business Unit"] ?? '') || '',
+                statusColor: uc.statusColor || '',
+                teamName: uc.teamName || '',
+                businessUnit: uc.businessUnitName || '',
                 phase: phaseName,
                 phaseId: Number.isFinite(phaseId) ? phaseId : null,
                 currentPhaseDisplay,
@@ -381,24 +328,36 @@ const MyUseCases = () => {
                             </div>
 
                             <FilterCombobox
-                                label="Phase"
+                                multiple
+                                placeholder="Phase"
                                 options={[{ label: "All Phases", value: "all" }, ...phaseOptions]}
                                 value={searchPhase}
                                 onChange={setSearchPhase}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
                             <FilterCombobox
-                                label="Status"
+                                multiple
+                                placeholder="Status"
                                 options={[{ label: "All Statuses", value: "all" }, ...statusOptions]}
                                 value={searchStatus}
                                 onChange={setSearchStatus}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
                             <FilterCombobox
-                                label="Business Unit"
+                                multiple
+                                placeholder="Business Unit"
                                 options={businessUnitOptions}
                                 value={searchBusinessUnit}
                                 onChange={setSearchBusinessUnit}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
                             {(searchUseCase || searchPhase.length > 0 || searchStatus.length > 0 || searchBusinessUnit.length > 0) && (

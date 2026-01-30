@@ -42,13 +42,13 @@ const AIGalleryDetail = () => {
 
   useEffect(() => {
     if (!Number.isFinite(id)) {
-      router.push("/gallery");
+      router.push("/");
     }
   }, [id, router]);
 
   useEffect(() => {
     if (!isLoading && !useCase) {
-      router.push("/gallery");
+      router.push("/");
     }
   }, [isLoading, router, useCase]);
 
@@ -101,7 +101,7 @@ const AIGalleryDetail = () => {
         variant="ghost"
         size="sm"
         className="absolute top-4 right-6 z-10"
-        onClick={() => router.push("/gallery")}
+        onClick={() => router.push("/")}
       >
         <X size={20} />
       </Button>

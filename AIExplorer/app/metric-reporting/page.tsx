@@ -34,8 +34,7 @@ import {
     updateUseCaseMetrics,
 } from '@/lib/api';
 import { getMappings } from '@/lib/submit-use-case';
-import { ParcsCategorySelect } from '@/components/use-case-details/ParcsCategorySelect';
-import { UnitOfMeasurementSelect } from '@/components/use-case-details/UnitOfMeasurementSelect';
+import { FilterCombobox } from '@/components/shared/filter-combobox';
 
 const metricColumnSizes = {
     primarySuccessValue: 260,
@@ -131,6 +130,15 @@ const MetricReporting = () => {
     const [selectedMetricIdsForReporting, setSelectedMetricIdsForReporting] = useState([]);
 
     const metricsSnapshotRef = useRef(null);
+
+    const metricCategorySelectOptions = useMemo(
+        () => metricCategoryOptions.map((option) => ({ label: option, value: option })),
+        [metricCategoryOptions],
+    );
+    const unitOfMeasureSelectOptions = useMemo(
+        () => unitOfMeasureOptions.map((option) => ({ label: option, value: option })),
+        [unitOfMeasureOptions],
+    );
 
     const userEmail = accounts?.[0]?.username ?? '';
 
@@ -839,13 +847,16 @@ const MetricReporting = () => {
                                                 </TableCell>
                                                 <TableCell style={{ width: metricColumnSizes.parcsCategory }}>
                                                     {isEditing ? (
-                                                        <ParcsCategorySelect
+                                                        <FilterCombobox
                                                             value={metric.parcsCategory || ''}
-                                                            onSelect={(val) =>
+                                                            onChange={(val) =>
                                                                 handleChangeMetric(metric.id, 'parcsCategory', val)
                                                             }
-                                                            options={metricCategoryOptions}
+                                                            options={metricCategorySelectOptions}
+                                                            placeholder="Select"
+                                                            showBadges={false}
                                                             className="metric-select"
+                                                            buttonClassName="h-9 px-2 text-xs"
                                                         />
                                                     ) : (
                                                         <span className="text-sm px-2 whitespace-normal break-words">
@@ -855,13 +866,16 @@ const MetricReporting = () => {
                                                 </TableCell>
                                                 <TableCell style={{ width: metricColumnSizes.unitOfMeasurement }}>
                                                     {isEditing ? (
-                                                        <UnitOfMeasurementSelect
+                                                        <FilterCombobox
                                                             value={metric.unitOfMeasurement || ''}
-                                                            onSelect={(val) =>
+                                                            onChange={(val) =>
                                                                 handleChangeMetric(metric.id, 'unitOfMeasurement', val)
                                                             }
-                                                            options={unitOfMeasureOptions}
+                                                            options={unitOfMeasureSelectOptions}
+                                                            placeholder="Select"
+                                                            showBadges={false}
                                                             className="metric-select"
+                                                            buttonClassName="h-9 px-2 text-xs"
                                                         />
                                                     ) : (
                                                         <span className="text-sm px-2 whitespace-normal break-words">

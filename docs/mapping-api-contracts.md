@@ -1,5 +1,8 @@
 # Mapping APIs and Filter Replacement
 
+> Note: Mapping endpoints are now consolidated under `/api/mappings?types=...`.  
+> This document reflects the legacy per-type endpoints for historical reference.
+
 Goal: Replace the single `/api/usecases/filters` endpoint with dedicated mapping endpoints backed by Azure SQL. The frontend should build filter options by calling the mapping endpoints it needs.
 
 Source of truth: `docs/Aihub.xlsx` (mapping sheets).

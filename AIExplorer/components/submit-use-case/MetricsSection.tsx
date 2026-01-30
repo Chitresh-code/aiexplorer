@@ -10,8 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { MetricDatePicker } from "@/components/submit-use-case/MetricDatePicker";
-import { ParcsCategorySelect } from "@/components/submit-use-case/ParcsCategorySelect";
-import { UnitOfMeasurementSelect } from "@/components/submit-use-case/UnitOfMeasurementSelect";
+import { FilterCombobox } from "@/components/shared/filter-combobox";
 
 type Metric = {
     id: number;
@@ -75,7 +74,17 @@ export const MetricsSection = ({
     onOpenMetricDateDialog,
     onAcceptSuggestions = () => {},
     onRejectSuggestions = () => {},
-}: MetricsSectionProps) => (
+}: MetricsSectionProps) => {
+    const metricCategoryOptions = metricCategories.map((option) => ({
+        label: option,
+        value: option,
+    }));
+    const unitOfMeasurementSelectOptions = unitOfMeasurementOptions.map((option) => ({
+        label: option,
+        value: option,
+    }));
+
+    return (
     <div className="space-y-6">
         <div className="mb-8 p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
             <div className="flex items-center justify-between mb-6">
@@ -156,11 +165,14 @@ export const MetricsSection = ({
                                             {metric.isSubmitted ? (
                                                 <span className="text-sm px-2">{metric.parcsCategory}</span>
                                             ) : (
-                                                <ParcsCategorySelect
+                                                <FilterCombobox
                                                     value={metric.parcsCategory || ""}
-                                                    onSelect={(val) => onChangeMetric(metric.id, "parcsCategory", val)}
-                                                    options={metricCategories}
+                                                    onChange={(val) => onChangeMetric(metric.id, "parcsCategory", val)}
+                                                    options={metricCategoryOptions}
+                                                    placeholder="Select"
+                                                    showBadges={false}
                                                     className="metric-select"
+                                                    buttonClassName="h-9 px-2 text-xs"
                                                 />
                                             )}
                                         </TableCell>
@@ -168,13 +180,14 @@ export const MetricsSection = ({
                                             {metric.isSubmitted ? (
                                                 <span className="text-sm px-2">{metric.unitOfMeasurement}</span>
                                             ) : (
-                                                <UnitOfMeasurementSelect
+                                                <FilterCombobox
                                                     value={metric.unitOfMeasurement || ""}
-                                                    onSelect={(val) =>
-                                                        onChangeMetric(metric.id, "unitOfMeasurement", val)
-                                                    }
-                                                    options={unitOfMeasurementOptions}
+                                                    onChange={(val) => onChangeMetric(metric.id, "unitOfMeasurement", val)}
+                                                    options={unitOfMeasurementSelectOptions}
+                                                    placeholder="Select"
+                                                    showBadges={false}
                                                     className="metric-select"
+                                                    buttonClassName="h-9 px-2 text-xs"
                                                 />
                                             )}
                                         </TableCell>
@@ -275,3 +288,4 @@ export const MetricsSection = ({
         </div>
     </div>
 );
+};

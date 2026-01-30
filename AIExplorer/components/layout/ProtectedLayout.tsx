@@ -39,10 +39,11 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
 
   const breadcrumbItems = useMemo(() => {
     const segments = pathname.split('/').filter(Boolean);
+    const homeHref = '/';
     if (segments.length === 0) {
-      return [{ href: '/', label: 'Home', isCurrent: true }];
+      return [{ href: homeHref, label: 'Home', isCurrent: true }];
     }
-    const items = [{ href: '/', label: 'Home', isCurrent: false }];
+    const items = [{ href: homeHref, label: 'Home', isCurrent: false }];
     let accumulatedPath = '';
     const routeLabels: Record<string, string> = {
       'champion': 'AI Champion - Use Cases',
@@ -126,7 +127,7 @@ export function ProtectedLayout({ children }: { children: ReactNode }) {
 
       if (isGalleryDetailsPage && useCaseTitle) {
         items.push({
-          href: accumulatedPath || '/gallery',
+          href: '/',
           label: routeLabels[segment] || 'AI Gallery',
           isCurrent: false,
         });

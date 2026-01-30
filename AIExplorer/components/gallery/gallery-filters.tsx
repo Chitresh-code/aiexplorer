@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import type { FilterComboboxProps } from "@/components/gallery/filters/filter-combobox";
-import { FilterCombobox } from "@/components/gallery/filters/filter-combobox";
+import type { FilterComboboxProps } from "@/components/shared/filter-combobox";
+import { FilterCombobox } from "@/components/shared/filter-combobox";
 
 export type GalleryFilterConfig = FilterComboboxProps & { id: string };
 

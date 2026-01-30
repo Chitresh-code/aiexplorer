@@ -7,8 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ParcsCategorySelect } from "@/components/use-case-details/ParcsCategorySelect";
-import { UnitOfMeasurementSelect } from "@/components/use-case-details/UnitOfMeasurementSelect";
+import { FilterCombobox } from "@/components/shared/filter-combobox";
 import { cn } from "@/lib/utils";
 import { Plus, History, Trash2, Calendar as CalendarIcon } from "lucide-react";
 import { flexRender, type Table as TableType } from "@tanstack/react-table";
@@ -155,6 +154,15 @@ export const MetricsSection = ({
   onOpenReportMetric,
   onSaveReportedMetrics,
 }: MetricsSectionProps) => {
+  const metricCategoryOptions = useMemo(
+    () => metricCategories.map((option) => ({ label: option, value: option })),
+    [metricCategories],
+  );
+  const unitOfMeasurementSelectOptions = useMemo(
+    () => unitOfMeasurementOptions.map((option) => ({ label: option, value: option })),
+    [unitOfMeasurementOptions],
+  );
+
   return (
     <div className="w-[95%] mx-auto">
       <div className="mb-8 p-6 bg-white rounded-xl ring-1 ring-gray-200 shadow-sm">
@@ -216,19 +224,25 @@ export const MetricsSection = ({
                           />
                         </TableCell>
                         <TableCell style={{ width: metricColumnSizes.parcsCategory }}>
-                          <ParcsCategorySelect
+                          <FilterCombobox
                             value={metric.parcsCategory || ""}
-                            onSelect={(val) => onChangeMetric?.(metric.id, "parcsCategory", val)}
-                            options={metricCategories}
+                            onChange={(val) => onChangeMetric?.(metric.id, "parcsCategory", val)}
+                            options={metricCategoryOptions}
+                            placeholder="Select"
+                            showBadges={false}
                             className="metric-select"
+                            buttonClassName="h-9 px-2 text-xs"
                           />
                         </TableCell>
                         <TableCell style={{ width: metricColumnSizes.unitOfMeasurement }}>
-                          <UnitOfMeasurementSelect
+                          <FilterCombobox
                             value={metric.unitOfMeasurement || ""}
-                            onSelect={(val) => onChangeMetric?.(metric.id, "unitOfMeasurement", val)}
-                            options={unitOfMeasurementOptions}
+                            onChange={(val) => onChangeMetric?.(metric.id, "unitOfMeasurement", val)}
+                            options={unitOfMeasurementSelectOptions}
+                            placeholder="Select"
+                            showBadges={false}
                             className="metric-select"
+                            buttonClassName="h-9 px-2 text-xs"
                           />
                         </TableCell>
                         <TableCell style={{ width: metricColumnSizes.baselineValue }}>

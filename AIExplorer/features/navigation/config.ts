@@ -14,7 +14,7 @@ export type NavItemConfig = {
 };
 
 export const NAV_ITEMS: NavItemConfig[] = [
-  { id: "gallery", label: "AI Gallery", path: "/gallery", icon: "gallery" },
+  { id: "gallery", label: "AI Gallery", path: "/", icon: "gallery" },
   {
     id: "submit-use-case",
     label: "Submit a Use Case",

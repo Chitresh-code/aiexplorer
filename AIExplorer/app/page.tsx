@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation';
+"use client";
+
+import GalleryPage from "@/components/pages/GalleryPage";
 
 export default function HomePage() {
-  redirect('/gallery');
+  return <GalleryPage />;
 }

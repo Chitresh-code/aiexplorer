@@ -1,29 +1,26 @@
 'use client';
 
 import { useCallback, useEffect, useState } from "react";
+import { normalizeUseCaseDetail } from "@/lib/mappers/usecase";
+import {
+  normalizeChecklistItems,
+  normalizeMetricItems,
+  normalizePlanItems,
+  normalizeReportedMetricItems,
+  normalizeStakeholderItems,
+  normalizeUpdateItems,
+} from "@/lib/mappers/usecase-details";
+import type { UseCaseDetail as NormalizedUseCaseDetail } from "@/lib/types/usecase";
+import type {
+  ChecklistItem,
+  MetricItem,
+  PlanItem,
+  ReportedMetricItem,
+  StakeholderItem,
+  UpdateItem,
+} from "@/lib/types/usecase-details";
 
-export type UseCaseDetail = {
-  id?: number;
-  title?: string;
-  headlines?: string;
-  opportunity?: string;
-  businessValue?: string;
-  subteamname?: string;
-  informationurl?: string;
-  modified?: string;
-  created?: string;
-  primarycontact?: string;
-  editor_email?: string;
-  businessunitid?: number;
-  businessUnitName?: string;
-  teamName?: string;
-  phaseid?: number;
-  phase?: string;
-  phaseStage?: string;
-  statusid?: number;
-  statusName?: string;
-  statusColor?: string;
-};
+export type UseCaseDetail = NormalizedUseCaseDetail;
 
 export type AgentLibraryItem = {
   id?: number;
@@ -59,12 +56,12 @@ type UseCaseDetailsResponse = {
   agentLibrary?: AgentLibraryItem[];
   personas?: PersonaItem[];
   themes?: ThemeItem[];
-  plan?: Record<string, unknown>[];
+  plan?: PlanItem[];
   prioritize?: Record<string, unknown> | null;
-  metrics?: { items?: Record<string, unknown>[]; reported?: Record<string, unknown>[] };
-  stakeholders?: Record<string, unknown>[];
-  updates?: Record<string, unknown>[];
-  checklist?: Record<string, unknown>[];
+  metrics?: { items?: MetricItem[]; reported?: ReportedMetricItem[] };
+  stakeholders?: StakeholderItem[];
+  updates?: UpdateItem[];
+  checklist?: ChecklistItem[];
 };
 
 type UseCaseDetailsOptions = {
@@ -113,7 +110,44 @@ export const useUseCaseDetails = (
         throw new Error(details || "Failed to load use case details.");
       }
       const payload = (await response.json()) as UseCaseDetailsResponse;
-      setData(payload ?? null);
+      const normalizedUseCase = payload?.useCase
+        ? normalizeUseCaseDetail(payload.useCase as Record<string, unknown>)
+        : null;
+      const normalizedPlan = normalizePlanItems(
+        (payload?.plan ?? []) as Record<string, unknown>[],
+      );
+      const normalizedStakeholders = normalizeStakeholderItems(
+        (payload?.stakeholders ?? []) as Record<string, unknown>[],
+      );
+      const normalizedUpdates = normalizeUpdateItems(
+        (payload?.updates ?? []) as Record<string, unknown>[],
+      );
+      const normalizedChecklist = normalizeChecklistItems(
+        (payload?.checklist ?? []) as Record<string, unknown>[],
+      );
+      const normalizedMetrics = payload?.metrics
+        ? {
+            items: normalizeMetricItems(
+              (payload.metrics.items ?? []) as Record<string, unknown>[],
+            ),
+            reported: normalizeReportedMetricItems(
+              (payload.metrics.reported ?? []) as Record<string, unknown>[],
+            ),
+          }
+        : undefined;
+      setData(
+        payload
+          ? {
+              ...payload,
+              useCase: normalizedUseCase ?? payload.useCase,
+              plan: normalizedPlan,
+              stakeholders: normalizedStakeholders,
+              updates: normalizedUpdates,
+              checklist: normalizedChecklist,
+              metrics: normalizedMetrics,
+            }
+          : null,
+      );
       setError(null);
     } catch (err) {
       console.error("Failed to load use case details", err);

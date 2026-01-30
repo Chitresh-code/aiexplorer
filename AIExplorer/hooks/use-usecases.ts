@@ -3,25 +3,18 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchUseCases } from '@/lib/api';
-
-export interface UseCaseRecord {
-  ID: number;
-  UseCase?: string;
-  Title?: string;
-  Phase?: string;
-  Status?: string;
-  [key: string]: unknown;
-}
+import { normalizeUseCaseSummary } from "@/lib/mappers/usecase";
+import type { UseCaseSummary } from "@/lib/types/usecase";
 
 interface UseCasesHookState {
-  useCases: UseCaseRecord[];
+  useCases: UseCaseSummary[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
 }
 
 export const useUseCases = (options?: { email?: string }): UseCasesHookState => {
-  const [useCases, setUseCases] = useState<UseCaseRecord[]>([]);
+  const [useCases, setUseCases] = useState<UseCaseSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,11 +36,22 @@ export const useUseCases = (options?: { email?: string }): UseCasesHookState => 
           throw new Error(details || "Failed to load user use cases.");
         }
         const data = await response.json();
-        const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-        setUseCases(items);
+        const items = Array.isArray(data?.items)
+          ? (data.items as Record<string, unknown>[])
+          : Array.isArray(data)
+            ? (data as Record<string, unknown>[])
+            : [];
+        const normalized = items
+          .map((item: Record<string, unknown>) => normalizeUseCaseSummary(item))
+          .filter(Boolean) as UseCaseSummary[];
+        setUseCases(normalized);
       } else {
         const data = await fetchUseCases();
-        setUseCases(Array.isArray(data) ? data : []);
+        const items = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+        const normalized = items
+          .map((item: Record<string, unknown>) => normalizeUseCaseSummary(item))
+          .filter(Boolean) as UseCaseSummary[];
+        setUseCases(normalized);
       }
       setError(null);
     } catch (err) {

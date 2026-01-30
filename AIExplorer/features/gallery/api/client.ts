@@ -5,26 +5,8 @@ import type {
   GalleryUseCaseListItem,
   UseCaseQuery,
 } from "@/features/gallery/types";
-
-type GalleryDbUseCase = {
-  id: number | null;
-  businessUnitId: number | null;
-  phaseId: number | null;
-  statusId: number | null;
-  title: string;
-  headlines: string;
-  opportunity: string;
-  businessValue: string;
-  informationUrl: string;
-  primaryContact: string;
-  productChecklist: string;
-  eseDependency: string;
-  businessUnitName: string;
-  teamName: string;
-  phase: string;
-  statusName: string;
-  statusColor: string;
-};
+import type { UseCaseDetail, UseCaseSummary } from "@/lib/types/usecase";
+import { normalizeUseCaseDetail, normalizeUseCaseSummary } from "@/lib/mappers/usecase";
 
 const statusColorMap: Record<string, string> = {
   green: "#E3F4E7",
@@ -52,7 +34,7 @@ const stringMatches = (haystack: string, needles: string[]) => {
   return needles.some((needle) => hay.includes(normalize(needle)));
 };
 
-const applyFilters = (
+export const applyGalleryFilters = (
   items: GalleryUseCaseListItem[],
   query: UseCaseQuery,
 ): GalleryUseCaseListItem[] => {
@@ -82,7 +64,7 @@ const applyFilters = (
   });
 };
 
-const sortItems = (
+export const sortGalleryItems = (
   items: GalleryUseCaseListItem[],
   sortBy?: keyof GalleryUseCaseListItem,
   sortDir: "asc" | "desc" = "asc",
@@ -96,8 +78,8 @@ const sortItems = (
   });
 };
 
-const toListItem = (item: GalleryDbUseCase): GalleryUseCaseListItem => ({
-  id: item.id ?? 0,
+const toListItem = (item: UseCaseSummary): GalleryUseCaseListItem => ({
+  id: item.id,
   title: item.title ?? "",
   phase: item.phase ?? "",
   status: item.statusName ?? "",
@@ -111,8 +93,8 @@ const toListItem = (item: GalleryDbUseCase): GalleryUseCaseListItem => ({
   bgColor: resolveStatusColor(item.statusColor),
 });
 
-const toDetailItem = (item: GalleryDbUseCase): GalleryUseCase => ({
-  id: item.id ?? 0,
+const toDetailItem = (item: UseCaseDetail): GalleryUseCase => ({
+  id: item.id,
   title: item.title ?? "",
   phase: item.phase ?? "",
   status: item.statusName ?? "",
@@ -171,13 +153,14 @@ export const fetchUseCases = async (
   if (!response.ok) {
     throw new Error("Failed to load use cases.");
   }
-  const payload = (await response.json()) as { items?: GalleryDbUseCase[] } | GalleryDbUseCase[];
+  const payload = (await response.json()) as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
   const rawItems = Array.isArray(payload) ? payload : payload.items ?? [];
-  const mappedItems = rawItems
-    .filter((item) => item.id !== null)
-    .map(toListItem);
-  const filtered = applyFilters(mappedItems, query);
-  const sorted = sortItems(filtered, query.sortBy, query.sortDir);
+  const normalizedItems = rawItems
+    .map((item) => normalizeUseCaseSummary(item as Record<string, unknown>))
+    .filter(Boolean) as UseCaseSummary[];
+  const mappedItems = normalizedItems.map(toListItem);
+  const filtered = applyGalleryFilters(mappedItems, query);
+  const sorted = sortGalleryItems(filtered, query.sortBy, query.sortDir);
   const skip = query.skip ?? 0;
   const limit = query.limit ?? sorted.length;
   return {
@@ -200,29 +183,20 @@ export const fetchUseCase = async (
   }
   
   const payload = await response.json();
-  const item = payload.useCase; // Extract the core use case object
+  const rawUseCase = payload.useCase ?? {};
+  const normalizedUseCase = normalizeUseCaseDetail(rawUseCase) ?? {
+    id,
+    title: "",
+    phase: "",
+    statusName: "",
+    businessUnitName: "",
+    teamName: "",
+  };
   
-  // 2. Map everything including themes and personas when available
   return {
-    ...item,
-    id: Number(item.id),
-    title: item.title || "",
-    phase: item.phase || "",
-    status: item.statusName || "",
-    businessUnit: item.businessUnitName || "",
-    team: item.teamName || "",
-    subTeam: "",
-    vendorName: "",
-    aiModel: item.aiModel || "",
-    // Map themes and personas from the specific arrays in the payload
+    ...toDetailItem(normalizedUseCase),
     aiThemes: payload.themes?.map((t: any) => t.themeName) || [],
     personas: payload.personas?.map((p: any) => p.personaName) || [],
-    bgColor: resolveStatusColor(item.statusColor),
-    headline: item.headlines || "",
-    opportunity: item.opportunity || "",
-    evidence: item.businessValue || "",
-    primaryContact: item.primarycontact || "", // Note: Use lowercase 'primarycontact' to match your API output
-    businessValue: item.business_value || "", // Note: Use 'business_value' to match your API output
   };
 };
 

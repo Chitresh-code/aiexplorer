@@ -15,8 +15,7 @@ import { MetricsSection } from "@/components/use-case-details/MetricsSection";
 import type { MetricsRow, ReportedHistoryRow } from "@/components/use-case-details/MetricsSection";
 import { ActionsSection } from "@/components/use-case-details/ActionsSection";
 import { ReprioritizeSection } from "@/components/use-case-details/ReprioritizeSection";
-import { ParcsCategorySelect } from "@/components/use-case-details/ParcsCategorySelect";
-import { UnitOfMeasurementSelect } from "@/components/use-case-details/UnitOfMeasurementSelect";
+import { FilterCombobox } from "@/components/shared/filter-combobox";
 import { ChecklistSection } from "@/components/submit-use-case/ChecklistSection";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +26,14 @@ import { useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import { Calendar as CalendarIcon, CheckSquare, Pencil, Trash2 } from 'lucide-react';
 import { useUseCaseDetails, type AgentLibraryItem } from '@/hooks/use-usecase-details';
+import type {
+    ChecklistItem,
+    MetricItem,
+    PlanItem,
+    ReportedMetricItem,
+    StakeholderItem,
+    UpdateItem,
+} from "@/lib/types/usecase-details";
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -108,74 +115,10 @@ const UseCaseDetailsSkeleton = () => (
 
 
 type Metric = MetricsRow;
-type MetricDetailRow = {
-    id?: number | string | null;
-    usecaseid?: number | string | null;
-    metrictypeid?: number | string | null;
-    unitofmeasureid?: number | string | null;
-    primarysuccessmetricname?: string | null;
-    baselinevalue?: string | number | null;
-    baselinedate?: string | null;
-    targetvalue?: string | number | null;
-    targetdate?: string | null;
-    modified?: string | null;
-    created?: string | null;
-    editor_email?: string | null;
-};
-type ReportedMetricDetailRow = {
-    id?: number | string | null;
-    usecaseid?: number | string | null;
-    metricid?: number | string | null;
-    reportedvalue?: string | number | null;
-    reporteddate?: string | null;
-    modified?: string | null;
-    created?: string | null;
-    editor_email?: string | null;
-};
-
 type RoleOption = {
     id: number;
     name: string;
     roleType: string;
-};
-
-type PlanItem = {
-    id: number | null;
-    usecaseid: number | null;
-    usecasephaseid: number | null;
-    phase: string | null;
-    startdate: string | null;
-    enddate: string | null;
-    modified: string | null;
-    created: string | null;
-    editor_email: string | null;
-};
-
-type StakeholderItem = {
-    id: number | null;
-    roleid: number | null;
-    usecaseid: number | null;
-    role: string | null;
-    stakeholder_email: string | null;
-    modified: string | null;
-    created: string | null;
-    editor_email: string | null;
-};
-
-type UpdateItem = {
-    id: number | null;
-    usecaseid: number | null;
-    meaningfulupdate: string | null;
-    roleid: number | null;
-    role: string | null;
-    usecasephaseid: number | null;
-    phase: string | null;
-    usecasestatusid: number | null;
-    status: string | null;
-    statusColor: string | null;
-    modified: string | null;
-    created: string | null;
-    editor_email: string | null;
 };
 
 type ChecklistQuestion = {
@@ -187,11 +130,6 @@ type ChecklistQuestion = {
     responseKey: string;
 };
 
-type ChecklistResponseItem = {
-    questionid?: number | string | null;
-    questionId?: number | string | null;
-    response?: string | null;
-};
 
 type ChecklistDisplayItem = {
     id: number | string;
@@ -375,25 +313,25 @@ const UseCaseDetails = () => {
     );
     
     const useCase = useMemo(() => {
-        const raw = useCaseDetails?.useCase ?? {};
-        const phaseIdValue = Number((raw as any).phaseid ?? (raw as any).phaseId);
-        const businessValue = String((raw as any).business_value ?? (raw as any).businessValue ?? "");
+        const raw = useCaseDetails?.useCase;
+        const phaseIdValue = raw?.phaseId ?? null;
+        const businessValue = String(raw?.businessValue ?? "");
         return {
-            id: (raw as any).id ?? id,
-            title: String((raw as any).title ?? state?.useCaseTitle ?? "Use Case"),
-            phase: String((raw as any).phase ?? ""),
-            phaseStage: String((raw as any).phaseStage ?? (raw as any).phasestage ?? ""),
+            id: raw?.id ?? id,
+            title: String(raw?.title ?? state?.useCaseTitle ?? "Use Case"),
+            phase: String(raw?.phase ?? ""),
+            phaseStage: String(raw?.phaseStage ?? ""),
             phaseId: Number.isFinite(phaseIdValue) ? phaseIdValue : null,
-            statusName: String((raw as any).statusName ?? ""),
-            statusColor: String((raw as any).statusColor ?? ""),
-            businessUnitName: String((raw as any).businessUnitName ?? ""),
-            teamName: String((raw as any).teamName ?? ""),
-            headlines: String((raw as any).headlines ?? ""),
-            opportunity: String((raw as any).opportunity ?? ""),
+            statusName: String(raw?.statusName ?? ""),
+            statusColor: String(raw?.statusColor ?? ""),
+            businessUnitName: String(raw?.businessUnitName ?? ""),
+            teamName: String(raw?.teamName ?? ""),
+            headlines: String(raw?.headlines ?? ""),
+            opportunity: String(raw?.opportunity ?? ""),
             businessValue,
-            informationUrl: String((raw as any).informationurl ?? (raw as any).informationUrl ?? ""),
-            primaryContact: String((raw as any).primarycontact ?? (raw as any).primaryContact ?? ""),
-            editorEmail: String((raw as any).editor_email ?? (raw as any).editorEmail ?? ""),
+            informationUrl: String(raw?.informationUrl ?? ""),
+            primaryContact: String(raw?.primaryContact ?? ""),
+            editorEmail: String(raw?.editorEmail ?? ""),
         };
     }, [useCaseDetails, id, state?.useCaseTitle]);
     const tabParam = String(searchParams.get("tab") ?? "").toLowerCase();
@@ -483,6 +421,15 @@ const UseCaseDetails = () => {
     const [metricCategoryMap, setMetricCategoryMap] = useState<Map<number, string>>(new Map());
     const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState<string[]>([]);
     const [unitOfMeasureMap, setUnitOfMeasureMap] = useState<Map<number, string>>(new Map());
+
+    const metricCategorySelectOptions = useMemo(
+        () => metricCategoryOptions.map((option) => ({ label: option, value: option })),
+        [metricCategoryOptions],
+    );
+    const unitOfMeasureSelectOptions = useMemo(
+        () => unitOfMeasureOptions.map((option) => ({ label: option, value: option })),
+        [unitOfMeasureOptions],
+    );
     const [phaseMappings, setPhaseMappings] = useState<{ id: number; name: string; stage?: string }[]>([]);
     const [riceImpactOptions, setRiceImpactOptions] = useState<{ label: string; value: string }[]>([]);
     const [riceConfidenceOptions, setRiceConfidenceOptions] = useState<{ label: string; value: string }[]>([]);
@@ -502,8 +449,8 @@ const UseCaseDetails = () => {
     const [agentLink, setAgentLink] = useState<string>('');
     const [vendorModelsData, setVendorModelsData] = useState<Map<string, { id: number; name: string }[]>>(new Map());
     const [isAgentLibraryEditing, setIsAgentLibraryEditing] = useState(false);
-    const [metricDetailRows, setMetricDetailRows] = useState<MetricDetailRow[]>([]);
-    const [reportedMetricRows, setReportedMetricRows] = useState<ReportedMetricDetailRow[]>([]);
+    const [metricDetailRows, setMetricDetailRows] = useState<MetricItem[]>([]);
+    const [reportedMetricRows, setReportedMetricRows] = useState<ReportedMetricItem[]>([]);
     const agentLibrarySnapshotRef = useRef<{
         selectedAIThemes: string[];
         selectedPersonas: string[];
@@ -626,9 +573,9 @@ const UseCaseDetails = () => {
 
     const checklistResponseMap = useMemo(() => {
         const map = new Map<number, string>();
-        const rows = (useCaseDetails?.checklist ?? []) as ChecklistResponseItem[];
+        const rows = (useCaseDetails?.checklist ?? []) as ChecklistItem[];
         rows.forEach((row) => {
-            const questionId = Number(row.questionid ?? row.questionId);
+            const questionId = Number(row.questionId);
             if (!Number.isFinite(questionId)) return;
             const response = String(row.response ?? "").trim();
             map.set(questionId, response);
@@ -1022,36 +969,18 @@ const UseCaseDetails = () => {
         const stakeholderRows = (useCaseDetails?.stakeholders ?? []) as StakeholderItem[];
         const updateRows = (useCaseDetails?.updates ?? []) as UpdateItem[];
 
-        setPlanItems(
-            planRows.map((row) => ({
-                ...row,
-                phase: (row as any).phasename ?? row.phase ?? null,
-            })),
-        );
-        setStakeholderItems(
-            stakeholderRows.map((row) => ({
-                ...row,
-                role: (row as any).role_name ?? row.role ?? null,
-            })),
-        );
-        setUpdateItems(
-            updateRows.map((row) => ({
-                ...row,
-                role: (row as any).role_name ?? row.role ?? null,
-                phase: (row as any).phase_name ?? row.phase ?? null,
-                status: (row as any).status_name ?? row.status ?? null,
-                statusColor: (row as any).status_color ?? row.statusColor ?? null,
-            })),
-        );
+        setPlanItems(planRows);
+        setStakeholderItems(stakeholderRows);
+        setUpdateItems(updateRows);
 
         if (!isTimelineEditing) {
             const nextPhaseDates: Record<string, { start?: Date; end?: Date }> = {};
             planRows.forEach((row) => {
-                const phaseName = String((row as any).phasename ?? row.phase ?? "").trim();
+                const phaseName = String(row.phaseName ?? "").trim();
                 if (!phaseName) return;
                 nextPhaseDates[phaseName] = {
-                    start: row.startdate ? new Date(row.startdate) : undefined,
-                    end: row.enddate ? new Date(row.enddate) : undefined,
+                    start: row.startDate ? new Date(row.startDate) : undefined,
+                    end: row.endDate ? new Date(row.endDate) : undefined,
                 };
             });
             if (Object.keys(nextPhaseDates).length > 0) {
@@ -1068,12 +997,12 @@ const UseCaseDetails = () => {
                 const timeLabel = created ? format(new Date(created), "MMM d, yyyy") : "";
                 return {
                     id: Number(row.id ?? 0),
-                    author: String(row.editor_email ?? "").trim() || "Unknown",
-                    role: String((row as any).role_name ?? row.role ?? "").trim(),
-                    phase: String((row as any).phase_name ?? row.phase ?? "").trim(),
-                    status: String((row as any).status_name ?? row.status ?? "").trim(),
-                    statusColor: String((row as any).status_color ?? row.statusColor ?? "").trim(),
-                    content: String(row.meaningfulupdate ?? "").trim(),
+                    author: String(row.editorEmail ?? "").trim() || "Unknown",
+                    role: String(row.roleName ?? "").trim(),
+                    phase: String(row.phaseName ?? "").trim(),
+                    status: String(row.statusName ?? "").trim(),
+                    statusColor: String(row.statusColor ?? "").trim(),
+                    content: String(row.meaningfulUpdate ?? "").trim(),
                     time: timeLabel,
                     type: "comment",
                 };
@@ -1095,13 +1024,13 @@ const UseCaseDetails = () => {
 
         const nextStakeholders = stakeholderItems
             .map((item) => {
-                const roleName = String(item.role ?? "").trim();
-                const email = String(item.stakeholder_email ?? "").trim();
+                const roleName = String(item.roleName ?? "").trim();
+                const email = String(item.stakeholderEmail ?? "").trim();
                 if (!roleName || isChampionDelegateRole(roleName)) {
                     return null;
                 }
                 const roleOption =
-                    roleOptions.find((role) => role.id === Number(item.roleid)) ??
+                    roleOptions.find((role) => role.id === Number(item.roleId)) ??
                     roleOptions.find(
                         (role) => normalizeRoleName(role.name) === normalizeRoleName(roleName),
                     );
@@ -1113,7 +1042,7 @@ const UseCaseDetails = () => {
                     role: roleName,
                     initial: buildInitials(email || roleName),
                     canEdit,
-                    roleId: item.roleid ?? null,
+                    roleId: item.roleId ?? null,
                 };
             })
             .filter(Boolean) as {
@@ -1424,11 +1353,17 @@ const UseCaseDetails = () => {
             const data = await response.json();
             const item = data?.item;
             if (item) {
-                const normalizedItem = {
-                    ...item,
-                    role: item.role ?? roleOption.name,
-                    roleid: item.roleid ?? roleOption.id,
-                    stakeholder_email: item.stakeholder_email ?? stakeholderName.trim(),
+                const normalizedItem: StakeholderItem = {
+                    id: Number(item.id ?? payload.id ?? null),
+                    useCaseId: Number(item.useCaseId ?? item.usecaseid ?? id ?? null),
+                    roleId: Number(item.roleId ?? item.roleid ?? roleOption.id),
+                    roleName: String(item.roleName ?? item.role ?? roleOption.name ?? "").trim() || null,
+                    stakeholderEmail: String(
+                        item.stakeholderEmail ?? item.stakeholder_email ?? stakeholderName.trim(),
+                    ).trim() || null,
+                    modified: item.modified ?? null,
+                    created: item.created ?? null,
+                    editorEmail: item.editorEmail ?? item.editor_email ?? editorEmail ?? null,
                 };
                 setStakeholderItems((prev) => {
                     if (editingIndex !== null && payload.id) {
@@ -1511,12 +1446,12 @@ const UseCaseDetails = () => {
             const item = data?.item;
             const roleFromStakeholder = stakeholderItems.find(
                 (entry) =>
-                    String(entry.stakeholder_email ?? "").trim().toLowerCase() ===
+                    String(entry.stakeholderEmail ?? "").trim().toLowerCase() ===
                     editorEmail.toLowerCase(),
             );
             const roleLabel =
-                String(roleFromStakeholder?.role ?? "").trim() ||
-                roleOptions.find((role) => role.id === Number(item?.roleid))?.name ||
+                String(roleFromStakeholder?.roleName ?? "").trim() ||
+                roleOptions.find((role) => role.id === Number(item?.roleId ?? item?.roleid))?.name ||
                 "Stakeholder";
             const createdAt = item?.created ?? item?.modified ?? new Date().toISOString();
             const newUpdate = {
@@ -1530,8 +1465,23 @@ const UseCaseDetails = () => {
                 time: format(new Date(createdAt), "MMM d, yyyy"),
                 type: "comment",
             };
+            const normalizedUpdateItem: UpdateItem = {
+                id: Number(item?.id ?? Date.now()),
+                useCaseId: Number(item?.useCaseId ?? item?.usecaseid ?? id ?? null),
+                meaningfulUpdate: String(item?.meaningfulUpdate ?? item?.meaningfulupdate ?? trimmedUpdate).trim() || null,
+                roleId: Number(item?.roleId ?? item?.roleid ?? null),
+                roleName: roleLabel,
+                useCasePhaseId: Number(item?.useCasePhaseId ?? item?.usecasephaseid ?? null),
+                phaseName: String(item?.phaseName ?? item?.phase_name ?? useCase.phase ?? "").trim() || null,
+                useCaseStatusId: Number(item?.useCaseStatusId ?? item?.usecasestatusid ?? null),
+                statusName: String(item?.statusName ?? item?.status_name ?? useCase.statusName ?? "").trim() || null,
+                statusColor: String(item?.statusColor ?? item?.status_color ?? useCase.statusColor ?? "").trim() || null,
+                modified: item?.modified ?? null,
+                created: item?.created ?? null,
+                editorEmail: editorEmail || null,
+            };
             setUpdates((prev) => [newUpdate, ...prev]);
-            setUpdateItems((prev) => [item, ...prev]);
+            setUpdateItems((prev) => [normalizedUpdateItem, ...prev]);
             setUpdateText("");
             toast.success("Update posted successfully!");
         } catch (error) {
@@ -2164,7 +2114,7 @@ const UseCaseDetails = () => {
 
         const latestReportIdByMetricId = new Map<number, number>();
         reportedMetricRows.forEach((row) => {
-            const metricId = Number(row.metricid);
+            const metricId = Number(row.metricId);
             const reportId = Number(row.id);
             if (!Number.isFinite(metricId) || !Number.isFinite(reportId)) return;
             const current = latestReportIdByMetricId.get(metricId);
@@ -2174,9 +2124,9 @@ const UseCaseDetails = () => {
             }
             const currentRow = reportedMetricRows.find((item) => Number(item.id) === current);
             const currentTime = currentRow
-                ? new Date(String(currentRow.reporteddate ?? currentRow.modified ?? currentRow.created ?? "")).getTime()
+                ? new Date(String(currentRow.reportedDate ?? currentRow.modified ?? currentRow.created ?? "")).getTime()
                 : -1;
-            const nextTime = new Date(String(row.reporteddate ?? row.modified ?? row.created ?? "")).getTime();
+            const nextTime = new Date(String(row.reportedDate ?? row.modified ?? row.created ?? "")).getTime();
             if (!Number.isFinite(currentTime) || (Number.isFinite(nextTime) && nextTime >= currentTime)) {
                 latestReportIdByMetricId.set(metricId, reportId);
             }
@@ -2351,8 +2301,8 @@ const UseCaseDetails = () => {
 
         const metricsPayload = useCaseDetails?.metrics;
         if (metricsPayload?.items || metricsPayload?.reported) {
-            setMetricDetailRows((metricsPayload?.items ?? []) as MetricDetailRow[]);
-            setReportedMetricRows((metricsPayload?.reported ?? []) as ReportedMetricDetailRow[]);
+            setMetricDetailRows(metricsPayload?.items ?? []);
+            setReportedMetricRows(metricsPayload?.reported ?? []);
             return;
         }
 
@@ -2382,31 +2332,31 @@ const UseCaseDetails = () => {
             .map((row) => {
                 const metricId = Number(row.id);
                 if (!Number.isFinite(metricId)) return null;
-                const metricTypeId = Number(row.metrictypeid);
-                const unitId = Number(row.unitofmeasureid);
+                const metricTypeId = Number(row.metricTypeId);
+                const unitId = Number(row.unitOfMeasureId);
                 return {
                     id: metricId,
-                    primarySuccessValue: String(row.primarysuccessmetricname ?? "").trim(),
+                    primarySuccessValue: String(row.primarySuccessMetricName ?? "").trim(),
                     parcsCategory: metricCategoryMap.get(metricTypeId) ?? "",
                     unitOfMeasurement: unitOfMeasureMap.get(unitId) ?? "",
-                    baselineValue: String(row.baselinevalue ?? ""),
-                    baselineDate: formatMetricDate(String(row.baselinedate ?? "")),
-                    targetValue: String(row.targetvalue ?? ""),
-                    targetDate: formatMetricDate(String(row.targetdate ?? "")),
+                    baselineValue: String(row.baselineValue ?? ""),
+                    baselineDate: formatMetricDate(String(row.baselineDate ?? "")),
+                    targetValue: String(row.targetValue ?? ""),
+                    targetDate: formatMetricDate(String(row.targetDate ?? "")),
                     isSubmitted: true,
                 };
             })
             .filter(Boolean) as Metric[];
 
-        const latestReports = new Map<number, ReportedMetricDetailRow>();
+        const latestReports = new Map<number, ReportedMetricItem>();
         reportedMetricRows.forEach((row) => {
-            const metricId = Number(row.metricid);
+            const metricId = Number(row.metricId);
             if (!Number.isFinite(metricId)) return;
             const current = latestReports.get(metricId);
             const currentTime = current
-                ? new Date(String(current.reporteddate ?? current.modified ?? current.created ?? "")).getTime()
+                ? new Date(String(current.reportedDate ?? current.modified ?? current.created ?? "")).getTime()
                 : -1;
-            const nextTime = new Date(String(row.reporteddate ?? row.modified ?? row.created ?? "")).getTime();
+            const nextTime = new Date(String(row.reportedDate ?? row.modified ?? row.created ?? "")).getTime();
             if (!current || (Number.isFinite(nextTime) && nextTime >= currentTime)) {
                 latestReports.set(metricId, row);
             }
@@ -2416,8 +2366,8 @@ const UseCaseDetails = () => {
             const report = latestReports.get(metric.id);
             return {
                 ...metric,
-                reportedValue: report ? String(report.reportedvalue ?? "") : "",
-                reportedDate: report ? formatMetricDate(String(report.reporteddate ?? "")) : "",
+                reportedValue: report ? String(report.reportedValue ?? "") : "",
+                reportedDate: report ? formatMetricDate(String(report.reportedDate ?? "")) : "",
                 isSubmitted: true,
             };
         });
@@ -2427,15 +2377,15 @@ const UseCaseDetails = () => {
         const nextHistory: ReportedHistoryRow[] = reportedMetricRows
             .map((row) => {
                 const reportId = Number(row.id);
-                const metricId = Number(row.metricid);
+                const metricId = Number(row.metricId);
                 if (!Number.isFinite(reportId) || !Number.isFinite(metricId)) return null;
                 const metric = metricLookup.get(metricId);
                 return {
                     id: reportId,
                     metricId,
                     primarySuccessValue: metric?.primarySuccessValue ?? `Metric ${metricId}`,
-                    reportedValue: String(row.reportedvalue ?? ""),
-                    reportedDate: formatMetricDate(String(row.reporteddate ?? "")),
+                    reportedValue: String(row.reportedValue ?? ""),
+                    reportedDate: formatMetricDate(String(row.reportedDate ?? "")),
                 };
             })
             .filter(Boolean) as ReportedHistoryRow[];
@@ -2695,11 +2645,14 @@ const UseCaseDetails = () => {
                 return (!isMetricsEditing) ? (
                     <span className="text-sm px-2 whitespace-normal break-words">{metric.parcsCategory}</span>
                 ) : (
-                    <ParcsCategorySelect
+                    <FilterCombobox
                         value={metric.parcsCategory ?? ""}
-                        onSelect={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
+                        onChange={(val) => handleInputChange(metric.id, 'parcsCategory', val)}
+                        options={metricCategorySelectOptions}
+                        placeholder="Select"
+                        showBadges={false}
                         className="metric-select"
-                        options={metricCategoryOptions}
+                        buttonClassName="h-9 px-2 text-xs"
                     />
                 );
             },
@@ -2713,11 +2666,14 @@ const UseCaseDetails = () => {
                 return (!isMetricsEditing) ? (
                     <span className="text-sm px-2 whitespace-normal break-words">{metric.unitOfMeasurement}</span>
                 ) : (
-                    <UnitOfMeasurementSelect
+                    <FilterCombobox
                         value={metric.unitOfMeasurement ?? ""}
-                        onSelect={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
+                        onChange={(val) => handleInputChange(metric.id, 'unitOfMeasurement', val)}
+                        options={unitOfMeasureSelectOptions}
+                        placeholder="Select"
+                        showBadges={false}
                         className="metric-select"
-                        options={unitOfMeasureOptions}
+                        buttonClassName="h-9 px-2 text-xs"
                     />
                 );
             },

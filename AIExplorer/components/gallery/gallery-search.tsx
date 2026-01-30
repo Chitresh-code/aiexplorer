@@ -9,6 +9,7 @@ type GallerySearchProps = {
   value: string;
   onChange: (value: string) => void;
   onTabChange: (tab: "search" | "similar") => void;
+  onSearch?: () => void;
 };
 
 export const GallerySearch = ({
@@ -16,6 +17,7 @@ export const GallerySearch = ({
   value,
   onChange,
   onTabChange,
+  onSearch,
 }: GallerySearchProps) => (
   <div className="flex w-full py-4">
     <div className="w-full">
@@ -29,10 +31,25 @@ export const GallerySearch = ({
             }
             value={value}
             onChange={(event) => onChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (activeTab !== "similar") return;
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onSearch?.();
+              }
+            }}
             className="h-12 text-sm border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0"
             aria-label="Search use cases"
           />
-          
+          {activeTab === "similar" ? (
+            <Button
+              className="h-10 px-4 bg-teal-600 text-white hover:bg-teal-700"
+              onClick={onSearch}
+              disabled={!value.trim()}
+            >
+              Search
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

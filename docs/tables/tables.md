@@ -1,0 +1,33 @@
+| Table Name | Type | Create Date | Modify Date | Total bytes | Used bytes | Object description (comment) | Schema |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| agentlibrary | USER_TABLE | 2026-01-29 04:13:23.19 | 2026-01-29 04:13:23.19 | 73728 | 16384 | [NULL] | [Schema](schema/agentlibrary.md) |
+| ai_champions | USER_TABLE | 2026-01-23 11:42:33.42 | 2026-01-23 11:42:33.42 | 73728 | 32768 | [NULL] | [Schema](schema/ai_champions.md) |
+| aiproductchecklist | USER_TABLE | 2026-01-29 04:13:30.067 | 2026-01-29 04:13:30.067 | 466944 | 294912 | [NULL] | [Schema](schema/aiproductchecklist.md) |
+| aiproductquestions | USER_TABLE | 2026-01-29 04:13:50.883 | 2026-01-29 04:13:50.883 | 73728 | 16384 | [NULL] | [Schema](schema/aiproductquestions.md) |
+| aithememapping | USER_TABLE | 2026-01-29 04:13:55.84 | 2026-01-29 04:13:55.84 | 73728 | 32768 | [NULL] | [Schema](schema/aithememapping.md) |
+| businessunitmapping | USER_TABLE | 2026-01-29 04:14:00.403 | 2026-01-29 04:14:00.403 | 73728 | 16384 | [NULL] | [Schema](schema/businessunitmapping.md) |
+| decisions | USER_TABLE | 2026-01-29 04:14:05.35 | 2026-01-29 04:14:05.35 | 73728 | 57344 | [NULL] | [Schema](schema/decisions.md) |
+| implementationtimespan | USER_TABLE | 2026-01-29 04:14:10.98 | 2026-01-29 04:14:10.98 | 73728 | 16384 | [NULL] | [Schema](schema/implementationtimespan.md) |
+| knowldegesourcemapping | USER_TABLE | 2026-01-23 11:42:36.467 | 2026-01-23 11:42:36.467 | 73728 | 16384 | [NULL] | [Schema](schema/knowldegesourcemapping.md) |
+| knowledgesourcemapping | USER_TABLE | 2026-01-29 04:14:15.813 | 2026-01-29 04:14:15.813 | 73728 | 16384 | [NULL] | [Schema](schema/knowledgesourcemapping.md) |
+| metric | USER_TABLE | 2026-01-29 04:14:20.39 | 2026-01-29 04:14:20.39 | 73728 | 49152 | [NULL] | [Schema](schema/metric.md) |
+| metricreported | USER_TABLE | 2026-01-29 04:14:31.47 | 2026-01-29 04:14:31.47 | 73728 | 16384 | [NULL] | [Schema](schema/metricreported.md) |
+| outcomes | USER_TABLE | 2026-01-29 04:14:26.3 | 2026-01-29 04:14:26.3 | 73728 | 16384 | [NULL] | [Schema](schema/outcomes.md) |
+| personamapping | USER_TABLE | 2026-01-29 04:14:36.283 | 2026-01-29 04:14:36.283 | 73728 | 40960 | [NULL] | [Schema](schema/personamapping.md) |
+| phasemapping | USER_TABLE | 2026-01-29 04:14:41.367 | 2026-01-29 04:14:41.367 | 73728 | 16384 | [NULL] | [Schema](schema/phasemapping.md) |
+| plan | USER_TABLE | 2026-01-29 04:14:47.55 | 2026-01-29 04:14:47.55 | 466944 | 352256 | [NULL] | [Schema](schema/plan.md) |
+| prioritization | USER_TABLE | 2026-01-29 04:14:56.683 | 2026-01-29 04:14:56.683 | 73728 | 32768 | [NULL] | [Schema](schema/prioritization.md) |
+| reportingfrequency | USER_TABLE | 2026-01-29 04:15:01.79 | 2026-01-29 04:15:01.79 | 73728 | 16384 | [NULL] | [Schema](schema/reportingfrequency.md) |
+| rice | USER_TABLE | 2026-01-29 04:15:07.37 | 2026-01-29 04:15:07.37 | 73728 | 16384 | [NULL] | [Schema](schema/rice.md) |
+| rolemapping | USER_TABLE | 2026-01-29 04:15:12.597 | 2026-01-29 04:15:12.597 | 73728 | 16384 | [NULL] | [Schema](schema/rolemapping.md) |
+| stakeholder | USER_TABLE | 2026-01-29 04:15:17.603 | 2026-01-29 04:30:33.177 | 3088384 | 3039232 | [NULL] | [Schema](schema/stakeholder.md) |
+| stakeholder_mapping | USER_TABLE | 2026-01-29 04:15:29.587 | 2026-01-29 04:15:29.587 | 73728 | 32768 | [NULL] | [Schema](schema/stakeholder_mapping.md) |
+| statusmapping | USER_TABLE | 2026-01-29 04:15:34.713 | 2026-01-29 04:15:34.713 | 73728 | 16384 | [NULL] | [Schema](schema/statusmapping.md) |
+| unitofmeasure | USER_TABLE | 2026-01-29 04:15:39.85 | 2026-01-29 04:15:39.85 | 73728 | 16384 | [NULL] | [Schema](schema/unitofmeasure.md) |
+| updates | USER_TABLE | 2026-01-29 04:15:45.363 | 2026-01-29 04:15:45.363 | 139264 | 90112 | [NULL] | [Schema](schema/updates.md) |
+| usecaseknowledgesource | USER_TABLE | 2026-01-29 04:15:49.757 | 2026-01-29 04:15:49.757 | 73728 | 16384 | [NULL] | [Schema](schema/usecaseknowledgesource.md) |
+| usecasepersona | USER_TABLE | 2026-01-29 04:15:53.707 | 2026-01-29 04:15:53.707 | 139264 | 81920 | [NULL] | [Schema](schema/usecasepersona.md) |
+| usecases | USER_TABLE | 2026-01-29 04:15:59.39 | 2026-01-29 04:15:59.39 | 2572288 | 2441216 | [NULL] | [Schema](schema/usecases.md) |
+| usecasestakeholderapproval | USER_TABLE | 2026-01-29 04:16:06.353 | 2026-01-29 05:01:39.5 | 1122304 | 966656 | [NULL] | [Schema](schema/usecasestakeholderapproval.md) |
+| usecasetheme | USER_TABLE | 2026-01-29 04:16:13.42 | 2026-01-29 04:16:13.42 | 73728 | 73728 | [NULL] | [Schema](schema/usecasetheme.md) |
+| vendormodelmapping | USER_TABLE | 2026-01-29 04:16:19.04 | 2026-01-29 04:16:19.04 | 73728 | 32768 | [NULL] | [Schema](schema/vendormodelmapping.md) |

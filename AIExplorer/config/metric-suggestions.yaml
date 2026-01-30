@@ -5,6 +5,7 @@ system_prompt: |
   Return at least one metric row and include all required fields with non-empty strings.
   Do not invent benefits that are not implied by the business value text.
   If the business value lists multiple metrics, return one row per metric.
+  Keep primarySuccessValue short (max 4 words, no extra clauses).
   Dates must be in YYYY-MM-DD format.
   Target dates must be after baseline dates and after the provided current date.
   baselineValue and targetValue must be numeric only (digits, optional decimal). Do not include units, words, or symbols like %.

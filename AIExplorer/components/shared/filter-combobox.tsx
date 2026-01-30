@@ -28,6 +28,7 @@ type BaseProps = {
     emptyText?: string
     disabled?: boolean
     className?: string
+    buttonClassName?: string
     contentClassName?: string
     align?: "start" | "center" | "end"
     icon?: React.ReactNode
@@ -59,6 +60,7 @@ export function FilterCombobox({
     emptyText = "No option found.",
     disabled = false,
     className,
+    buttonClassName,
     contentClassName,
     align = "start",
     icon,
@@ -111,7 +113,7 @@ export function FilterCombobox({
         : selectedLabel ?? placeholder
 
     return (
-        <div className={cn("flex flex-col gap-2", className?.includes("w-") ? "w-fit" : "w-full")}>
+        <div className={cn("flex flex-col gap-2", className?.includes("w-") ? "w-fit" : "w-full", className)}>
             {showBadges && selectedValues.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                     {selectedValues.map((val) => {
@@ -145,7 +147,8 @@ export function FilterCombobox({
                         className={cn(
                             "w-full justify-between",
                             !selectedValues.length && "text-muted-foreground",
-                            className
+                            className,
+                            buttonClassName
                         )}
                         disabled={disabled}
                     >

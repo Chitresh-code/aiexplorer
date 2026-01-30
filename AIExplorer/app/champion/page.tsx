@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@/lib/router";
 import { useMsal } from "@azure/msal-react";
-import { LayoutGrid, List, Plus, Search, Layers3, CheckCircle2, Clock3, Flag, TrendingUp, TrendingDown } from "lucide-react";
+import { LayoutGrid, List, Plus, PlusCircle, Search, Layers3, CheckCircle2, Clock3, Flag, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,9 @@ import { createColumns } from "@/features/my-use-cases/components/columns";
 import KanbanView from "@/features/champion/components/kanban-view";
 import { getMappings } from "@/lib/submit-use-case";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FilterCombobox } from "@/components/my-use-cases/filter-combobox";
+import { FilterCombobox } from "@/components/shared/filter-combobox";
+import { normalizeUseCaseSummary } from "@/lib/mappers/usecase";
+import type { UseCaseSummary } from "@/lib/types/usecase";
 import {
     Empty,
     EmptyContent,
@@ -61,42 +63,6 @@ type TimespanMapping = {
     name?: string;
 };
 
-type BackendUseCase = {
-    id?: number | string;
-    ID?: number | string;
-    title?: string;
-    Title?: string;
-    UseCase?: string;
-    phase?: string;
-    Phase?: string;
-    phaseId?: number | string | null;
-    PhaseId?: number | string | null;
-    phaseid?: number | string | null;
-    statusName?: string;
-    Status?: string;
-    statusColor?: string;
-    StatusColor?: string;
-    businessUnitName?: string;
-    BusinessUnit?: string;
-    BusinessUnitName?: string;
-    teamName?: string;
-    TeamName?: string;
-    deliveryTimespan?: string;
-    Delivery?: string;
-    priority?: number | string | null;
-    Priority?: number | string | null;
-    currentPhaseStartDate?: string;
-    CurrentPhaseStartDate?: string;
-    currentPhaseEndDate?: string;
-    CurrentPhaseEndDate?: string;
-    phasePlan?: Array<{
-        phaseId?: number | string | null;
-        phaseName?: string | null;
-        startDate?: string | null;
-        endDate?: string | null;
-    }> | string | null;
-};
-
 type NormalizedUseCase = {
     id: string;
     title: string;
@@ -131,7 +97,7 @@ const ChampionUseCaseScreen = () => {
     const [phasesData, setPhasesData] = useState<PhaseMapping[]>([]);
     const [statusData, setStatusData] = useState<StatusMapping[]>([]);
     const [timespansData, setTimespansData] = useState<TimespanMapping[]>([]);
-    const [useCases, setUseCases] = useState<BackendUseCase[]>([]);
+    const [useCases, setUseCases] = useState<UseCaseSummary[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -178,7 +144,11 @@ const ChampionUseCaseScreen = () => {
                 }
                 const data = await response.json();
                 if (active) {
-                    setUseCases(Array.isArray(data?.items) ? data.items : []);
+                    const items = Array.isArray(data?.items) ? (data.items as Record<string, unknown>[]) : [];
+                    const normalized = items
+                        .map((item: Record<string, unknown>) => normalizeUseCaseSummary(item))
+                        .filter(Boolean) as UseCaseSummary[];
+                    setUseCases(normalized);
                     setError(null);
                 }
             } catch (err) {
@@ -263,40 +233,16 @@ const ChampionUseCaseScreen = () => {
             return `${month}-${day}-${year}`;
         };
 
-        return useCases.flatMap((raw) => {
-            const uc = raw as BackendUseCase;
-            const legacy = uc as Record<string, unknown>;
-            const phaseName = String(uc.phase || uc.Phase || "").trim();
-            const phaseId = Number(uc.phaseId ?? uc.PhaseId ?? uc.phaseid);
-            const status = String(uc.statusName || uc.Status || "In Progress").trim();
-            const rawPlan = uc.phasePlan as unknown;
-            const parsedPlan = Array.isArray(rawPlan)
-                ? rawPlan
-                : typeof rawPlan === "string"
-                    ? (() => {
-                        try {
-                            const parsed = JSON.parse(rawPlan);
-                            return Array.isArray(parsed) ? parsed : [];
-                        } catch {
-                            return [];
-                        }
-                    })()
-                    : [];
+        return useCases.flatMap((uc) => {
+            const phaseName = String(uc.phase ?? "").trim();
+            const phaseId = Number(uc.phaseId ?? NaN);
+            const status = String(uc.statusName ?? "In Progress").trim();
+            const parsedPlan = Array.isArray(uc.phasePlan) ? uc.phasePlan : [];
             const phaseEntry = parsedPlan.find(
-                (entry: any) => Number(entry?.phaseId) === phaseId,
+                (entry) => Number(entry?.phaseId) === phaseId,
             );
-            const startRaw = String(
-                phaseEntry?.startDate ??
-                uc.currentPhaseStartDate ??
-                uc.CurrentPhaseStartDate ??
-                "",
-            );
-            const endRaw = String(
-                phaseEntry?.endDate ??
-                uc.currentPhaseEndDate ??
-                uc.CurrentPhaseEndDate ??
-                "",
-            );
+            const startRaw = String(phaseEntry?.startDate ?? "");
+            const endRaw = String(phaseEntry?.endDate ?? "");
             const start = formatDate(startRaw);
             const end = formatDate(endRaw);
             const currentPhaseDisplay = start && end ? `${start} - ${end}` : status;
@@ -319,18 +265,18 @@ const ChampionUseCaseScreen = () => {
                 phaseValues[key] = currentPhaseDisplay;
             });
 
-            const rawId = uc.id ?? uc.ID;
+            const rawId = uc.id;
             if (rawId == null) return [];
 
             return [{
                 id: String(rawId),
-                title: uc.title || uc.Title || uc.UseCase || "Untitled",
-                delivery: uc.deliveryTimespan || uc.Delivery || "",
-                priority: Number(uc.priority ?? uc.Priority) || null,
+                title: uc.title || "Untitled",
+                delivery: uc.deliveryTimespan || "",
+                priority: Number(uc.priority) || null,
                 status,
-                statusColor: uc.statusColor || uc.StatusColor || "",
-                teamName: uc.teamName || uc.TeamName || String(legacy["Team Name"] ?? "") || "",
-                businessUnit: uc.businessUnitName || uc.BusinessUnit || uc.BusinessUnitName || String(legacy["Business Unit"] ?? "") || "",
+                statusColor: uc.statusColor || "",
+                teamName: uc.teamName || "",
+                businessUnit: uc.businessUnitName || "",
                 phase: phaseName,
                 phaseId: Number.isFinite(phaseId) ? phaseId : null,
                 currentPhaseDisplay,
@@ -518,24 +464,36 @@ const ChampionUseCaseScreen = () => {
                             </div>
 
                             <FilterCombobox
-                                label="Phase"
+                                multiple
+                                placeholder="Phase"
                                 options={[{ label: "All Phases", value: "all" }, ...phaseOptions]}
                                 value={searchPhase}
                                 onChange={setSearchPhase}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
                             <FilterCombobox
-                                label="Status"
+                                multiple
+                                placeholder="Status"
                                 options={[{ label: "All Statuses", value: "all" }, ...statusOptions]}
                                 value={searchStatus}
                                 onChange={setSearchStatus}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
                             <FilterCombobox
-                                label="Business Unit"
+                                multiple
+                                placeholder="Business Unit"
                                 options={businessUnitOptions}
                                 value={searchBusinessUnit}
                                 onChange={setSearchBusinessUnit}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
                             {(searchUseCase || searchPhase.length > 0 || searchStatus.length > 0 || searchBusinessUnit.length > 0) && (
