@@ -59,8 +59,8 @@ export const GET = async (
     const result = (await pool
       .request()
       .input("UseCaseId", id)
-      .input("Type", type || null)
-      .input("Include", includeParam ?? null)
+      .input("RequestType", type || null)
+      .input("IncludeList", includeParam ?? null)
       .input("All", all ? 1 : 0)
       .input("Email", email || null)
       .execute("dbo.GetUseCaseDetails")) as IProcedureResult<any>;

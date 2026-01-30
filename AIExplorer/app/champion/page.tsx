@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@/lib/router";
 import { useMsal } from "@azure/msal-react";
-import { LayoutGrid, List, Plus, Search, Layers3, CheckCircle2, Clock3, Flag } from "lucide-react";
+import { LayoutGrid, List, Plus, Search, Layers3, CheckCircle2, Clock3, Flag, TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,7 +113,7 @@ type NormalizedUseCase = {
 };
 
 const TrendingIcon = ({ isPositive, className }: { isPositive: boolean; className?: string }) => {
-    const Icon = isPositive ? TrendingUpIcon : TrendingDownIcon;
+    const Icon = isPositive ? TrendingUp : TrendingDown;
     return <Icon className={className} />;
 };
 

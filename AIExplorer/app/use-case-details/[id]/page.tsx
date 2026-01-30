@@ -24,7 +24,7 @@ import { toast } from 'sonner';
 import { useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
 import { Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
-import { useUseCaseDetails } from '@/hooks/use-usecase-details';
+import { useUseCaseDetails, type AgentLibraryItem } from '@/hooks/use-usecase-details';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -332,8 +332,11 @@ const UseCaseDetails = () => {
         },
     );
     
-    const agentLibraryItems = useMemo(
-        () => (useCaseDetails?.agentLibrary ?? []) as typeof useCaseDetails.agentLibrary,
+    const agentLibraryItems = useMemo<AgentLibraryItem[]>(
+        () =>
+            Array.isArray(useCaseDetails?.agentLibrary)
+                ? useCaseDetails?.agentLibrary
+                : [],
         [useCaseDetails?.agentLibrary],
     );
     
@@ -426,6 +429,13 @@ const UseCaseDetails = () => {
         metrics: Metric[];
         reportedMetrics: Metric[];
         reportedHistory: ReportedHistoryRow[];
+    } | null>(null);
+    const timelineSnapshotRef = useRef<Record<string, { start?: Date; end?: Date }> | null>(null);
+    const infoSnapshotRef = useRef<{
+        title: string;
+        headline: string;
+        opportunity: string;
+        evidence: string;
     } | null>(null);
 
     const [themeOptions, setThemeOptions] = useState<{ label: string; value: string }[]>([]);
@@ -1270,13 +1280,19 @@ const UseCaseDetails = () => {
             const data = await response.json();
             const item = data?.item;
             if (item) {
+                const normalizedItem = {
+                    ...item,
+                    role: item.role ?? roleOption.name,
+                    roleid: item.roleid ?? roleOption.id,
+                    stakeholder_email: item.stakeholder_email ?? stakeholderName.trim(),
+                };
                 setStakeholderItems((prev) => {
                     if (editingIndex !== null && payload.id) {
                         return prev.map((row) =>
-                            String(row.id) === String(payload.id) ? item : row,
+                            String(row.id) === String(payload.id) ? normalizedItem : row,
                         );
                     }
-                    return [...prev, item];
+                    return [...prev, normalizedItem];
                 });
             }
 
@@ -1402,15 +1418,35 @@ const UseCaseDetails = () => {
     const handleApplyChanges = useCallback(async () => {
         try {
             const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            const snapshot = infoSnapshotRef.current;
+            const diffPayload: Record<string, unknown> = {};
+
+            if (!snapshot || snapshot.title !== editableTitle) {
+                diffPayload.title = editableTitle;
+            }
+            if (!snapshot || snapshot.headline !== editableHeadline) {
+                diffPayload.headlines = editableHeadline;
+            }
+            if (!snapshot || snapshot.opportunity !== editableOpportunity) {
+                diffPayload.opportunity = editableOpportunity;
+            }
+            if (!snapshot || snapshot.evidence !== editableEvidence) {
+                diffPayload.businessValue = editableEvidence;
+            }
+
+            if (Object.keys(diffPayload).length === 0) {
+                setIsEditing(false);
+                infoSnapshotRef.current = null;
+                return;
+            }
+
             await updateUseCaseInfo(id, {
-                title: editableTitle,
-                headlines: editableHeadline,
-                opportunity: editableOpportunity,
-                businessValue: editableEvidence,
+                ...diffPayload,
                 editorEmail,
             });
             toast.success('Changes saved');
             setIsEditing(false);
+            infoSnapshotRef.current = null;
         } catch (error) {
             console.error("Failed to update use case info:", error);
             toast.error("Failed to save changes.");
@@ -1420,7 +1456,18 @@ const UseCaseDetails = () => {
     const handleCancelEdit = useCallback(() => {
         resetEditableFields();
         setIsEditing(false);
+        infoSnapshotRef.current = null;
     }, [resetEditableFields]);
+
+    const handleStartInfoEdit = useCallback(() => {
+        infoSnapshotRef.current = {
+            title: editableTitle,
+            headline: editableHeadline,
+            opportunity: editableOpportunity,
+            evidence: editableEvidence,
+        };
+        setIsEditing(true);
+    }, [editableEvidence, editableHeadline, editableOpportunity, editableTitle]);
 
     const resetAgentLibraryFields = useCallback(() => {
         if (agentLibraryItems.length > 0) {
@@ -1507,21 +1554,76 @@ const UseCaseDetails = () => {
             // Get user email from MSAL context
             const userEmail = accounts[0]?.username ?? '';
 
-            const payload = {
-                aiThemeIds: editableAITheme.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0),
-                personaIds: selectedPersonas.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0),
-
-                knowledgeSourceIds: selectedKnowledgeSources
-                    .map((id) => parseInt(id))
-                    .filter((id) => !isNaN(id) && id > 0),
-
-                agentLibraryId,
-                vendorModelId,
-                agentId: agentId || null,
-                agentLink: agentLink || null,
-                prompt: instructions || null,
-                editorEmail: userEmail,
+            const snapshot = agentLibrarySnapshotRef.current;
+            const normalizeList = (list: string[]) =>
+                Array.from(
+                    new Set(
+                        list
+                            .map((value) => String(value).trim())
+                            .filter(Boolean),
+                    ),
+                ).sort();
+            const listChanged = (current: string[], previous: string[]) => {
+                const a = normalizeList(current);
+                const b = normalizeList(previous);
+                if (a.length !== b.length) return true;
+                return a.some((value, index) => value !== b[index]);
             };
+            const normalizeValue = (value: string) => String(value ?? "").trim();
+
+            const payload: Record<string, unknown> = { editorEmail: userEmail };
+
+            if (agentLibraryId) {
+                payload.agentLibraryId = agentLibraryId;
+            }
+
+            const currentThemes = editableAITheme;
+            const previousThemes = snapshot?.selectedAIThemes ?? [];
+            if (!snapshot || listChanged(currentThemes, previousThemes)) {
+                payload.aiThemeIds = currentThemes
+                    .map((id) => parseInt(id))
+                    .filter((id) => !isNaN(id) && id > 0);
+            }
+
+            const currentPersonas = selectedPersonas;
+            const previousPersonas = snapshot?.selectedPersonas ?? [];
+            if (!snapshot || listChanged(currentPersonas, previousPersonas)) {
+                payload.personaIds = currentPersonas
+                    .map((id) => parseInt(id))
+                    .filter((id) => !isNaN(id) && id > 0);
+            }
+
+            const currentKnowledgeSources = selectedKnowledgeSources;
+            const previousKnowledgeSources = snapshot?.selectedKnowledgeSources ?? [];
+            if (!snapshot || listChanged(currentKnowledgeSources, previousKnowledgeSources)) {
+                payload.knowledgeSourceIds = currentKnowledgeSources
+                    .map((id) => parseInt(id))
+                    .filter((id) => !isNaN(id) && id > 0);
+            }
+
+            const prevModelId = snapshot?.selectedModel
+                ? parseInt(snapshot.selectedModel) || null
+                : null;
+            if (!snapshot || prevModelId !== vendorModelId) {
+                payload.vendorModelId = vendorModelId;
+            }
+
+            if (!snapshot || normalizeValue(snapshot.agentId) !== normalizeValue(agentId)) {
+                payload.agentId = agentId || null;
+            }
+            if (!snapshot || normalizeValue(snapshot.agentLink) !== normalizeValue(agentLink)) {
+                payload.agentLink = agentLink || null;
+            }
+            if (!snapshot || normalizeValue(snapshot.instructions) !== normalizeValue(instructions)) {
+                payload.prompt = instructions || null;
+            }
+
+            const payloadKeys = Object.keys(payload).filter((key) => key !== "editorEmail");
+            if (payloadKeys.length === 0) {
+                setIsAgentLibraryEditing(false);
+                agentLibrarySnapshotRef.current = null;
+                return;
+            }
 
             const response = await fetch(`/api/usecases/${id}/agent-library`, {
                 method: 'PATCH',
@@ -1538,6 +1640,7 @@ const UseCaseDetails = () => {
 
             toast.success('Agent Library changes saved successfully');
             setIsAgentLibraryEditing(false);
+            agentLibrarySnapshotRef.current = null;
             
             // Optionally refetch the data
             // await refetchAgentLibrary();
@@ -1567,6 +1670,17 @@ const UseCaseDetails = () => {
     };
 
     const handleToggleTimelineEdit = () => {
+        timelineSnapshotRef.current = Object.keys(phaseDates).reduce(
+            (acc, key) => {
+                const value = phaseDates[key];
+                acc[key] = {
+                    start: value?.start ? new Date(value.start) : undefined,
+                    end: value?.end ? new Date(value.end) : undefined,
+                };
+                return acc;
+            },
+            {} as Record<string, { start?: Date; end?: Date }>,
+        );
         setIsTimelineEditing(true);
     };
 
@@ -1577,20 +1691,41 @@ const UseCaseDetails = () => {
         }
         try {
             const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            const snapshot = timelineSnapshotRef.current;
             const items = phaseMappings
                 .map((phase) => {
                     const dates = phaseDates[phase.name];
                     if (!dates?.start || !dates?.end) return null;
-                    return {
+                    const nextItem = {
                         usecasephaseid: phase.id,
                         startdate: format(dates.start, "yyyy-MM-dd"),
                         enddate: format(dates.end, "yyyy-MM-dd"),
                     };
+
+                    if (!snapshot) return nextItem;
+                    const prev = snapshot[phase.name];
+                    if (!prev?.start || !prev?.end) return nextItem;
+                    const prevStart = format(prev.start, "yyyy-MM-dd");
+                    const prevEnd = format(prev.end, "yyyy-MM-dd");
+                    if (prevStart === nextItem.startdate && prevEnd === nextItem.enddate) {
+                        return null;
+                    }
+                    return nextItem;
                 })
                 .filter(Boolean);
 
-            if (!items.length) {
+            const hasAnyDates = phaseMappings.some((phase) => {
+                const dates = phaseDates[phase.name];
+                return Boolean(dates?.start && dates?.end);
+            });
+            if (!hasAnyDates) {
                 toast.error("Add start and end dates before saving.");
+                return;
+            }
+            if (!items.length) {
+                toast.success("No timeline changes to save.");
+                setIsTimelineEditing(false);
+                timelineSnapshotRef.current = null;
                 return;
             }
 
@@ -1605,6 +1740,7 @@ const UseCaseDetails = () => {
             }
             toast.success("Timeline saved");
             setIsTimelineEditing(false);
+            timelineSnapshotRef.current = null;
         } catch (error) {
             console.error("Failed to save timeline:", error);
             toast.error("Failed to save timeline.");
@@ -1902,15 +2038,17 @@ const UseCaseDetails = () => {
 
         try {
             const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
-            await updateUseCaseMetrics(id, {
-                newMetrics,
-                updateMetrics,
-                deleteMetricIds,
-                newReportedMetrics,
-                updateReportedMetrics,
-                deleteReportedMetricIds,
-                editorEmail,
-            });
+            const metricsPayload: Record<string, unknown> = { editorEmail };
+            if (newMetrics.length) metricsPayload.newMetrics = newMetrics;
+            if (updateMetrics.length) metricsPayload.updateMetrics = updateMetrics;
+            if (deleteMetricIds.length) metricsPayload.deleteMetricIds = deleteMetricIds;
+            if (newReportedMetrics.length) metricsPayload.newReportedMetrics = newReportedMetrics;
+            if (updateReportedMetrics.length) metricsPayload.updateReportedMetrics = updateReportedMetrics;
+            if (deleteReportedMetricIds.length) {
+                metricsPayload.deleteReportedMetricIds = deleteReportedMetricIds;
+            }
+
+            await updateUseCaseMetrics(id, metricsPayload);
             await refetch();
             metricsSnapshotRef.current = null;
             toast.success("Metrics updated successfully");
@@ -1934,7 +2072,7 @@ const UseCaseDetails = () => {
         if (activeTab === 'info') {
             return {
                 isEditing: isEditing,
-                onStart: () => setIsEditing(true),
+                onStart: handleStartInfoEdit,
                 onCancel: handleCancelEdit,
                 onApply: handleApplyChanges,
                 applyLabel: "Apply Changes",
@@ -1976,6 +2114,7 @@ const UseCaseDetails = () => {
         isMetricsEditing,
         handleCancelEdit,
         handleApplyChanges,
+        handleStartInfoEdit,
         handleStartReprioritizeEdit,
         handleCancelReprioritizeEdit,
         handleApplyReprioritizeChanges,

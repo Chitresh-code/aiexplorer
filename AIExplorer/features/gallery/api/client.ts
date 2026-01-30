@@ -251,9 +251,7 @@ export const fetchFilters = async (
     vendorModels?: MappingResponse<VendorModelMapping>;
   };
 
-  const fetchJson = async <T>(
-    url: string,
-  ): Promise<MappingResponse<T>> => {
+  const fetchJson = async <T>(url: string): Promise<T> => {
     const response = await fetch(url, { signal });
     if (!response.ok) {
       throw new Error(`Failed to load mappings from ${url}.`);

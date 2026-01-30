@@ -31,6 +31,15 @@ export type AgentLibraryItem = {
   vendormodelid?: number;
   vendorName?: string;
   productName?: string;
+  aiThemeIds?: number[];
+  personaIds?: number[];
+  knowledgeSourceIds?: number[];
+  agentid?: string | null;
+  agentlink?: string | null;
+  prompt?: string | null;
+  modified?: string | null;
+  created?: string | null;
+  editor_email?: string | null;
 };
 
 export type PersonaItem = {

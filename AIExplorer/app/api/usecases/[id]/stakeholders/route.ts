@@ -2,15 +2,7 @@ import { NextResponse } from "next/server";
 import { getSqlPool } from "@/lib/azure-sql";
 import { getUiErrorMessage, logErrorTrace } from "@/lib/error-utils";
 
-type StakeholderPayload = {
-  id?: number;
-  roleId: number;
-  stakeholderEmail: string;
-  editorEmail?: string;
-};
-
 const normalizeRoleName = (value: string) => value.trim().toLowerCase();
-
 const isOwnerRole = (value: string) => normalizeRoleName(value) === "owner";
 
 const resolveRole = async (roleId: number) => {
@@ -30,6 +22,13 @@ const resolveRole = async (roleId: number) => {
       `,
     );
   return result.recordset?.[0] ?? null;
+};
+
+type StakeholderPayload = {
+  id?: number;
+  roleId: number;
+  stakeholderEmail: string;
+  editorEmail?: string;
 };
 
 export const POST = async (
@@ -56,116 +55,25 @@ export const POST = async (
       );
     }
 
-    const roleRow = await resolveRole(roleId);
-    const roleName = String(roleRow?.rolename ?? "").trim();
-    const roleType = String(roleRow?.roletype ?? "").trim();
-    const isActive = String(roleRow?.isactive ?? "1").trim();
-
-    if (!roleName || roleType !== "2" || isActive !== "1" || isOwnerRole(roleName)) {
-      return NextResponse.json(
-        { message: "Role is not eligible for stakeholder updates." },
-        { status: 400 },
-      );
-    }
-
     const pool = await getSqlPool();
-    const identityResult = await pool
+    const result = await pool
       .request()
-      .query(
-        "SELECT COLUMNPROPERTY(OBJECT_ID('dbo.stakeholder'), 'id', 'IsIdentity') AS isIdentity",
+      .input("UseCaseId", id)
+      .input("RoleId", roleId)
+      .input("StakeholderEmail", stakeholderEmail)
+      .input("EditorEmail", editorEmail)
+      .execute("dbo.CreateUseCaseStakeholder");
+
+    const item = result.recordset?.[0] ?? null;
+    if (!item) {
+      return NextResponse.json(
+        { message: "Failed to add stakeholder." },
+        { status: 500 },
       );
-    const isIdentity = identityResult.recordset?.[0]?.isIdentity === 1;
-    const now = new Date().toISOString();
-
-    let insertedId: number | null = null;
-
-    if (isIdentity) {
-      const result = await pool
-        .request()
-        .input("UseCaseId", id)
-        .input("RoleId", roleId)
-        .input("RoleName", roleName)
-        .input("StakeholderEmail", stakeholderEmail)
-        .input("Now", now)
-        .input("EditorEmail", editorEmail)
-        .query(
-          `
-          INSERT INTO dbo.stakeholder (
-            roleid,
-            usecaseid,
-            role,
-            stakeholder_email,
-            modified,
-            created,
-            editor_email
-          )
-          VALUES (
-            @RoleId,
-            @UseCaseId,
-            @RoleName,
-            @StakeholderEmail,
-            @Now,
-            @Now,
-            @EditorEmail
-          );
-          SELECT SCOPE_IDENTITY() AS id;
-          `,
-        );
-      insertedId = Number(result.recordset?.[0]?.id ?? null);
-    } else {
-      const result = await pool
-        .request()
-        .input("UseCaseId", id)
-        .input("RoleId", roleId)
-        .input("RoleName", roleName)
-        .input("StakeholderEmail", stakeholderEmail)
-        .input("Now", now)
-        .input("EditorEmail", editorEmail)
-        .query(
-          `
-          DECLARE @NextId BIGINT = (
-            SELECT ISNULL(MAX(id), 0) + 1
-            FROM dbo.stakeholder WITH (UPDLOCK, HOLDLOCK)
-          );
-          INSERT INTO dbo.stakeholder (
-            id,
-            roleid,
-            usecaseid,
-            role,
-            stakeholder_email,
-            modified,
-            created,
-            editor_email
-          )
-          VALUES (
-            @NextId,
-            @RoleId,
-            @UseCaseId,
-            @RoleName,
-            @StakeholderEmail,
-            @Now,
-            @Now,
-            @EditorEmail
-          );
-          SELECT @NextId AS id;
-          `,
-        );
-      insertedId = Number(result.recordset?.[0]?.id ?? null);
     }
 
     return NextResponse.json(
-      {
-        item: {
-          id: insertedId,
-          roleid: roleId,
-          usecaseid: id,
-          role: roleName,
-          stakeholder_email: stakeholderEmail,
-          modified: now,
-          created: now,
-          editor_email: editorEmail,
-        },
-      },
+      { item },
       { status: 201, headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
@@ -202,42 +110,18 @@ export const PATCH = async (
       );
     }
 
-    const roleRow = await resolveRole(roleId);
-    const roleName = String(roleRow?.rolename ?? "").trim();
-    const roleType = String(roleRow?.roletype ?? "").trim();
-    const isActive = String(roleRow?.isactive ?? "1").trim();
-
-    if (!roleName || roleType !== "2" || isActive !== "1" || isOwnerRole(roleName)) {
-      return NextResponse.json(
-        { message: "Role is not eligible for stakeholder updates." },
-        { status: 400 },
-      );
-    }
-
-    const now = new Date().toISOString();
     const pool = await getSqlPool();
     const result = await pool
       .request()
       .input("Id", stakeholderId)
       .input("UseCaseId", id)
       .input("RoleId", roleId)
-      .input("RoleName", roleName)
       .input("StakeholderEmail", stakeholderEmail)
-      .input("Now", now)
       .input("EditorEmail", editorEmail)
-      .query(
-        `
-        UPDATE dbo.stakeholder
-        SET roleid = @RoleId,
-            role = @RoleName,
-            stakeholder_email = @StakeholderEmail,
-            modified = @Now,
-            editor_email = @EditorEmail
-        WHERE id = @Id AND usecaseid = @UseCaseId;
-        `,
-      );
+      .execute("dbo.UpdateUseCaseStakeholder");
 
-    if ((result.rowsAffected?.[0] ?? 0) === 0) {
+    const item = result.recordset?.[0] ?? null;
+    if (!item) {
       return NextResponse.json(
         { message: "Stakeholder not found." },
         { status: 404 },
@@ -246,16 +130,7 @@ export const PATCH = async (
 
     return NextResponse.json(
       {
-        item: {
-          id: stakeholderId,
-          roleid: roleId,
-          usecaseid: id,
-          role: roleName,
-          stakeholder_email: stakeholderEmail,
-          modified: now,
-          created: null,
-          editor_email: editorEmail,
-        },
+        item,
       },
       { headers: { "cache-control": "no-store" } },
     );

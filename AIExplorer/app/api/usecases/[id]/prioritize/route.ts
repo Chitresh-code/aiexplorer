@@ -81,103 +81,29 @@ export const PATCH = async (
 
     const updates = updateFields.filter((field) => hasField(field.key));
 
-    if (updates.length === 0 && !editorEmail) {
+    if (updates.length === 0) {
       return NextResponse.json(
         { message: "At least one field is required." },
         { status: 400 },
       );
     }
 
+    const diffPayload: Record<string, unknown> = {};
+    updates.forEach((field) => {
+      diffPayload[field.key] = field.value;
+    });
+
     const pool = await getSqlPool();
-    const existing = await pool
+    await pool
       .request()
       .input("UseCaseId", useCaseId)
-      .query(
-        `
-        SELECT TOP 1 id
-        FROM dbo.prioritization
-        WHERE usecaseid = @UseCaseId
-        ORDER BY id DESC;
-        `,
-      );
-
-    const existingId = existing.recordset?.[0]?.id;
-    const now = new Date().toISOString();
-
-    if (existingId) {
-      const setClauses = updates.map((field, index) => `${field.column} = @Value${index}`);
-      setClauses.push("modified = @Now");
-      if (editorEmail !== null) {
-        setClauses.push("editor_email = @EditorEmail");
-      }
-
-      const requestBuilder = pool
-        .request()
-        .input("Id", existingId)
-        .input("Now", now)
-        .input("EditorEmail", editorEmail);
-
-      updates.forEach((field, index) => {
-        requestBuilder.input(`Value${index}`, field.value ?? null);
-      });
-
-      await requestBuilder.query(
-        `
-        UPDATE dbo.prioritization
-        SET ${setClauses.join(", ")}
-        WHERE id = @Id;
-        `,
-      );
-
-      return NextResponse.json(
-        { ok: true, id: existingId },
-        { headers: { "cache-control": "no-store" } },
-      );
-    }
-
-    const nextIdResult = await pool.request().query(
-      `
-      SELECT ISNULL(MAX(id), 0) + 1 AS NextId
-      FROM dbo.prioritization WITH (UPDLOCK, HOLDLOCK);
-      `,
-    );
-    const nextId = Number(nextIdResult.recordset?.[0]?.NextId);
-    if (!Number.isFinite(nextId)) {
-      return NextResponse.json(
-        { message: "Failed to allocate prioritization id." },
-        { status: 500 },
-      );
-    }
-
-    const insertColumns = ["id", "usecaseid", "created", "modified", "editor_email"];
-    const insertValues = ["@Id", "@UseCaseId", "@Now", "@Now", "@EditorEmail"];
-
-    updates.forEach((field, index) => {
-      insertColumns.push(field.column);
-      insertValues.push(`@Value${index}`);
-    });
-
-    const insertRequest = pool
-      .request()
-      .input("Id", nextId)
-      .input("UseCaseId", useCaseId)
-      .input("Now", now)
-      .input("EditorEmail", editorEmail);
-
-    updates.forEach((field, index) => {
-      insertRequest.input(`Value${index}`, field.value ?? null);
-    });
-
-    await insertRequest.query(
-      `
-      INSERT INTO dbo.prioritization (${insertColumns.join(", ")})
-      VALUES (${insertValues.join(", ")});
-      `,
-    );
+      .input("PayloadJson", JSON.stringify(diffPayload))
+      .input("EditorEmail", editorEmail)
+      .execute("dbo.UpdateUseCasePrioritization");
 
     return NextResponse.json(
-      { ok: true, id: nextId },
-      { status: 201, headers: { "cache-control": "no-store" } },
+      { ok: true },
+      { headers: { "cache-control": "no-store" } },
     );
   } catch (error) {
     logErrorTrace("Prioritize update failed", error);

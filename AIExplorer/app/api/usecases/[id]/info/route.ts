@@ -23,43 +23,37 @@ export const PATCH = async (
 
   try {
     const payload = (await request.json()) as UpdateInfoPayload;
-    const title = payload.title?.trim() ?? null;
-    const headlines = payload.headlines?.trim() ?? null;
-    const opportunity = payload.opportunity?.trim() ?? null;
-    const businessValue = payload.businessValue?.trim() ?? null;
     const editorEmail = payload.editorEmail?.trim() ?? null;
+    const diffPayload: Record<string, unknown> = {};
 
-    if (!title && !headlines && !opportunity && !businessValue) {
+    if (Object.prototype.hasOwnProperty.call(payload, "title")) {
+      diffPayload.title = payload.title;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "headlines")) {
+      diffPayload.headlines = payload.headlines;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "opportunity")) {
+      diffPayload.opportunity = payload.opportunity;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "businessValue")) {
+      diffPayload.businessValue = payload.businessValue;
+    }
+
+    if (Object.keys(diffPayload).length === 0) {
       return NextResponse.json(
         { message: "At least one field is required." },
         { status: 400 },
       );
     }
 
-    const now = new Date().toISOString();
     const pool = await getSqlPool();
 
     await pool
       .request()
       .input("UseCaseId", id)
-      .input("Title", title)
-      .input("Headlines", headlines)
-      .input("Opportunity", opportunity)
-      .input("BusinessValue", businessValue)
-      .input("Now", now)
+      .input("PayloadJson", JSON.stringify(diffPayload))
       .input("EditorEmail", editorEmail)
-      .query(
-        `
-        UPDATE dbo.usecases
-        SET title = COALESCE(@Title, title),
-            headlines = COALESCE(@Headlines, headlines),
-            opportunity = COALESCE(@Opportunity, opportunity),
-            business_value = COALESCE(@BusinessValue, business_value),
-            modified = @Now,
-            editor_email = COALESCE(@EditorEmail, editor_email)
-        WHERE TRY_CONVERT(BIGINT, id) = @UseCaseId;
-        `,
-      );
+      .execute("dbo.UpdateUseCaseInfo");
 
     return NextResponse.json(
       { ok: true },

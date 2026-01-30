@@ -32,110 +32,13 @@ export const PATCH = async (
       );
     }
 
-    const now = new Date().toISOString();
-    const editorEmail = payload.editorEmail?.trim() || null;
-
     const pool = await getSqlPool();
-    const identityResult = await pool
+    await pool
       .request()
-      .query(
-        "SELECT COLUMNPROPERTY(OBJECT_ID('dbo.[plan]'), 'id', 'IsIdentity') AS isIdentity",
-      );
-    const isIdentity = identityResult.recordset?.[0]?.isIdentity === 1;
-
-    const requestSql = pool.request();
-    requestSql.input("UseCaseId", id);
-    requestSql.input("EditorEmail", editorEmail);
-    requestSql.input("Now", now);
-
-    const statements: string[] = [];
-    statements.push("BEGIN TRAN;");
-    if (!isIdentity) {
-      statements.push(
-        "DECLARE @NextId BIGINT = (SELECT ISNULL(MAX(id), 0) FROM dbo.[plan] WITH (UPDLOCK, HOLDLOCK));",
-      );
-    }
-
-    items.forEach((item, index) => {
-      const phaseId = Number(item.usecasephaseid);
-      if (!Number.isFinite(phaseId)) {
-        return;
-      }
-      const startDate = item.startdate?.trim();
-      const endDate = item.enddate?.trim();
-      const phaseKey = `PhaseId${index}`;
-      const startKey = `StartDate${index}`;
-      const endKey = `EndDate${index}`;
-
-      requestSql.input(phaseKey, phaseId);
-      requestSql.input(startKey, startDate);
-      requestSql.input(endKey, endDate);
-
-      statements.push(`
-        IF EXISTS (
-          SELECT 1
-          FROM dbo.[plan]
-          WHERE usecaseid = @UseCaseId AND usecasephaseid = @${phaseKey}
-        )
-        BEGIN
-          UPDATE dbo.[plan]
-          SET startdate = @${startKey},
-              enddate = @${endKey},
-              modified = @Now,
-              editor_email = COALESCE(@EditorEmail, editor_email)
-          WHERE usecaseid = @UseCaseId AND usecasephaseid = @${phaseKey};
-        END
-        ELSE
-        BEGIN
-          ${
-            isIdentity
-              ? `INSERT INTO dbo.[plan] (
-                  usecaseid,
-                  usecasephaseid,
-                  startdate,
-                  enddate,
-                  modified,
-                  created,
-                  editor_email
-                )
-                VALUES (
-                  @UseCaseId,
-                  @${phaseKey},
-                  @${startKey},
-                  @${endKey},
-                  @Now,
-                  @Now,
-                  @EditorEmail
-                );`
-              : `SET @NextId = @NextId + 1;
-                INSERT INTO dbo.[plan] (
-                  id,
-                  usecaseid,
-                  usecasephaseid,
-                  startdate,
-                  enddate,
-                  modified,
-                  created,
-                  editor_email
-                )
-                VALUES (
-                  @NextId,
-                  @UseCaseId,
-                  @${phaseKey},
-                  @${startKey},
-                  @${endKey},
-                  @Now,
-                  @Now,
-                  @EditorEmail
-                );`
-          }
-        END
-      `);
-    });
-
-    statements.push("COMMIT TRAN;");
-
-    await requestSql.query(statements.join("\n"));
+      .input("UseCaseId", id)
+      .input("PlanJson", JSON.stringify(items))
+      .input("EditorEmail", payload.editorEmail?.trim() || null)
+      .execute("dbo.UpdateUseCasePlan");
 
     return NextResponse.json(
       { ok: true },
