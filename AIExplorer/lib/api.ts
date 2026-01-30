@@ -121,6 +121,28 @@ export const updateUseCaseMetrics = async (
   return response.json();
 };
 
+export const updateUseCaseChecklist = async (
+  id: string | number,
+  payload: {
+    items: Array<{
+      questionId: number;
+      response?: string | null;
+    }>;
+    editorEmail?: string;
+  },
+) => {
+  const response = await fetch(`/api/usecases/${id}/checklist`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const details = await response.text().catch(() => "");
+    throw new Error(details || "Failed to update use case checklist.");
+  }
+  return response.json();
+};
+
 export const deleteUseCase = async (id: string | number) => {
   await apiClient.delete(`/api/usecases/${id}`);
 };

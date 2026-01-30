@@ -13,6 +13,7 @@ const allSections = [
   "metrics",
   "stakeholders",
   "updates",
+  "checklist",
 ] as const;
 
 const normalizeList = (value: string | null) =>
@@ -119,6 +120,10 @@ export const GET = async (
 
     if (includeSet.has("updates")) {
       response.updates = next();
+    }
+
+    if (includeSet.has("checklist")) {
+      response.checklist = next();
     }
 
     return NextResponse.json(

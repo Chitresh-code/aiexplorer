@@ -16,6 +16,7 @@ type InfoSectionProps = {
   onTitleChange: (value: string) => void;
   useCasePhase?: string;
   agentBadgeLabel?: string;
+  agentLink?: string;
   businessUnitName: string;
   teamName: string;
   aiThemeNames: string[];
@@ -35,6 +36,7 @@ export const InfoSection = ({
   onTitleChange,
   useCasePhase,
   agentBadgeLabel,
+  agentLink,
   businessUnitName,
   teamName,
   aiThemeNames,
@@ -46,6 +48,7 @@ export const InfoSection = ({
   onEvidenceChange,
   editableContactPerson,
 }: InfoSectionProps) => {
+  const resolvedAgentLink = agentLink?.trim() || "";
   const MarkdownBlock = ({ content }: { content: string }) => {
     if (!content.trim()) {
       return <div className="text-gray-400 italic">No content provided.</div>;
@@ -122,87 +125,94 @@ export const InfoSection = ({
             className="border-none shadow-sm bg-white overflow-hidden ring-1 ring-gray-200 h-full flex flex-col"
             style={{ backgroundColor: "#c7e7e7" }}
           >
-            <CardContent className="p-8 flex-1 min-h-0 overflow-y-auto">
-              <div className="flex min-h-0 flex-col gap-6">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    Use Case:
-                  </h3>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Input
-                      value={editableTitle}
-                      onChange={(e) => onTitleChange(e.target.value)}
-                      readOnly={!isEditing}
-                      className={cn(
-                        "text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto",
-                        isEditing &&
-                          "bg-white/50 border-white/20 px-2 py-1 shadow-sm focus-visible:ring-1",
-                      )}
-                    />
-                    <Badge
-                      variant="secondary"
-                      className="bg-white/80 text-[#13352C] border-none shadow-sm hover:bg-white font-semibold flex-shrink-0"
-                    >
-                      {useCasePhase || "—"}
-                    </Badge>
-                    {agentBadgeLabel ? (
+            <CardContent className="p-8 flex-1 min-h-0 flex flex-col">
+              <div className="flex-1 min-h-0 overflow-y-auto pr-2">
+                <div className="flex min-h-0 flex-col gap-6">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                      Use Case:
+                    </h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Input
+                        value={editableTitle}
+                        onChange={(e) => onTitleChange(e.target.value)}
+                        readOnly={!isEditing}
+                        className={cn(
+                          "text-[#13352C] font-medium bg-transparent border-none shadow-none focus-visible:ring-0 p-0 h-auto",
+                          isEditing &&
+                            "bg-white/50 border-white/20 px-2 py-1 shadow-sm focus-visible:ring-1",
+                        )}
+                      />
                       <Badge
-                        variant="outline"
-                        className="bg-[#13352C] text-white border-none shadow-md px-3 py-1 font-medium flex-shrink-0"
+                        variant="secondary"
+                        className="bg-white/80 text-[#13352C] border-none shadow-sm hover:bg-white font-semibold flex-shrink-0"
                       >
-                        {agentBadgeLabel}
+                        {useCasePhase || "—"}
                       </Badge>
+                      {agentBadgeLabel ? (
+                        <Badge
+                          variant="outline"
+                          className="bg-[#13352C] text-white border-none shadow-md px-3 py-1 font-medium flex-shrink-0"
+                        >
+                          {agentBadgeLabel}
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                      Business Unit:
+                    </h3>
+                    <div className="text-[#13352C] font-medium">
+                      {businessUnitName || "—"}
+                    </div>
+                    {teamName ? (
+                      <div className="text-sm text-[#13352C] mt-1">
+                        Team: {teamName}
+                      </div>
                     ) : null}
                   </div>
-                </div>
 
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    Business Unit:
-                  </h3>
-                  <div className="text-[#13352C] font-medium">
-                    {businessUnitName || "—"}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                      AI Theme:
+                    </h3>
+                    {aiThemeNames.length > 0 ? (
+                      <ul className="list-disc pl-5 text-[#13352C] font-medium text-base space-y-1">
+                        {aiThemeNames.map((theme) => (
+                          <li key={theme}>{theme}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-[#13352C] font-medium text-base">
+                        No AI themes selected
+                      </div>
+                    )}
                   </div>
-                  {teamName ? (
-                    <div className="text-sm text-[#13352C] mt-1">
-                      Team: {teamName}
-                    </div>
-                  ) : null}
-                </div>
 
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    AI Theme:
-                  </h3>
-                  {aiThemeNames.length > 0 ? (
-                    <ul className="list-disc pl-5 text-[#13352C] font-medium text-base space-y-1">
-                      {aiThemeNames.map((theme) => (
-                        <li key={theme}>{theme}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-[#13352C] font-medium text-base">
-                      No AI themes selected
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
+                      Primary Contact Person
+                    </h3>
+                    <div className="text-[#13352C] font-medium">
+                      {editableContactPerson || "—"}
                     </div>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-2">
-                    Primary Contact Person
-                  </h3>
-                  <div className="text-[#13352C] font-medium">
-                    {editableContactPerson || "—"}
                   </div>
                 </div>
+              </div>
 
-                <div className="mt-auto pt-2 flex justify-start">
-                  <Button
-                    className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-8 rounded-md"
-                  >
-                    Explore
-                  </Button>
-                </div>
+              <div className="pt-4 flex justify-start">
+                <Button
+                  className="bg-[#D3E12E] hover:bg-[#c0ce25] text-[#13352C] font-bold px-8 rounded-md"
+                  disabled={!resolvedAgentLink}
+                  onClick={() => {
+                    if (!resolvedAgentLink) return;
+                    window.open(resolvedAgentLink, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  Explore
+                </Button>
               </div>
             </CardContent>
           </Card>

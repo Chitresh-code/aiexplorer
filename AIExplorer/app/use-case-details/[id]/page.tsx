@@ -17,22 +17,26 @@ import { ActionsSection } from "@/components/use-case-details/ActionsSection";
 import { ReprioritizeSection } from "@/components/use-case-details/ReprioritizeSection";
 import { ParcsCategorySelect } from "@/components/use-case-details/ParcsCategorySelect";
 import { UnitOfMeasurementSelect } from "@/components/use-case-details/UnitOfMeasurementSelect";
+import { ChecklistSection } from "@/components/submit-use-case/ChecklistSection";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
+import { Form } from "@/components/ui/form";
 import { toast } from 'sonner';
 import { useLocation } from '@/lib/router';
 import { useMsal } from '@azure/msal-react';
-import { Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, Pencil, Trash2 } from 'lucide-react';
 import { useUseCaseDetails, type AgentLibraryItem } from '@/hooks/use-usecase-details';
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { updateUseCaseInfo, updateUseCaseMetrics } from '@/lib/api';
+import { updateUseCaseChecklist, updateUseCaseInfo, updateUseCaseMetrics } from '@/lib/api';
 
 import { getMappings } from '@/lib/submit-use-case';
+import { useForm } from "react-hook-form";
 import { useReactTable, getCoreRowModel, type ColumnDef } from '@tanstack/react-table';
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 const UseCaseDetailsSkeleton = () => (
     <div className="flex flex-1 flex-col gap-6 p-6 w-full">
@@ -172,6 +176,36 @@ type UpdateItem = {
     modified: string | null;
     created: string | null;
     editor_email: string | null;
+};
+
+type ChecklistQuestion = {
+    id: number | string;
+    question: string;
+    kind: "yesno" | "choice";
+    options: { value: string; label: string }[];
+    isMulti: boolean;
+    responseKey: string;
+};
+
+type ChecklistResponseItem = {
+    questionid?: number | string | null;
+    questionId?: number | string | null;
+    response?: string | null;
+};
+
+type ChecklistDisplayItem = {
+    id: number | string;
+    question: string;
+    responses: string[];
+};
+
+type AiProductQuestion = {
+    id?: number | string;
+    question?: string;
+    questionType?: string;
+    questiontype?: string;
+    responseValue?: string;
+    responsevalue?: string;
 };
 
 const metricColumnSizes = {
@@ -364,7 +398,7 @@ const UseCaseDetails = () => {
     }, [useCaseDetails, id, state?.useCaseTitle]);
     const tabParam = String(searchParams.get("tab") ?? "").toLowerCase();
     const resolvedTab = useMemo(() => {
-        const ownerTabs = new Set(["info", "update", "library", "metrics", "status"]);
+        const ownerTabs = new Set(["info", "update", "checklist", "library", "metrics", "status"]);
         const championTabs = new Set(["info", "update", "reprioritize", "metrics", "status"]);
         const allowedTabs = isChampionView ? championTabs : ownerTabs;
         if (tabParam && allowedTabs.has(tabParam)) {
@@ -440,6 +474,7 @@ const UseCaseDetails = () => {
 
     const [themeOptions, setThemeOptions] = useState<{ label: string; value: string }[]>([]);
     const [statusOptions, setStatusOptions] = useState<string[]>([]);
+    const [aiProductQuestionsData, setAiProductQuestionsData] = useState<AiProductQuestion[]>([]);
 
     useEffect(() => {
         setActiveTab(resolvedTab);
@@ -517,12 +552,18 @@ const UseCaseDetails = () => {
     const reprioritizeSnapshotRef = useRef<typeof formData | null>(null);
 
     const [isEditing, setIsEditing] = useState(false);
+    const [isChecklistEditing, setIsChecklistEditing] = useState(false);
     const [editableTitle, setEditableTitle] = useState(useCase.title);
     const [editableAITheme, setEditableAITheme] = useState<string[]>([]);
     const [editableHeadline, setEditableHeadline] = useState('');
     const [editableOpportunity, setEditableOpportunity] = useState('');
     const [editableEvidence, setEditableEvidence] = useState('');
     const [editableContactPerson, setEditableContactPerson] = useState('');
+    const checklistForm = useForm<{ checklistResponses: Record<string, string | string[]> }>({
+        defaultValues: { checklistResponses: {} },
+    });
+    const checklistSnapshotRef = useRef<Record<string, string | string[]>>({});
+    const checklistContainerRef = useRef<HTMLDivElement>(null);
 
     const roleSelectOptions = useMemo(
         () =>
@@ -537,6 +578,82 @@ const UseCaseDetails = () => {
     );
 
     const canAddStakeholder = useMemo(() => roleSelectOptions.length > 0, [roleSelectOptions]);
+
+    const checklistQuestions = useMemo<ChecklistQuestion[]>(() => {
+        if (!Array.isArray(aiProductQuestionsData) || aiProductQuestionsData.length === 0) {
+            return [];
+        }
+
+        const parseOptions = (raw?: string) => {
+            if (!raw) return [];
+            return raw
+                .split(",")
+                .map((option) => option.trim())
+                .filter(Boolean)
+                .map((option) => ({ value: option, label: option }));
+        };
+
+        const toOrder = (value: number | string) => {
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : Number.MAX_SAFE_INTEGER;
+        };
+
+        const mapped = aiProductQuestionsData
+            .map((question) => {
+                const text = String(question.question ?? "").trim();
+                if (!text) return null;
+
+                const rawType = String(question.questionType ?? question.questiontype ?? "").toLowerCase();
+                const responseValue = String(question.responseValue ?? question.responsevalue ?? "");
+                const isYesNo = rawType.includes("yes") && rawType.includes("no");
+                const isChoice = rawType.includes("choice") || (responseValue && !isYesNo);
+
+                return {
+                    id: question.id ?? text,
+                    question: text,
+                    kind: isYesNo ? "yesno" : "choice",
+                    options: isChoice ? parseOptions(responseValue) : [],
+                    isMulti: isChoice && text.toLowerCase().includes("select all"),
+                    responseKey: String(question.id ?? text)
+                        .replace(/[^\w-]/g, "_")
+                        .toLowerCase(),
+                } as ChecklistQuestion;
+            })
+            .filter((item): item is ChecklistQuestion => Boolean(item));
+
+        return mapped.sort((a, b) => toOrder(a.id) - toOrder(b.id));
+    }, [aiProductQuestionsData]);
+
+    const checklistResponseMap = useMemo(() => {
+        const map = new Map<number, string>();
+        const rows = (useCaseDetails?.checklist ?? []) as ChecklistResponseItem[];
+        rows.forEach((row) => {
+            const questionId = Number(row.questionid ?? row.questionId);
+            if (!Number.isFinite(questionId)) return;
+            const response = String(row.response ?? "").trim();
+            map.set(questionId, response);
+        });
+        return map;
+    }, [useCaseDetails?.checklist]);
+
+    const checklistDisplayItems = useMemo<ChecklistDisplayItem[]>(() => {
+        if (checklistQuestions.length === 0) return [];
+        return checklistQuestions.map((question) => {
+            const questionId = Number(question.id);
+            const response = Number.isFinite(questionId)
+                ? checklistResponseMap.get(questionId) ?? ""
+                : "";
+            const responses = response
+                .split(",")
+                .map((entry) => entry.trim())
+                .filter(Boolean);
+            return {
+                id: question.id,
+                question: question.question,
+                responses,
+            };
+        });
+    }, [checklistQuestions, checklistResponseMap]);
 
     // Sync editable fields when useCase updates
     useEffect(() => {
@@ -601,6 +718,28 @@ const UseCaseDetails = () => {
         }
     }, [accounts, useCase.primaryContact]);
 
+    useEffect(() => {
+        if (isChecklistEditing || checklistQuestions.length === 0) return;
+
+        const defaults: Record<string, string | string[]> = {};
+        checklistQuestions.forEach((question) => {
+            const questionId = Number(question.id);
+            if (!Number.isFinite(questionId)) return;
+            const response = checklistResponseMap.get(questionId) ?? "";
+            if (question.isMulti) {
+                const values = response
+                    .split(",")
+                    .map((entry) => entry.trim())
+                    .filter(Boolean);
+                defaults[question.responseKey] = values;
+            } else {
+                defaults[question.responseKey] = response;
+            }
+        });
+        checklistForm.reset({ checklistResponses: defaults });
+        checklistSnapshotRef.current = defaults;
+    }, [checklistForm, checklistQuestions, checklistResponseMap, isChecklistEditing]);
+
     // Fetch mapping data
     useEffect(() => {
         const fetchDropdownData = async () => {
@@ -617,6 +756,7 @@ const UseCaseDetails = () => {
                     "rice",
                     "implementationTimespans",
                     "reportingFrequency",
+                    "aiProductQuestions",
                     "roles",
                 ]);
                 const themes = mappings.themes;
@@ -630,6 +770,7 @@ const UseCaseDetails = () => {
                 const riceMappings = mappings.rice;
                 const timespans = mappings.implementationTimespans;
                 const reportingFrequencies = mappings.reportingFrequency;
+                const aiProductQuestions = mappings.aiProductQuestions;
                 const roles = mappings.roles;
                 setThemeOptions(
                     (themes?.items ?? [])
@@ -814,6 +955,9 @@ const UseCaseDetails = () => {
                         }))
                         .filter((item: RoleOption) => Number.isFinite(item.id) && item.name);
                     setRoleOptions(items);
+                }
+                if (Array.isArray(aiProductQuestions?.items)) {
+                    setAiProductQuestionsData(aiProductQuestions.items as AiProductQuestion[]);
                 }
             } catch (error) {
                 console.error('Error fetching dropdown data:', error);
@@ -1469,6 +1613,62 @@ const UseCaseDetails = () => {
         setIsEditing(true);
     }, [editableEvidence, editableHeadline, editableOpportunity, editableTitle]);
 
+    const normalizeChecklistResponse = (value: unknown) => {
+        if (Array.isArray(value)) {
+            return value.map((entry) => String(entry).trim()).filter(Boolean).join(", ");
+        }
+        if (value === null || value === undefined) return "";
+        return String(value).trim();
+    };
+
+    const handleStartChecklistEdit = useCallback(() => {
+        const current = checklistForm.getValues("checklistResponses") ?? {};
+        checklistSnapshotRef.current = { ...current };
+        setIsChecklistEditing(true);
+    }, [checklistForm]);
+
+    const handleCancelChecklistEdit = useCallback(() => {
+        checklistForm.reset({ checklistResponses: checklistSnapshotRef.current ?? {} });
+        setIsChecklistEditing(false);
+    }, [checklistForm]);
+
+    const handleApplyChecklistChanges = useCallback(async () => {
+        const current = checklistForm.getValues("checklistResponses") ?? {};
+        const snapshot = checklistSnapshotRef.current ?? {};
+        const diffItems = checklistQuestions.reduce<{ questionId: number; response: string | null }[]>(
+            (acc, question) => {
+                const key = question.responseKey;
+                const currentValue = normalizeChecklistResponse((current as Record<string, unknown>)[key]);
+                const previousValue = normalizeChecklistResponse((snapshot as Record<string, unknown>)[key]);
+                if (currentValue === previousValue) return acc;
+                const questionId = Number(question.id);
+                if (!Number.isFinite(questionId)) return acc;
+                acc.push({
+                    questionId,
+                    response: currentValue ? currentValue : null,
+                });
+                return acc;
+            },
+            [],
+        );
+
+        if (diffItems.length === 0) {
+            setIsChecklistEditing(false);
+            return;
+        }
+
+        try {
+            const editorEmail = accounts?.[0]?.username ?? accounts?.[0]?.name ?? "";
+            await updateUseCaseChecklist(id, { editorEmail, items: diffItems });
+            await refetch();
+            toast.success("Checklist updated successfully");
+            setIsChecklistEditing(false);
+        } catch (error) {
+            console.error("Failed to update checklist:", error);
+            toast.error("Failed to update checklist.");
+        }
+    }, [accounts, checklistForm, checklistQuestions, id, refetch]);
+
     const resetAgentLibraryFields = useCallback(() => {
         if (agentLibraryItems.length > 0) {
             const item = agentLibraryItems[0];
@@ -2105,6 +2305,15 @@ const UseCaseDetails = () => {
                 applyLabel: "Apply Changes",
             };
         }
+        if (activeTab === 'checklist') {
+            return {
+                isEditing: isChecklistEditing,
+                onStart: handleStartChecklistEdit,
+                onCancel: handleCancelChecklistEdit,
+                onApply: handleApplyChecklistChanges,
+                applyLabel: "Apply Changes",
+            };
+        }
         return null;
     }, [
         activeTab,
@@ -2112,6 +2321,7 @@ const UseCaseDetails = () => {
         isReprioritizeEditing,
         isAgentLibraryEditing,
         isMetricsEditing,
+        isChecklistEditing,
         handleCancelEdit,
         handleApplyChanges,
         handleStartInfoEdit,
@@ -2124,9 +2334,13 @@ const UseCaseDetails = () => {
         handleStartMetricsEdit,
         handleCancelMetricsEdit,
         handleApplyMetricsEdit,
+        handleStartChecklistEdit,
+        handleCancelChecklistEdit,
+        handleApplyChecklistChanges,
     ]);
 
-    const isAnyEditing = isEditing || isAgentLibraryEditing || isMetricsEditing || isReprioritizeEditing;
+    const isAnyEditing =
+        isEditing || isAgentLibraryEditing || isMetricsEditing || isReprioritizeEditing || isChecklistEditing;
 
     useEffect(() => {
         if (!id || typeof id !== "string") {
@@ -2661,6 +2875,8 @@ const UseCaseDetails = () => {
         return phaseName ? `${phaseName.toUpperCase()} PHASE` : "CURRENT PHASE";
     }, [useCase.phase]);
 
+    const tabsGridCols = isChampionView ? "grid-cols-5" : "grid-cols-6";
+
     if (loading) {
         return <UseCaseDetailsSkeleton />;
     }
@@ -2681,7 +2897,8 @@ const UseCaseDetails = () => {
                         (isEditing && val !== 'info') ||
                         (isAgentLibraryEditing && val !== 'library') ||
                         (isMetricsEditing && val !== 'metrics') ||
-                        (isReprioritizeEditing && val !== 'reprioritize')
+                        (isReprioritizeEditing && val !== 'reprioritize') ||
+                        (isChecklistEditing && val !== 'checklist')
                     ) {
                         return;
                     }
@@ -2695,29 +2912,39 @@ const UseCaseDetails = () => {
                         <div />
                         <TabsList
                             className={cn(
-                                "grid w-full min-w-0 grid-cols-5 h-10 bg-gray-100/50 p-1 border rounded-lg transition-[max-width] justify-center items-center",
+                                "grid w-full min-w-0 h-10 bg-gray-100/50 p-1 border rounded-lg transition-[max-width] justify-center items-center",
+                                tabsGridCols,
                                 isAnyEditing ? "max-w-[900px]" : "max-w-[1600px]"
                             )}
                         >
                             <TabsTrigger
                                 value="info"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={false}
+                                disabled={isChecklistEditing}
                             >
                                 Info
                             </TabsTrigger>
                             <TabsTrigger
                                 value="update"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing || isMetricsEditing}
+                                disabled={isEditing || isMetricsEditing || isChecklistEditing}
                             >
                                 Update
                             </TabsTrigger>
+                            {!isChampionView && (
+                                <TabsTrigger
+                                    value="checklist"
+                                    className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
+                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing || isReprioritizeEditing}
+                                >
+                                    AI Product Checklist
+                                </TabsTrigger>
+                            )}
                             {isChampionView ? (
                                 <TabsTrigger
                                     value="reprioritize"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
+                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing || isChecklistEditing}
                                 >
                                     Reprioritize
                                 </TabsTrigger>
@@ -2725,7 +2952,7 @@ const UseCaseDetails = () => {
                                 <TabsTrigger
                                     value="library"
                                     className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
+                                    disabled={isEditing || isAgentLibraryEditing || isMetricsEditing || isChecklistEditing}
                                 >
                                     Library
                                 </TabsTrigger>
@@ -2733,14 +2960,14 @@ const UseCaseDetails = () => {
                             <TabsTrigger
                                 value="metrics"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing || isAgentLibraryEditing}
+                                disabled={isEditing || isAgentLibraryEditing || isChecklistEditing}
                             >
                                 Metrics
                             </TabsTrigger>
                             <TabsTrigger
                                 value="status"
                                 className="data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm py-1.5 px-3 rounded-md transition-all text-gray-600 font-medium"
-                                disabled={isEditing || isAgentLibraryEditing || isMetricsEditing}
+                                disabled={isEditing || isAgentLibraryEditing || isMetricsEditing || isChecklistEditing}
                             >
                                 {isChampionView ? 'Approvals' : 'Actions'}
                             </TabsTrigger>
@@ -2788,6 +3015,7 @@ const UseCaseDetails = () => {
                         onTitleChange={setEditableTitle}
                         useCasePhase={useCase.phase}
                         agentBadgeLabel={agentBadgeLabel}
+                        agentLink={String(agentLibraryItems?.[0]?.agentlink ?? useCaseDetails?.agentLibrary?.[0]?.agentlink ?? "")}
                         businessUnitName={useCase.businessUnitName}
                         teamName={useCase.teamName}
                         aiThemeNames={aiThemeDisplay}
@@ -2826,6 +3054,72 @@ const UseCaseDetails = () => {
                         updates={updates}
                     />
                 </TabsContent>
+                {!isChampionView && (
+                    <TabsContent value="checklist" className="space-y-6">
+                        {isChecklistEditing ? (
+                            <Form {...checklistForm}>
+                                <div ref={checklistContainerRef}>
+                                    <fieldset disabled={!isChecklistEditing}>
+                                        <ChecklistSection
+                                            form={checklistForm}
+                                            questions={checklistQuestions}
+                                            selectedModel={agentBadgeLabel}
+                                            containerRef={checklistContainerRef}
+                                        />
+                                    </fieldset>
+                                </div>
+                            </Form>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="p-6 rounded-lg border border-dashed">
+                                    <div className="flex items-center gap-3 mb-6 bg-background/80 backdrop-blur-sm py-2">
+                                        <div className="p-2 bg-primary/10 rounded-full text-primary">
+                                            <CheckSquare className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-semibold">AI Product Checklist</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Checklist responses for {agentBadgeLabel || "this use case"}.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {checklistQuestions.length === 0 ? (
+                                        <div className="rounded-md border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground">
+                                            Checklist questions are not available yet.
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+                                            <div className="grid gap-4">
+                                                {checklistDisplayItems.map((item, index) => (
+                                                    <div
+                                                        key={`${item.id}-${index}`}
+                                                        className="rounded-md border border-gray-100 bg-white p-4 shadow-sm"
+                                                    >
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {index + 1}. {item.question}
+                                                        </div>
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            {item.responses.length > 0 ? (
+                                                                item.responses.map((response, responseIndex) => (
+                                                                    <Badge key={`${item.id}-${responseIndex}`} variant="secondary">
+                                                                        {response}
+                                                                    </Badge>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-sm text-muted-foreground">—</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </TabsContent>
+                )}
                 <TabsContent value="reprioritize" className="space-y-3">
                     <ReprioritizeSection
                         formData={formData}

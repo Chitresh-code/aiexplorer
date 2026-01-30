@@ -55,7 +55,12 @@ export const POST = async (request: Request) => {
     const query = body.query?.trim() ?? "";
 
     const pool = await getSqlPool();
-    const result = await pool.request().execute("dbo.GetGalleryUseCases");
+    const result = await pool
+      .request()
+      .input("Role", null)
+      .input("Email", null)
+      .input("View", "gallery")
+      .execute("dbo.GetUseCases");
     const rawItems = (result.recordset ?? []) as GalleryDbUseCase[];
     const listItems = rawItems.map(toListItem);
 

@@ -64,6 +64,7 @@ type UseCaseDetailsResponse = {
   metrics?: { items?: Record<string, unknown>[]; reported?: Record<string, unknown>[] };
   stakeholders?: Record<string, unknown>[];
   updates?: Record<string, unknown>[];
+  checklist?: Record<string, unknown>[];
 };
 
 type UseCaseDetailsOptions = {

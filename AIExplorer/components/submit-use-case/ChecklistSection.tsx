@@ -23,7 +23,7 @@ type ChecklistSectionProps = {
     form: any;
     questions: ChecklistQuestion[];
     selectedModel?: string;
-    containerRef?: React.RefObject<HTMLDivElement>;
+    containerRef?: React.RefObject<HTMLDivElement | null>;
     isLoading?: boolean;
 };
 
