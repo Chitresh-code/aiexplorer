@@ -1,0 +1,36 @@
+#!/bin/sh
+# Pre-commit hook for code quality checks
+# This hook runs linting and type checking before each commit
+
+set -e
+
+echo "🔍 Running pre-commit checks..."
+
+# Check if npm is available
+if ! command -v npm &> /dev/null; then
+  echo "❌ npm is not installed"
+  exit 1
+fi
+
+# Run ESLint
+echo "📝 Running ESLint..."
+npm run lint -- --max-warnings 0 || {
+  echo "❌ ESLint found issues"
+  exit 1
+}
+
+# Run TypeScript compiler
+echo "✓ Checking TypeScript..."
+npm run type-check || {
+  echo "❌ TypeScript compilation failed"
+  exit 1
+}
+
+# Check formatting
+echo "✓ Checking code formatting..."
+npm run format:check || {
+  echo "⚠️  Code formatting issues found. Run 'npm run format' to fix."
+  exit 1
+}
+
+echo "✅ All pre-commit checks passed!"

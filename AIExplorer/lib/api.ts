@@ -1,6 +1,20 @@
-import axios from "axios";
+/**
+ * API Client Module
+ * 
+ * Provides centralized API communication with:
+ * - Axios HTTP client with sensible defaults
+ * - Automatic base URL detection
+ * - Request/response interceptors
+ * - Type-safe API endpoints
+ * 
+ * All API calls should use functions from this module to ensure
+ * consistent error handling and logging.
+ */
 
-const getBaseUrl = () => {
+import axios from "axios";
+import { logErrorTrace } from "./error-utils";
+
+const getBaseUrl = (): string => {
   const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 
   // Validate envUrl is a proper URL starting with http/https
@@ -21,35 +35,89 @@ const getBaseUrl = () => {
 
 const API_URL = getBaseUrl();
 
+/**
+ * Axios instance configured with:
+ * - Base URL for all requests
+ * - Standard headers
+ * - Request/response interceptors for error handling
+ */
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
   },
+  timeout: 30000,
 });
 
-export const fetchUseCases = async () => {
+/**
+ * Response interceptor for global error handling
+ * Logs errors and provides consistent error messages
+ */
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const message = error.response?.data?.message || error.message || "Unknown API error";
+    logErrorTrace(`API Request Failed: ${error.config?.url}`, new Error(message));
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Fetch all use cases in list view format
+ * @returns Array of use case summaries
+ * @throws {AxiosError} If the request fails
+ */
+export const fetchUseCases = async (): Promise<unknown[]> => {
   const response = await apiClient.get("/api/usecases?view=list");
-  const data = response.data;
-  return Array.isArray(data?.items) ? data.items : data;
+  const data = response.data as Record<string, unknown>;
+  return Array.isArray(data?.items) ? data.items as unknown[] : (data as unknown[]);
 };
 
-export const fetchUseCase = async (id: string | number) => {
+/**
+ * Fetch a specific use case by ID
+ * @param id - The use case ID
+ * @returns The use case details
+ * @throws {AxiosError} If the request fails or use case not found
+ */
+export const fetchUseCase = async (id: string | number): Promise<unknown> => {
   const response = await apiClient.get(`/api/usecases/${id}`);
   return response.data;
 };
 
-export const createUseCase = async (payload: unknown) => {
+/**
+ * Create a new use case
+ * @param payload - The use case data
+ * @returns The created use case with ID
+ * @throws {AxiosError} If the request fails or validation fails
+ */
+export const createUseCase = async (payload: unknown): Promise<unknown> => {
   const response = await apiClient.post("/api/usecases", payload);
   return response.data;
 };
 
-export const updateUseCase = async (id: string | number, payload: unknown) => {
+/**
+ * Update an existing use case
+ * @param id - The use case ID
+ * @param payload - The updated use case data
+ * @returns The updated use case
+ * @throws {AxiosError} If the request fails or use case not found
+ */
+export const updateUseCase = async (
+  id: string | number,
+  payload: unknown
+): Promise<unknown> => {
   const response = await apiClient.put(`/api/usecases/${id}`, payload);
   return response.data;
 };
 
+/**
+ * Update use case information fields
+ * @param id - The use case ID
+ * @param payload - The fields to update (all optional)
+ * @returns The updated use case
+ * @throws {Error} If the request fails
+ */
 export const updateUseCaseInfo = async (
   id: string | number,
   payload: {
@@ -58,8 +126,8 @@ export const updateUseCaseInfo = async (
     opportunity?: string;
     businessValue?: string;
     editorEmail?: string;
-  },
-) => {
+  }
+): Promise<unknown> => {
   const response = await fetch(`/api/usecases/${id}/info`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -67,6 +135,7 @@ export const updateUseCaseInfo = async (
   });
   if (!response.ok) {
     const details = await response.text().catch(() => "");
+    logErrorTrace(`Update use case info failed: ${id}`, new Error(details));
     throw new Error(details || "Failed to update use case info.");
   }
   return response.json();
