@@ -200,7 +200,7 @@ const MetricDatePicker = ({
                     }}
                 >
                     <CalendarIcon className="mr-2 h-3 w-3" />
-                    {dateValue ? format(dateValue, "dd-MM-yyyy") : <span>Pick date</span>}
+                    {dateValue ? format(dateValue, "MM-dd-yyyy") : <span>Pick date</span>}
                 </Button>
             </PopoverTrigger>
             {!onOpenDialog && (
@@ -220,6 +220,17 @@ const MetricDatePicker = ({
             )}
         </Popover>
     );
+};
+
+const formatDisplayDate = (value?: string | null): string => {
+    if (!value) return "";
+    const parts = value.split("-");
+    if (parts.length !== 3) return value;
+    const [first, second, third] = parts;
+    if (first.length === 4) {
+        return `${second.padStart(2, "0")}-${third.padStart(2, "0")}-${first}`;
+    }
+    return value;
 };
 
 const ReportedDatePickerCell = ({
@@ -419,6 +430,7 @@ const UseCaseDetails = () => {
     }, [resolvedTab, location.search]);
     const [metricCategoryOptions, setMetricCategoryOptions] = useState<string[]>([]);
     const [metricCategoryMap, setMetricCategoryMap] = useState<Map<number, string>>(new Map());
+    const [metricCategoryDefaultUnitMap, setMetricCategoryDefaultUnitMap] = useState<Map<string, string>>(new Map());
     const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState<string[]>([]);
     const [unitOfMeasureMap, setUnitOfMeasureMap] = useState<Map<number, string>>(new Map());
 
@@ -737,33 +749,42 @@ const UseCaseDetails = () => {
                         .map((item: any) => String(item.category ?? "").trim())
                         .filter(Boolean),
                 );
-                setMetricCategoryMap(() => {
-                    const next = new Map<number, string>();
-                    (metricCategories?.items ?? []).forEach((item: any) => {
-                        const id = Number(item.id);
-                        const name = String(item.category ?? "").trim();
-                        if (Number.isFinite(id) && name) {
-                            next.set(id, name);
-                        }
-                    });
-                    return next;
+                const nextCategoryMap = new Map<number, string>();
+                (metricCategories?.items ?? []).forEach((item: any) => {
+                    const id = Number(item.id);
+                    const name = String(item.category ?? "").trim();
+                    if (Number.isFinite(id) && name) {
+                        nextCategoryMap.set(id, name);
+                    }
                 });
+                setMetricCategoryMap(nextCategoryMap);
                 setUnitOfMeasureOptions(
                     (unitOfMeasure?.items ?? [])
                         .map((item: any) => String(item.name ?? "").trim())
                         .filter(Boolean),
                 );
-                setUnitOfMeasureMap(() => {
-                    const next = new Map<number, string>();
-                    (unitOfMeasure?.items ?? []).forEach((item: any) => {
-                        const id = Number(item.id);
-                        const name = String(item.name ?? "").trim();
-                        if (Number.isFinite(id) && name) {
-                            next.set(id, name);
-                        }
-                    });
-                    return next;
+                const nextUnitMap = new Map<number, string>();
+                (unitOfMeasure?.items ?? []).forEach((item: any) => {
+                    const id = Number(item.id);
+                    const name = String(item.name ?? "").trim();
+                    if (Number.isFinite(id) && name) {
+                        nextUnitMap.set(id, name);
+                    }
                 });
+                setUnitOfMeasureMap(nextUnitMap);
+                const nextDefaultUnitMap = new Map<string, string>();
+                (metricCategories?.items ?? []).forEach((item: any) => {
+                    const name = String(item.category ?? "").trim();
+                    const defaultUnitId = Number(
+                        item.defaultUnitOfMeasureId ?? item.defaultunitofmeasureid,
+                    );
+                    if (!name || !Number.isFinite(defaultUnitId)) return;
+                    const unitName = nextUnitMap.get(defaultUnitId);
+                    if (unitName) {
+                        nextDefaultUnitMap.set(name, unitName);
+                    }
+                });
+                setMetricCategoryDefaultUnitMap(nextDefaultUnitMap);
                 setPhaseMappings(
                     (phases?.items ?? [])
                         .map((item: any) => ({
@@ -1947,10 +1968,21 @@ const UseCaseDetails = () => {
 
     const handleInputChange = useCallback((id: number | string, field: string, value: string) => {
         // Update main metrics state
-        setMetrics(prev => prev.map(metric =>
-            String(metric.id) === String(id) ? { ...metric, [field]: value } : metric
-        ));
-    }, []);
+        setMetrics((prev) =>
+            prev.map((metric) => {
+                if (String(metric.id) !== String(id)) return metric;
+                if (field === "parcsCategory") {
+                    const defaultUnit = metricCategoryDefaultUnitMap.get(value);
+                    return {
+                        ...metric,
+                        parcsCategory: value,
+                        unitOfMeasurement: defaultUnit ?? metric.unitOfMeasurement,
+                    };
+                }
+                return { ...metric, [field]: value };
+            }),
+        );
+    }, [metricCategoryDefaultUnitMap]);
 
     const handleDeleteMetric = useCallback((id: number | string) => {
         setMetrics(prev => prev.filter(metric => String(metric.id) !== String(id)));
@@ -2522,11 +2554,14 @@ const UseCaseDetails = () => {
             {
                 accessorKey: 'baselineDate',
                 header: 'Baseline Date',
-                cell: ({ row }) => (
-                    <span className="whitespace-normal break-words">
-                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).baselineDate}
-                    </span>
-                ),
+                cell: ({ row }) => {
+                    const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
+                    return (
+                        <span className="whitespace-normal break-words">
+                            {formatDisplayDate(metric.baselineDate)}
+                        </span>
+                    );
+                },
                 size: metricColumnSizes.baselineDate,
             },
             {
@@ -2542,11 +2577,14 @@ const UseCaseDetails = () => {
             {
                 accessorKey: 'targetDate',
                 header: 'Target Date',
-                cell: ({ row }) => (
-                    <span className="whitespace-normal break-words">
-                        {(reportedMetricsById.get(String(row.original.id)) ?? row.original).targetDate}
-                    </span>
-                ),
+                cell: ({ row }) => {
+                    const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
+                    return (
+                        <span className="whitespace-normal break-words">
+                            {formatDisplayDate(metric.targetDate)}
+                        </span>
+                    );
+                },
                 size: metricColumnSizes.targetDate,
             },
             {
@@ -2575,7 +2613,7 @@ const UseCaseDetails = () => {
                 cell: ({ row }) => {
                     if (!isMetricsEditing) {
                         const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
-                        return <span>{metric.reportedDate || "—"}</span>;
+                        return <span>{formatDisplayDate(metric.reportedDate) || "—"}</span>;
                     }
                     const metric = reportedMetricsById.get(String(row.original.id)) ?? row.original;
                     return (
@@ -2704,7 +2742,9 @@ const UseCaseDetails = () => {
             cell: ({ row }) => {
                 const metric = metricsById.get(String(row.original.id)) ?? row.original;
                 return (!isMetricsEditing) ? (
-                    <span className="text-sm px-2 whitespace-normal break-words">{metric.baselineDate}</span>
+                    <span className="text-sm px-2 whitespace-normal break-words">
+                        {formatDisplayDate(metric.baselineDate)}
+                    </span>
                 ) : (
                     <MetricDatePicker
                         value={metric.baselineDate ?? ""}
@@ -2745,7 +2785,9 @@ const UseCaseDetails = () => {
             cell: ({ row }) => {
                 const metric = metricsById.get(String(row.original.id)) ?? row.original;
                 return (!isMetricsEditing) ? (
-                    <span className="text-sm px-2 whitespace-normal break-words">{metric.targetDate}</span>
+                    <span className="text-sm px-2 whitespace-normal break-words">
+                        {formatDisplayDate(metric.targetDate)}
+                    </span>
                 ) : (
                     <MetricDatePicker
                         value={metric.targetDate ?? ""}

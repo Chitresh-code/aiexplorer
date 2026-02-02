@@ -122,6 +122,17 @@ const MetricDatePicker = ({
   );
 };
 
+const formatDisplayDate = (value?: string | null): string => {
+  if (!value) return "";
+  const parts = value.split("-");
+  if (parts.length !== 3) return value;
+  const [first, second, third] = parts;
+  if (first.length === 4) {
+    return `${second.padStart(2, "0")}-${third.padStart(2, "0")}-${first}`;
+  }
+  return value;
+};
+
 const metricColumnSizes = {
   primarySuccessValue: 260,
   parcsCategory: 220,
@@ -390,7 +401,7 @@ export const MetricsSection = ({
                           </TableCell>
                           <TableCell style={{ width: metricColumnSizes.baselineDate }}>
                             <span className="text-sm px-2 whitespace-normal break-words">
-                              {metric.baselineDate}
+                              {formatDisplayDate(metric.baselineDate)}
                             </span>
                           </TableCell>
                           <TableCell style={{ width: metricColumnSizes.targetValue }}>
@@ -400,7 +411,7 @@ export const MetricsSection = ({
                           </TableCell>
                           <TableCell style={{ width: metricColumnSizes.targetDate }}>
                             <span className="text-sm px-2 whitespace-normal break-words">
-                              {metric.targetDate}
+                              {formatDisplayDate(metric.targetDate)}
                             </span>
                           </TableCell>
                           <TableCell style={{ width: metricColumnSizes.targetValue }}>

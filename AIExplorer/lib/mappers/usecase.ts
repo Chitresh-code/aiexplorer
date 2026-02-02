@@ -1,6 +1,8 @@
 import type { UseCaseDetail, UseCasePhasePlan, UseCaseSummary } from "@/lib/types/usecase";
 
 const toNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
 };
@@ -8,6 +10,21 @@ const toNumber = (value: unknown): number | null => {
 const toStringValue = (value: unknown): string => {
   if (value === null || value === undefined) return "";
   return String(value).trim();
+};
+
+const parseIdList = (value: unknown): number[] => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => Number(entry))
+      .filter((num) => Number.isFinite(num));
+  }
+  const text = String(value).trim();
+  if (!text) return [];
+  return text
+    .split(",")
+    .map((segment) => Number(segment.trim()))
+    .filter((segment) => Number.isFinite(segment));
 };
 
 const normalizePhasePlan = (raw: unknown): UseCasePhasePlan[] => {
@@ -60,6 +77,24 @@ export const normalizeUseCaseSummary = (raw: Record<string, unknown>): UseCaseSu
     productChecklist: toStringValue(raw.productChecklist ?? raw.productchecklist ?? "") || null,
     eseDependency: toStringValue(raw.eseDependency ?? raw.esedependency ?? ""),
     phasePlan: normalizePhasePlan(raw.phasePlan ?? raw.phaseplan),
+    vendorModelId: toNumber(
+      raw.vendorModelId ?? raw.vendormodelid ?? raw.vendorModel ?? raw.vendor ?? null,
+    ),
+    aiThemeIds: parseIdList(raw.aiThemeIds ?? raw.aithemeids ?? raw.aiThemes ?? null),
+    personaIds: parseIdList(raw.personaIds ?? raw.personaids ?? raw.personas ?? null),
+    useCasePhaseApprovalId: toNumber(
+      raw.useCasePhaseApprovalId ?? raw.usecasephaseapprovalid ?? raw.approvalId ?? null,
+    ),
+    approvalUseCaseId: toNumber(
+      raw.approvalUseCaseId ?? raw.approvalusecaseid ?? null,
+    ),
+    approvalPhaseId: toNumber(
+      raw.approvalPhaseId ?? raw.approvalphaseid ?? null,
+    ),
+    approvalStatus: toStringValue(raw.approvalStatus ?? raw.approvalstatus ?? ""),
+    approvalStatusInt: toNumber(
+      raw.approvalStatusInt ?? raw.approvalstatusint ?? null,
+    ),
   };
 };
 

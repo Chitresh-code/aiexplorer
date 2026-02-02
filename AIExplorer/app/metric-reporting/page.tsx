@@ -108,6 +108,17 @@ const MetricDatePicker = ({
     );
 };
 
+const formatDisplayDate = (value) => {
+    if (!value) return '';
+    const parts = value.split('-');
+    if (parts.length !== 3) return value;
+    const [first, second, third] = parts;
+    if (String(first).length === 4) {
+        return `${String(second).padStart(2, '0')}-${String(third).padStart(2, '0')}-${first}`;
+    }
+    return value;
+};
+
 const MetricReporting = () => {
     const { accounts } = useMsal();
 
@@ -118,6 +129,7 @@ const MetricReporting = () => {
 
     const [metricCategoryOptions, setMetricCategoryOptions] = useState([]);
     const [metricCategoryMap, setMetricCategoryMap] = useState(new Map());
+    const [metricCategoryDefaultUnitMap, setMetricCategoryDefaultUnitMap] = useState(new Map());
     const [unitOfMeasureOptions, setUnitOfMeasureOptions] = useState([]);
     const [unitOfMeasureMap, setUnitOfMeasureMap] = useState(new Map());
 
@@ -218,11 +230,24 @@ const MetricReporting = () => {
                         unitMap.set(id, name);
                     }
                 });
+                const defaultUnitMap = new Map();
+                (metricCategories?.items ?? []).forEach((item) => {
+                    const name = String(item.category ?? '').trim();
+                    const defaultUnitId = Number(
+                        item.defaultUnitOfMeasureId ?? item.defaultunitofmeasureid,
+                    );
+                    if (!name || !Number.isFinite(defaultUnitId)) return;
+                    const unitName = unitMap.get(defaultUnitId);
+                    if (unitName) {
+                        defaultUnitMap.set(name, unitName);
+                    }
+                });
 
                 setMetricCategoryOptions(categoryOptions);
                 setMetricCategoryMap(categoryMap);
                 setUnitOfMeasureOptions(unitOptions);
                 setUnitOfMeasureMap(unitMap);
+                setMetricCategoryDefaultUnitMap(defaultUnitMap);
             } catch (error) {
                 console.error('Failed to load metric mappings', error);
             }
@@ -443,17 +468,21 @@ const MetricReporting = () => {
     }, []);
 
     const handleChangeMetric = useCallback((id, field, value) => {
-        setMetrics((prev) =>
-            prev.map((metric) =>
-                String(metric.id) === String(id) ? { ...metric, [field]: value } : metric
-            )
-        );
-        setReportedMetrics((prev) =>
-            prev.map((metric) =>
-                String(metric.id) === String(id) ? { ...metric, [field]: value } : metric
-            )
-        );
-    }, []);
+        const applyChange = (metric) => {
+            if (String(metric.id) !== String(id)) return metric;
+            if (field === 'parcsCategory') {
+                const defaultUnit = metricCategoryDefaultUnitMap.get(value);
+                return {
+                    ...metric,
+                    parcsCategory: value,
+                    unitOfMeasurement: defaultUnit ?? metric.unitOfMeasurement,
+                };
+            }
+            return { ...metric, [field]: value };
+        };
+        setMetrics((prev) => prev.map(applyChange));
+        setReportedMetrics((prev) => prev.map(applyChange));
+    }, [metricCategoryDefaultUnitMap]);
 
     const handleChangeReportedMetric = useCallback((id, field, value) => {
         setReportedMetrics((prev) =>
@@ -913,7 +942,7 @@ const MetricReporting = () => {
                                                         />
                                                     ) : (
                                                         <span className="text-sm px-2 whitespace-normal break-words">
-                                                            {metric.baselineDate}
+                                                            {formatDisplayDate(metric.baselineDate)}
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -947,7 +976,7 @@ const MetricReporting = () => {
                                                         />
                                                     ) : (
                                                         <span className="text-sm px-2 whitespace-normal break-words">
-                                                            {metric.targetDate}
+                                                            {formatDisplayDate(metric.targetDate)}
                                                         </span>
                                                     )}
                                                 </TableCell>
@@ -1056,7 +1085,7 @@ const MetricReporting = () => {
                                                 </TableCell>
                                                 <TableCell style={{ width: metricColumnSizes.baselineDate }}>
                                                     <span className="text-sm px-2 whitespace-normal break-words">
-                                                        {metric.baselineDate}
+                                                        {formatDisplayDate(metric.baselineDate)}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell style={{ width: metricColumnSizes.targetValue }}>
@@ -1066,7 +1095,7 @@ const MetricReporting = () => {
                                                 </TableCell>
                                                 <TableCell style={{ width: metricColumnSizes.targetDate }}>
                                                     <span className="text-sm px-2 whitespace-normal break-words">
-                                                        {metric.targetDate}
+                                                        {formatDisplayDate(metric.targetDate)}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell style={{ width: metricColumnSizes.reportedValue }}>
@@ -1099,7 +1128,7 @@ const MetricReporting = () => {
                                                         />
                                                     ) : (
                                                         <span className="text-sm px-2 whitespace-normal break-words">
-                                                            {metric.reportedDate || '—'}
+                                                            {formatDisplayDate(metric.reportedDate) || '—'}
                                                         </span>
                                                     )}
                                                 </TableCell>

@@ -24,6 +24,14 @@ export type UseCaseSummary = {
   productChecklist?: string | null;
   eseDependency?: string;
   phasePlan?: UseCasePhasePlan[];
+  vendorModelId?: number | null;
+  aiThemeIds?: number[];
+  personaIds?: number[];
+  useCasePhaseApprovalId?: number | null;
+  approvalUseCaseId?: number | null;
+  approvalPhaseId?: number | null;
+  approvalStatus?: string | null;
+  approvalStatusInt?: number | null;
 };
 
 export type UseCaseDetail = UseCaseSummary & {

@@ -75,12 +75,21 @@ type NormalizedUseCase = {
     phase: string;
     phaseId: number | null;
     currentPhaseDisplay: string;
+    approvalStatusInt: number | null;
+    approvalStatusKey: string;
     [key: string]: string | number | null;
 };
 
 const TrendingIcon = ({ isPositive, className }: { isPositive: boolean; className?: string }) => {
     const Icon = isPositive ? TrendingUp : TrendingDown;
     return <Icon className={className} />;
+};
+
+const resolveApprovalStatusKey = (value: number | null | undefined) => {
+    if (value === 1) return "approved";
+    if (value === 0) return "pending";
+    if (value === -1) return "rejected";
+    return "not-sent";
 };
 
 const ChampionUseCaseScreen = () => {
@@ -93,6 +102,7 @@ const ChampionUseCaseScreen = () => {
     const [searchPhase, setSearchPhase] = useState<string[]>([]);
     const [searchBusinessUnit, setSearchBusinessUnit] = useState<string[]>([]);
     const [searchStatus, setSearchStatus] = useState<string[]>([]);
+    const [searchApprovalStatus, setSearchApprovalStatus] = useState<string[]>([]);
     const [businessUnitsData, setBusinessUnitsData] = useState<{ items?: BusinessUnitMapping[] } | null>(null);
     const [phasesData, setPhasesData] = useState<PhaseMapping[]>([]);
     const [statusData, setStatusData] = useState<StatusMapping[]>([]);
@@ -193,6 +203,17 @@ const ChampionUseCaseScreen = () => {
             .map((name: string) => ({ label: name, value: name }));
     }, [statusData]);
 
+    const approvalStatusOptions = useMemo(
+        () => [
+            { label: "All Approval Statuses", value: "all" },
+            { label: "Approved", value: "approved" },
+            { label: "Pending", value: "pending" },
+            { label: "Rejected", value: "rejected" },
+            { label: "Not Sent", value: "not-sent" },
+        ],
+        [],
+    );
+
     const phaseColumns = useMemo(() => {
         return phasesData
             .map((item) => ({
@@ -267,6 +288,8 @@ const ChampionUseCaseScreen = () => {
 
             const rawId = uc.id;
             if (rawId == null) return [];
+            const approvalStatusInt =
+                typeof uc.approvalStatusInt === "number" ? uc.approvalStatusInt : null;
 
             return [{
                 id: String(rawId),
@@ -280,6 +303,8 @@ const ChampionUseCaseScreen = () => {
                 phase: phaseName,
                 phaseId: Number.isFinite(phaseId) ? phaseId : null,
                 currentPhaseDisplay,
+                approvalStatusInt,
+                approvalStatusKey: resolveApprovalStatusKey(approvalStatusInt),
                 ...phaseValues,
             }];
         });
@@ -307,10 +332,13 @@ const ChampionUseCaseScreen = () => {
         const prioritized = normalizedUseCases.filter((useCase) =>
             Number.isFinite(useCase.priority),
         ).length;
+        const approvalPending = normalizedUseCases.filter(
+            (useCase) => useCase.approvalStatusInt === 0 || useCase.approvalStatusInt === null,
+        ).length;
         return {
             totalUseCases,
             implemented,
-            approvalPending: 0,
+            approvalPending,
             prioritized,
         };
     }, [normalizedUseCases, phaseColumns, useCases]);
@@ -338,11 +366,23 @@ const ChampionUseCaseScreen = () => {
                 if (!searchBusinessUnit.some((unit) => unit.toLowerCase() === unitValue)) return false;
             }
 
+            if (searchApprovalStatus.length > 0 && !searchApprovalStatus.includes("all")) {
+                const approvalValue = uc.approvalStatusKey;
+                if (!searchApprovalStatus.includes(approvalValue)) return false;
+            }
+
             return true;
         });
 
         return mapped;
-    }, [normalizedUseCases, searchUseCase, searchPhase, searchStatus, searchBusinessUnit]);
+    }, [
+        normalizedUseCases,
+        searchUseCase,
+        searchPhase,
+        searchStatus,
+        searchBusinessUnit,
+        searchApprovalStatus,
+    ]);
 
     const columns = useMemo(
         () => createColumns(navigate, phaseColumns, deliveryOptions, idOptions, "champion"),
@@ -433,7 +473,7 @@ const ChampionUseCaseScreen = () => {
             <Card className="shadow-sm">
                 <CardContent className="pt-6">
                     <div className="w-full overflow-x-auto">
-                        <div className="grid min-w-[940px] grid-cols-[auto_minmax(220px,1fr)_repeat(3,minmax(180px,1fr))_auto] items-center gap-4">
+                        <div className="grid min-w-[1040px] grid-cols-[auto_minmax(220px,1fr)_repeat(4,minmax(180px,1fr))_auto] items-center gap-4">
                             <Tabs value={viewMode} onValueChange={(val: any) => setViewMode(val)}>
                                 <TabsList className="bg-gray-100/80 p-1 rounded-lg border border-gray-200 h-10">
                                     <TabsTrigger
@@ -487,6 +527,17 @@ const ChampionUseCaseScreen = () => {
 
                             <FilterCombobox
                                 multiple
+                                placeholder="Approval Status"
+                                options={approvalStatusOptions}
+                                value={searchApprovalStatus}
+                                onChange={setSearchApprovalStatus}
+                                icon={<PlusCircle className="h-4 w-4 text-muted-foreground" />}
+                                className="w-full"
+                                buttonClassName="h-8 px-3 border-dashed bg-white"
+                            />
+
+                            <FilterCombobox
+                                multiple
                                 placeholder="Business Unit"
                                 options={businessUnitOptions}
                                 value={searchBusinessUnit}
@@ -496,7 +547,7 @@ const ChampionUseCaseScreen = () => {
                                 buttonClassName="h-8 px-3 border-dashed bg-white"
                             />
 
-                            {(searchUseCase || searchPhase.length > 0 || searchStatus.length > 0 || searchBusinessUnit.length > 0) && (
+                            {(searchUseCase || searchPhase.length > 0 || searchStatus.length > 0 || searchBusinessUnit.length > 0 || searchApprovalStatus.length > 0) && (
                                 <Button
                                     variant="ghost"
                                     className="h-8 px-3 text-sm justify-self-end"
@@ -504,6 +555,7 @@ const ChampionUseCaseScreen = () => {
                                         setSearchUseCase("");
                                         setSearchPhase([]);
                                         setSearchStatus([]);
+                                        setSearchApprovalStatus([]);
                                         setSearchBusinessUnit([]);
                                     }}
                                 >

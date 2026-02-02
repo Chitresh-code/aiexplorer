@@ -2,6 +2,28 @@ import { NextResponse } from "next/server";
 import { getSqlPool } from "@/lib/azure-sql";
 import { getUiErrorMessage, logErrorTrace } from "@/lib/error-utils";
 
+const toNumberValue = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string" && value.trim() === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const parseIdList = (value: unknown): number[] => {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => Number(entry))
+      .filter((num) => Number.isFinite(num));
+  }
+  const text = String(value).trim();
+  if (!text) return [];
+  return text
+    .split(",")
+    .map((segment) => Number(segment.trim()))
+    .filter((segment) => Number.isFinite(segment));
+};
+
 export const GET = async (request: Request) => {
   const { searchParams } = new URL(request.url);
   const role = searchParams.get("role")?.trim().toLowerCase() ?? "";
@@ -48,6 +70,18 @@ export const GET = async (request: Request) => {
 
     const normalized = rows.map((row) => {
       const id = Number(row.id ?? row.ID);
+      const vendorModelId = toNumberValue(
+        row.vendorModelId ?? row.vendormodelid ?? row.vendorModel ?? null,
+      );
+      const aiThemeIds = parseIdList(
+        row.aiThemeIds ?? row.aithemeids ?? row.aiThemes ?? null,
+      );
+      const personaIds = parseIdList(
+        row.personaIds ?? row.personaids ?? row.personas ?? null,
+      );
+      const approvalStatusInt = toNumberValue(
+        row.approvalStatusInt ?? row.approvalstatusint ?? null,
+      );
       const item = {
         id: Number.isFinite(id) ? id : row.id ?? row.ID ?? null,
         businessUnitId: row.businessUnitId ?? row.businessunitid ?? row.BusinessUnitId ?? null,
@@ -68,6 +102,18 @@ export const GET = async (request: Request) => {
         statusColor: String(row.statusColor ?? row.StatusColor ?? "").trim(),
         priority: row.priority ?? row.Priority ?? null,
         deliveryTimespan: row.deliveryTimespan ?? row.DeliveryTimespan ?? null,
+        vendorModelId,
+        aiThemeIds,
+        personaIds,
+        useCasePhaseApprovalId:
+          row.useCasePhaseApprovalId ?? row.usecasephaseapprovalid ?? null,
+        approvalUseCaseId:
+          row.approvalUseCaseId ?? row.approvalusecaseid ?? null,
+        approvalPhaseId:
+          row.approvalPhaseId ?? row.approvalphaseid ?? null,
+        approvalStatus:
+          String(row.approvalStatus ?? row.approvalstatus ?? "").trim(),
+        approvalStatusInt,
       };
 
       if (view === "full") {
@@ -88,6 +134,11 @@ export const GET = async (request: Request) => {
           status: item.statusName,
           teamName: item.teamName,
           businessUnitName: item.businessUnitName,
+          vendorModelId: item.vendorModelId,
+          aiThemeIds: item.aiThemeIds,
+          personaIds: item.personaIds,
+          approvalStatus: item.approvalStatus,
+          approvalStatusInt: item.approvalStatusInt,
         };
       }
 
@@ -110,6 +161,11 @@ export const GET = async (request: Request) => {
         phase: item.phase,
         statusName: item.statusName,
         statusColor: item.statusColor,
+        vendorModelId: item.vendorModelId,
+        aiThemeIds: item.aiThemeIds,
+        personaIds: item.personaIds,
+        approvalStatus: item.approvalStatus,
+        approvalStatusInt: item.approvalStatusInt,
       };
     });
 
@@ -287,7 +343,7 @@ export const POST = async (request: Request): Promise<NextResponse> => {
     let approvals = false;
 
     // TODO: Remove this businessUnitId gating once testing is complete.
-    const shouldTriggerApprovalFlow = businessUnitId === 38;
+    const shouldTriggerApprovalFlow = businessUnitId === 38 || businessUnitId === 39;
 
     if (useCaseId && shouldTriggerApprovalFlow) {
       let phaseName = String(useCaseRecord?.Phase ?? useCaseRecord?.phase ?? "").trim();
